@@ -1,5 +1,8 @@
 """Typed scientific benchmark contracts; identity is independent of release."""
 
+from __future__ import annotations
+
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -31,20 +34,27 @@ class TemporalContract:
     history_seconds: float | None = None
     history_hz: float | None = None
     history_steps: int | None = None
+    target_hz: float | None = None
     horizon_seconds: float | None = None
     horizon_hz: float | None = None
     horizon_steps: int | None = None
 
     def __post_init__(self) -> None:
-        for value in (self.history_seconds, self.history_hz, self.horizon_seconds, self.horizon_hz):
-            if value is not None and value <= 0:
-                raise ValueError("temporal durations and cadences must be positive")
+        for value in (
+            self.history_seconds,
+            self.history_hz,
+            self.target_hz,
+            self.horizon_seconds,
+            self.horizon_hz,
+        ):
+            if value is not None and (not math.isfinite(value) or value <= 0):
+                raise ValueError("temporal durations and cadences must be finite and positive")
         for value in (self.history_steps, self.horizon_steps):
             if value is not None and value <= 0:
                 raise ValueError("temporal step counts must be positive")
 
-    def cadence_compatible_with(self, other: TemporalContract) -> bool:
-        """R1 requires explicit new identity when any canonical temporal contract changes."""
+    def canonical_grid_compatible_with(self, other: TemporalContract) -> bool:
+        """A changed canonical temporal grid requires a different task identity."""
         return self == other
 
 
@@ -80,7 +90,10 @@ class BenchmarkDefinition:
     def __post_init__(self) -> None:
         if not self.identity.scientific_id or not self.identity.family_id:
             raise ValueError("benchmark identity and family are required")
-        if self.identity.task_id is None and self.task.execution_status is not ExecutionStatus.UNRECOVERABLE:
+        if (
+            self.identity.task_id is None
+            and self.task.execution_status is not ExecutionStatus.UNRECOVERABLE
+        ):
             raise ValueError("family-only records must not claim an executable task")
 
 

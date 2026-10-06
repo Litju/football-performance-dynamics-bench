@@ -1,11 +1,10 @@
 """Runs, results, and governance release records stay independent of locks."""
 
 from dataclasses import dataclass
-from typing import TypeAlias
 
 from fpdbench.models import ModelCheckpoint
 
-MetricValues: TypeAlias = tuple[tuple[str, float], ...]
+type MetricValues = tuple[tuple[str, float], ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +32,11 @@ class PublicReleaseManifest:
 
     scientific_lock_hash: str
     legal_status: str
+    license_status: str
     publication_status: str
+    public_release_authority: str | None = None
+    artifact_availability: str | None = None
+    license_clearance_snapshot: str | None = None
     artifact_uris: tuple[str, ...] = ()
     hosting_provider: str | None = None
     release_timestamp: str | None = None

@@ -15,6 +15,11 @@ class EvidenceReference:
     uri: str
     sha256: str | None = None
     description: str = ""
+    authority_id: str = "historical_research_registry"
+
+    def __post_init__(self) -> None:
+        if not self.uri or not self.authority_id:
+            raise ValueError("evidence URI and authority are required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +27,10 @@ class HistoricalAlias:
     value: str
     canonical_id: str
     evidence: EvidenceReference
+
+    def __post_init__(self) -> None:
+        if not self.value or not self.canonical_id:
+            raise ValueError("historical alias value and canonical target are required")
 
 
 __all__ = [

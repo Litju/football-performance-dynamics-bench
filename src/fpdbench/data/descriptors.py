@@ -1,10 +1,10 @@
 """Immutable data, population, membership, split, and artifact descriptors."""
 
-from dataclasses import dataclass
 import hashlib
-from pathlib import Path
 import re
 from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -28,11 +28,9 @@ class ArtifactReference:
             raise ValueError("artifact size must be nonnegative")
 
     def verify(self, path: Path) -> bool:
-        digest = hashlib.sha256()
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest() == self.sha256
+        return sha256_file(path) == self.sha256 and (
+            self.size_bytes is None or path.stat().st_size == self.size_bytes
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +44,7 @@ class DataStateDescriptor:
     def __post_init__(self) -> None:
         if not self.state_id or not self.version or not self.transformation:
             raise ValueError("data state identity, version, and transformation are required")
+        object.__setattr__(self, "artifacts", tuple(self.artifacts))
         if self.manifest_sha256 is not None:
             _require_sha256(self.manifest_sha256, "manifest_sha256")
 
@@ -100,6 +99,7 @@ def membership_digest(sample_ids: Iterable[str]) -> str:
     for sample_id in sample_ids:
         if not sample_id:
             raise ValueError("sample identifiers must not be empty")
-        digest.update(sample_id.encode("utf-8"))
-        digest.update(b"\n")
+        encoded = sample_id.encode("utf-8")
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
     return digest.hexdigest()

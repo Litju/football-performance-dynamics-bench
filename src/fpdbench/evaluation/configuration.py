@@ -1,7 +1,7 @@
 """Versioned evaluator identity, independent of benchmark and model identity."""
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 

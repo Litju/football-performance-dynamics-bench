@@ -1,7 +1,7 @@
 from fpdbench.data.descriptors import (
     ArtifactReference,
-    DataStateDescriptor,
     DatasetMembership,
+    DataStateDescriptor,
     PopulationSemantics,
     SplitProtocolDescriptor,
     membership_digest,

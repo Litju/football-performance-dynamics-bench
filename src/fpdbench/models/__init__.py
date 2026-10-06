@@ -1,7 +1,7 @@
 """Model and checkpoint identities, independent of benchmark releases."""
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
