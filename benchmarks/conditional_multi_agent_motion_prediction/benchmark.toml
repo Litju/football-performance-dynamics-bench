@@ -1,0 +1,5 @@
+family_id = "conditional_multi_agent_motion_prediction"
+benchmark_ids = [
+  "conditional_multi_agent_motion_prediction/absolute_position_prediction",
+  "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+]
