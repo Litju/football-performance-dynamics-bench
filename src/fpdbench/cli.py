@@ -24,6 +24,15 @@ def _parser() -> argparse.ArgumentParser:
     description = benchmark_commands.add_parser("describe")
     description.add_argument("scientific_id")
 
+    families = commands.add_parser("families")
+    families.add_subparsers(dest="family_command", required=True).add_parser("list")
+
+    research_objects = commands.add_parser("research-objects")
+    object_commands = research_objects.add_subparsers(dest="research_object_command", required=True)
+    object_commands.add_parser("list")
+    object_description = object_commands.add_parser("describe")
+    object_description.add_argument("scientific_id")
+
     validation = commands.add_parser("validate")
     validation.add_argument("--root", type=Path, default=Path.cwd())
     naming = commands.add_parser("validate-naming")
@@ -71,6 +80,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "benchmarks" and args.benchmark_command == "describe":
         benchmark = default_registry().lookup(args.scientific_id)
         print(json.dumps(asdict(benchmark), indent=2, sort_keys=True))
+        return 0
+    if args.command == "families" and args.family_command == "list":
+        print("\n".join(default_registry().families()))
+        return 0
+    if args.command == "research-objects" and args.research_object_command == "list":
+        for research_object in default_registry().research_objects():
+            descriptor = research_object.descriptor
+            print(
+                f"{research_object.identity.scientific_id}\t"
+                f"{descriptor.research_object_type.value}\t"
+                f"{descriptor.scientific_maturity.value}"
+            )
+        return 0
+    if args.command == "research-objects" and args.research_object_command == "describe":
+        research_object = default_registry().lookup_research_object(args.scientific_id)
+        print(json.dumps(asdict(research_object), indent=2, sort_keys=True))
         return 0
     if args.command == "validate":
         return _print_errors(validate_repository(args.root))

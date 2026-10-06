@@ -37,6 +37,8 @@ class ForecastOrigin:
         object.__setattr__(self, "available_information_times_s", times)
         object.__setattr__(self, "feature_names", feature_names)
         if self.target_origin_positions_m is not None:
+            if not math.isclose(times[-1], self.timestamp_s, rel_tol=0.0, abs_tol=1e-9):
+                raise ValueError("target origin positions must be observed at the forecast origin")
             positions = immutable_xy_frame(
                 self.target_origin_positions_m,
                 expected_entities=11,

@@ -1,7 +1,7 @@
 from fpdbench.benchmarks.multimodal_state_estimation.multimodal_sensor_state_reconstruction import (
-    BENCHMARK,
     CANDIDATE_TARGET_FAMILIES,
     MODALITIES,
+    RESEARCH_OBJECT,
     SELECTED_TARGET_FAMILY,
     TEMPORAL_ALIGNMENT,
     NativeSensorStream,
@@ -14,7 +14,7 @@ from fpdbench.benchmarks.multimodal_state_estimation.multimodal_sensor_state_rec
 )
 
 __all__ = [
-    "BENCHMARK",
+    "RESEARCH_OBJECT",
     "CANDIDATE_TARGET_FAMILIES",
     "MODALITIES",
     "NativeSensorStream",

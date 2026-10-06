@@ -6,17 +6,22 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from fpdbench.benchmarks.base import (
-    BenchmarkDefinition,
-    BenchmarkIdentity,
+    UNKNOWN,
+    CausalStatus,
     ExecutionStatus,
     InformationBoundary,
+    ResearchObjectDefinition,
+    ResearchObjectIdentity,
+    ResearchObjectType,
+    ScientificDescriptor,
     ScientificMaturity,
+    ScientificTaskType,
     TechnicalTaskContract,
     TemporalContract,
 )
 from fpdbench.evaluation.metrics.relative_error import population_standardized_relative_error
 
-BENCHMARK_ID = "multimodal_state_estimation/multimodal_sensor_state_reconstruction"
+RESEARCH_OBJECT_ID = "multimodal_state_estimation/multimodal_sensor_state_reconstruction"
 SENSOR_GATE_MAX_QUALITY = 0.30
 SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL = 256
 
@@ -213,40 +218,68 @@ def evaluate_sensor_state_gate(public_nonexpert_qualities: Sequence[float]) -> S
     )
 
 
-BENCHMARK = BenchmarkDefinition(
-    identity=BenchmarkIdentity(
-        scientific_id=BENCHMARK_ID,
+_TASK = TechnicalTaskContract(
+    inputs=(
+        "timestamped GNSS",
+        "timestamped IMU",
+        "heart-rate observations",
+        "quality channels",
+    ),
+    targets=tuple(family.value for family in CANDIDATE_TARGET_FAMILIES),
+    temporal=TemporalContract(target_hz=10.0),
+    information_boundary=InformationBoundary(
+        available_inputs=("causal native-rate sensor observations", "validity and quality"),
+        withheld_targets=("private clean sensor-state candidates",),
+        forbidden_information=("future sensor samples",),
+    ),
+    population_semantics="Synthetic player exposures grouped by player-week; pilot only.",
+    data_state_binding=None,
+    split_protocol_binding=None,
+    evaluator_binding="validation-population SRE with equal-channel q and attack gate",
+    execution_status=ExecutionStatus.PARTIAL,
+    scientific_maturity=ScientificMaturity.NEGATIVE,
+    reconstruction_blockers=(
+        "No candidate target family was selected.",
+        "Exact asynchronous timestamp alignment and channel schemas are incomplete.",
+        "No per-target score table or target viability selection survives.",
+    ),
+    non_claims=(
+        "The scoped pilot negative is not a universal impossibility result.",
+        "No benchmark reward is emitted and no legal clearance is claimed.",
+    ),
+)
+
+RESEARCH_OBJECT = ResearchObjectDefinition(
+    identity=ResearchObjectIdentity(
+        scientific_id=RESEARCH_OBJECT_ID,
         family_id="multimodal_state_estimation",
         task_id="multimodal_sensor_state_reconstruction",
     ),
-    task=TechnicalTaskContract(
-        inputs=(
-            "timestamped GNSS",
-            "timestamped IMU",
-            "heart-rate observations",
-            "quality channels",
+    descriptor=ScientificDescriptor.from_task(
+        _TASK,
+        public_name="Multimodal sensor-state reconstruction pilot",
+        technical_name="multimodal_sensor_state_reconstruction",
+        research_question=UNKNOWN,
+        scientific_task_type=ScientificTaskType.RECONSTRUCTION,
+        prediction_or_inference_target=UNKNOWN,
+        input_modalities=("GNSS", "IMU", "heart rate", "timestamps", "quality channels"),
+        conditioning_information=(
+            "causal native-rate sensor observations",
+            "validity and quality",
         ),
-        targets=tuple(family.value for family in CANDIDATE_TARGET_FAMILIES),
-        temporal=TemporalContract(target_hz=10.0),
-        information_boundary=InformationBoundary(
-            available_inputs=("causal native-rate sensor observations", "validity and quality"),
-            withheld_targets=("private clean sensor-state candidates",),
-            forbidden_information=("future sensor samples",),
+        target_representation=UNKNOWN,
+        reference_frame=UNKNOWN,
+        history_interpretation=UNKNOWN,
+        horizon_interpretation=UNKNOWN,
+        source_sampling_hz=UNKNOWN,
+        unit_of_evaluation=UNKNOWN,
+        causal_status=CausalStatus.CAUSAL,
+        scientific_metric_family=(
+            "population-standardized relative error",
+            "equal-channel quality",
+            "attack gate",
         ),
-        population_semantics="Synthetic player exposures grouped by player-week; pilot only.",
-        data_state_binding=None,
-        split_protocol_binding=None,
-        evaluator_binding="validation-population SRE with equal-channel q and attack gate",
-        execution_status=ExecutionStatus.PARTIAL,
-        scientific_maturity=ScientificMaturity.NEGATIVE,
-        reconstruction_blockers=(
-            "No candidate target family was selected.",
-            "Exact asynchronous timestamp alignment and channel schemas are incomplete.",
-            "No per-target score table or target viability selection survives.",
-        ),
-        non_claims=(
-            "The scoped pilot negative is not a universal impossibility result.",
-            "No benchmark reward is emitted and no legal clearance is claimed.",
-        ),
+        research_object_type=ResearchObjectType.NEGATIVE_RESULT,
     ),
+    task=_TASK,
 )

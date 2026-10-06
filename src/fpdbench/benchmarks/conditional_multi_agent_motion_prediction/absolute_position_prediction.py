@@ -7,9 +7,13 @@ from dataclasses import dataclass
 from fpdbench.benchmarks.base import (
     BenchmarkDefinition,
     BenchmarkIdentity,
+    CausalStatus,
     ExecutionStatus,
     InformationBoundary,
+    ResearchObjectType,
+    ScientificDescriptor,
     ScientificMaturity,
+    ScientificTaskType,
     TechnicalTaskContract,
     TemporalContract,
 )
@@ -173,73 +177,107 @@ REPAIRED_POSITION_DATA_STATE = DataStateDescriptor(
     ),
 )
 
+_TASK = TechnicalTaskContract(
+    inputs=(
+        "25 observed scene steps at 5 Hz",
+        "realized future opponent-team XY",
+        "realized future ball XY",
+    ),
+    targets=("future target-team absolute pitch XY with shape [15, 11, 2]",),
+    temporal=TemporalContract(
+        history_seconds=HISTORY_SECONDS,
+        history_hz=HISTORY_HZ,
+        history_steps=HISTORY_STEPS,
+        horizon_seconds=HORIZON_SECONDS,
+        horizon_hz=HORIZON_HZ,
+        horizon_steps=HORIZON_STEPS,
+    ),
+    information_boundary=InformationBoundary(
+        available_inputs=(
+            "observed target-team history",
+            "observed opponent-team history",
+            "observed ball history",
+        ),
+        withheld_targets=(
+            "future target-team XY",
+            "future target-team-derived features",
+        ),
+        forbidden_information=(
+            "future target-team features",
+            "future aggregates",
+            "event labels",
+            "score",
+            "absolute timestamp",
+            "file identity",
+            "row order",
+            "target encoding",
+            "numeric player, team, or match identifiers",
+        ),
+        conditional_future_context=(
+            "realized future opponent-team XY",
+            "realized future ball XY",
+        ),
+    ),
+    population_semantics="Directed target-team player trajectories within evaluated match windows.",
+    data_state_binding=None,
+    split_protocol_binding=None,
+    evaluator_binding="ADE, FDE, XY-RMSE in metres; population SRE is separately defined",
+    execution_status=ExecutionStatus.PARTIAL,
+    scientific_maturity=ScientificMaturity.PARTIAL,
+    reconstruction_blockers=(
+        (
+            "The repaired and original data states are represented separately; "
+            "data bytes are absent."
+        ),
+        "Private challenge data and checkpoints are not included or recomputed.",
+        "No new scientific lock or public release is asserted.",
+    ),
+    non_claims=(
+        (
+            "Realized future opponent and ball paths are conditional context, "
+            "not an ex-ante exposure forecast."
+        ),
+        "The target team's future positions are never model inputs.",
+    ),
+)
+
 BENCHMARK = BenchmarkDefinition(
     identity=BenchmarkIdentity(
         scientific_id=BENCHMARK_ID,
         family_id="conditional_multi_agent_motion_prediction",
         task_id="absolute_position_prediction",
     ),
-    task=TechnicalTaskContract(
-        inputs=(
-            "25 observed scene steps at 5 Hz",
+    descriptor=ScientificDescriptor.from_task(
+        _TASK,
+        public_name="Conditional multi-agent absolute-position prediction",
+        technical_name="absolute_position_prediction",
+        research_question=(
+            "Given observed scene history and realized future opponent and ball positions, "
+            "what are the target-team players' future positions?"
+        ),
+        scientific_task_type=ScientificTaskType.CONDITIONAL_RESPONSE_PREDICTION,
+        prediction_or_inference_target=(
+            "Future XY positions of 11 target-team players over 3 seconds."
+        ),
+        input_modalities=("player tracking XY", "ball tracking XY"),
+        conditioning_information=(
+            "observed target-team history",
+            "observed opponent-team history",
+            "observed ball history",
             "realized future opponent-team XY",
             "realized future ball XY",
         ),
-        targets=("future target-team absolute pitch XY with shape [15, 11, 2]",),
-        temporal=TemporalContract(
-            history_seconds=HISTORY_SECONDS,
-            history_hz=HISTORY_HZ,
-            history_steps=HISTORY_STEPS,
-            horizon_seconds=HORIZON_SECONDS,
-            horizon_hz=HORIZON_HZ,
-            horizon_steps=HORIZON_STEPS,
-        ),
-        information_boundary=InformationBoundary(
-            available_inputs=("observed scene through origin",),
-            withheld_targets=(
-                "target-team future XY",
-                "target-team future provider speed and acceleration",
-            ),
-            forbidden_information=(
-                "future target-team features",
-                "future aggregates",
-                "event labels",
-                "score",
-                "absolute timestamp",
-                "file identity",
-                "row order",
-                "target encoding",
-                "numeric player, team, or match identifiers",
-            ),
-            conditional_future_context=(
-                "realized future opponent-team XY",
-                "realized future ball XY",
-            ),
-        ),
-        population_semantics=(
-            "Directed target-team player trajectories within evaluated match windows."
-        ),
-        data_state_binding=None,
-        split_protocol_binding=None,
-        evaluator_binding="ADE, FDE, XY-RMSE in metres; population SRE is separately defined",
-        execution_status=ExecutionStatus.PARTIAL,
-        scientific_maturity=ScientificMaturity.PARTIAL,
-        reconstruction_blockers=(
-            (
-                "The repaired and original data states are represented separately; "
-                "data bytes are absent."
-            ),
-            "Private challenge data and checkpoints are not included or recomputed.",
-            "No new scientific lock or public release is asserted.",
-        ),
-        non_claims=(
-            (
-                "Realized future opponent and ball paths are conditional context, "
-                "not an ex-ante exposure forecast."
-            ),
-            "The target team's future positions are never model inputs.",
-        ),
+        target_representation="Pitch-normalized absolute XY with shape [15, 11, 2].",
+        reference_frame="Absolute pitch XY normalized by [52.5, 34.0] metres.",
+        history_interpretation="Observed scene history available through the forecast origin.",
+        horizon_interpretation="Future target-team response over the 3-second horizon.",
+        source_sampling_hz=25.0,
+        unit_of_evaluation="Target-team player trajectory within a match window.",
+        causal_status=CausalStatus.CONDITIONAL_ON_REALIZED_FUTURE_CONTEXT,
+        scientific_metric_family=("ADE", "FDE", "XY-RMSE", "population SRE"),
+        research_object_type=ResearchObjectType.BENCHMARK,
     ),
+    task=_TASK,
 )
 
 ABSOLUTE_POSITION_BENCHMARK = BENCHMARK

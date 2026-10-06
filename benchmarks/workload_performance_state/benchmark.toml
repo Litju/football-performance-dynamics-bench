@@ -1,5 +1,6 @@
 family_id = "workload_performance_state"
-benchmark_ids = [
+benchmark_ids = []
+research_object_ids = [
   "workload_performance_state/whole_session_performance_state",
   "workload_performance_state/signed_tangential_acceleration_estimation",
 ]

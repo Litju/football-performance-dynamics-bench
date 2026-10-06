@@ -23,19 +23,33 @@ def validate_repository(root: Path) -> tuple[str, ...]:
             continue
         family_id = config.get("family_id")
         raw_benchmark_ids = config.get("benchmark_ids")
-        if not isinstance(family_id, str) or not isinstance(raw_benchmark_ids, list):
+        raw_object_ids = config.get("research_object_ids")
+        if (
+            not isinstance(family_id, str)
+            or not isinstance(raw_benchmark_ids, list)
+            or not isinstance(raw_object_ids, list)
+        ):
             errors.append(f"invalid family or benchmark IDs in {config_path.relative_to(root)}")
             continue
         values = cast(list[object], raw_benchmark_ids)
-        if not all(isinstance(value, str) for value in values):
+        object_values = cast(list[object], raw_object_ids)
+        if not all(isinstance(value, str) for value in values + object_values):
             errors.append(f"invalid family or benchmark IDs in {config_path.relative_to(root)}")
             continue
         benchmark_ids = tuple(value for value in values if isinstance(value, str))
+        research_object_ids = tuple(value for value in object_values if isinstance(value, str))
         config_families.add(family_id)
         registered_ids = {item.identity.scientific_id for item in registry.discover(family_id)}
         if set(benchmark_ids) != registered_ids:
             errors.append(
                 f"benchmark config disagrees with registry: {config_path.relative_to(root)}"
+            )
+        registered_object_ids = {
+            item.identity.scientific_id for item in registry.research_objects(family_id)
+        }
+        if set(research_object_ids) != registered_object_ids:
+            errors.append(
+                f"research-object config disagrees with registry: {config_path.relative_to(root)}"
             )
     if config_families != expected_families:
         errors.append("benchmark configuration family set disagrees with registry")
