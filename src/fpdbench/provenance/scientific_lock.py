@@ -27,9 +27,8 @@ SCIENTIFIC_FIELDS = (
     "schema_hash",
     "fixture_manifest_hash",
     "scientific_provenance_snapshot",
-    "supersedes_scientific_lock_hash",
 )
-REQUIRED_FIELDS = frozenset(SCIENTIFIC_FIELDS[:-1])
+REQUIRED_FIELDS = frozenset(SCIENTIFIC_FIELDS)
 _HASH_FIELDS = frozenset(
     {
         "benchmark_definition_hash",
@@ -62,12 +61,20 @@ GOVERNANCE_FIELDS = frozenset(
         "publication_timestamps",
         "deprecation_metadata",
         "deprecation_timestamps",
+        "supersession_metadata",
         "supersession_governance_metadata",
+        "supersedes_scientific_lock_hash",
         "withdrawal_metadata",
         "withdrawal_timestamps",
         "citation_metadata",
         "documentation_metadata",
         "runtime_clock_values",
+        "timestamp",
+        "timestamps",
+        "url",
+        "urls",
+        "release_governance",
+        "release_governance_metadata",
     }
 )
 
@@ -157,11 +164,6 @@ def _scientific_payload(lock: Mapping[str, object]) -> JsonObject:
         for field in ("data_release_version", "split_protocol_version", "evaluator_version")
     ):
         raise ValueError("data, split, and evaluator versions must use semantic versioning")
-    if "supersedes_scientific_lock_hash" in payload and (
-        not isinstance(payload["supersedes_scientific_lock_hash"], str)
-        or not _SHA256.fullmatch(payload["supersedes_scientific_lock_hash"])
-    ):
-        raise ValueError("superseded scientific lock hash must be lowercase SHA-256")
     return payload
 
 
