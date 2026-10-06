@@ -5,36 +5,83 @@ from fpdbench.validation.naming import validate_naming
 from fpdbench.validation.repository import validate_repository
 
 
-def test_naming_policy_positive_and_negative_controls(tmp_path: Path) -> None:
-    good_root = tmp_path / "good"
-    good_root.mkdir()
-    (good_root / "absolute_position_prediction.py").write_text("pass\n")
-    assert validate_naming(good_root) == ()
+def test_naming_policy_checks_python_config_docs_readme_and_paths(tmp_path: Path) -> None:
+    tokens = {
+        "source": "R7" + "E",
+        "readme": "ALI" + "478",
+        "config": "H5" + "F3",
+        "docs": "RES" + "-326",
+        "path": "SC" + "R0",
+        "test_path": "RES" + "-384",
+        "artifact": "ALI" + "478",
+    }
+    files = {
+        "src/fpdbench/foo.py": f'value = "{tokens["source"]}"\n',
+        "README.md": f"Example: {tokens['readme']}\n",
+        "benchmark.toml": f'value = "{tokens["config"]}"\n',
+        "docs/foo.md": f"Example: {tokens['docs']}\n",
+        f"docs/{tokens['path']}/index.md": "safe\n",
+        f"tests/test_{tokens['test_path']}.py": "safe\n",
+        f"artifacts/{tokens['artifact']}.bin": "safe\n",
+    }
+    for relative, contents in files.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents)
 
-    bad_root = tmp_path / "bad"
-    bad_root.mkdir()
-    forbidden_components = (
-        "ALI123.py",
-        "BM123",
-        "SBR0",
-        "SCR0",
-        "H5F3",
-        "R7D",
-        "R7E",
-        "RES-384",
-        "soccer-trainingload-bmcb",
+    errors = validate_naming(tmp_path)
+    assert len(errors) == len(files)
+    assert any("foo.py" in error and tokens["source"] in error for error in errors)
+    assert any("README.md" in error and tokens["readme"] in error for error in errors)
+    assert any("benchmark.toml" in error and tokens["config"] in error for error in errors)
+    assert any("docs/foo.md" in error and tokens["docs"] in error for error in errors)
+    assert any(tokens["path"] in error for error in errors)
+    assert any("test_" + tokens["test_path"] in error for error in errors)
+    assert any(tokens["artifact"] + ".bin" in error for error in errors)
+
+
+def test_naming_policy_catches_each_historical_identifier_family(tmp_path: Path) -> None:
+    tokens = (
+        "BM" + "123",
+        "SB" + "-R0-" + "BM" + "-001",
+        "SC" + "-R0-" + "001",
+        "R7" + "D",
+        "soccer-trainingload-" + "bmcb",
     )
-    for component in forbidden_components:
-        (bad_root / component).mkdir()
-    errors = validate_naming(bad_root)
-    assert len(errors) == len(forbidden_components)
-    assert all(any(component in error for error in errors) for component in forbidden_components)
+    for index, token in enumerate(tokens):
+        root = tmp_path / f"case_{index}"
+        root.mkdir()
+        (root / "source.py").write_text(f'value = "{token}"\n')
+        assert validate_naming(root)
 
 
-def test_naming_policy_rejects_obsolete_project_names_in_source(tmp_path: Path) -> None:
-    package = tmp_path / "src" / "fpdbench"
-    package.mkdir(parents=True)
-    (package / "research.py").write_text("name = 'Association Football Performance Modeling'\n")
+def test_naming_policy_allows_only_structured_historical_alias_values(tmp_path: Path) -> None:
+    alias_value = "ALI" + "478"
+    alias_source = tmp_path / "src" / "fpdbench" / "provenance_alias.py"
+    alias_source.parent.mkdir(parents=True)
+    alias_source.write_text(
+        f'HistoricalAlias(value="{alias_value}", '
+        'canonical_id="workload_performance_state/whole_session_performance_state")\n'
+    )
+    assert validate_naming(tmp_path) == ()
+
+    alias_source.write_text(
+        f'HistoricalAlias(value="{alias_value}", canonical_id="{alias_value}")\n'
+    )
+    errors = validate_naming(tmp_path)
+    assert len(errors) == 1
+    assert "outside structured provenance value" in errors[0]
+
+
+def test_naming_policy_checks_repository_root_name(tmp_path: Path) -> None:
+    root = tmp_path / ("ALI" + "478")
+    root.mkdir()
+    assert any("forbidden canonical path component" in error for error in validate_naming(root))
+
+
+def test_naming_policy_rejects_obsolete_project_names_in_content(tmp_path: Path) -> None:
+    name = "Association Football " + "Performance Modeling"
+    (tmp_path / "README.md").write_text(f"# {name}\n")
     assert any("obsolete project identity" in error for error in validate_naming(tmp_path))
 
 

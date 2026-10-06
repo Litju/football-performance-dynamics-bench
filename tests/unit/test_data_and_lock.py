@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -85,13 +86,29 @@ def test_scientific_lock_is_deterministic_and_excludes_governance() -> None:
     governed.update(
         {
             "legal_status": "not_assessed",
+            "license_status": "pending",
             "publication_status": "private",
             "hosting_provider": "local",
+            "provider_urls": ["https://example.test/release"],
             "release_timestamp": "2099-01-01T00:00:00Z",
+            "release_status": "preparation",
+            "timestamp": "2099-01-01T00:00:00Z",
+            "release_governance": {"approval": "pending"},
+            "deprecation_metadata": {"reason": "replaced"},
+            "supersession_metadata": {"reason": "lineage only"},
+            "supersedes_scientific_lock_hash": _digest("1"),
         }
     )
     assert compute_scientific_lock_hash(governed) == first["scientific_lock_hash"]
     assert "hosting_provider" not in first
+    assert "supersedes_scientific_lock_hash" not in first
+
+
+def test_supersession_relationship_does_not_change_scientific_lock() -> None:
+    base = _scientific_state()
+    first = dict(base, supersedes_scientific_lock_hash=_digest("1"))
+    second = dict(base, supersedes_scientific_lock_hash=_digest("2"))
+    assert compute_scientific_lock_hash(first) == compute_scientific_lock_hash(second)
 
 
 def test_scientific_lock_changes_when_scientific_state_changes() -> None:
@@ -103,6 +120,36 @@ def test_scientific_lock_changes_when_scientific_state_changes() -> None:
     lock = build_scientific_lock(base)
     lock["scientific_lock_hash"] = _digest("0")
     assert not verify_scientific_lock(lock)
+
+
+def test_every_result_bearing_component_changes_the_scientific_lock() -> None:
+    base = _scientific_state()
+    original = compute_scientific_lock_hash(base)
+    mutations: tuple[tuple[str, object], ...] = (
+        ("benchmark_id", "conditional_multi_agent_motion_prediction/other_task"),
+        ("benchmark_definition_hash", _digest("9")),
+        ("data_state_id", "other-data-state"),
+        ("data_manifest_hash", _digest("9")),
+        ("split_protocol_id", "other-split"),
+        ("split_protocol_version", "2.0.0"),
+        ("split_protocol_hash", _digest("9")),
+        ("evaluator_id", "other-evaluator"),
+        ("evaluator_version", "2.0.0"),
+        ("evaluator_hash", _digest("9")),
+        ("schema_version", "2.0.0"),
+        ("schema_hash", _digest("9")),
+        ("fixture_manifest_hash", _digest("9")),
+    )
+    for name, value in mutations:
+        changed = dict(base)
+        changed[name] = value
+        assert compute_scientific_lock_hash(changed) != original
+
+    changed_provenance = dict(base)
+    snapshot = dict(cast(dict[str, object], base["scientific_provenance_snapshot"]))
+    snapshot["snapshot_hash"] = _digest("2")
+    changed_provenance["scientific_provenance_snapshot"] = snapshot
+    assert compute_scientific_lock_hash(changed_provenance) != original
 
 
 def test_lock_canonical_json_and_rejects_non_string_leaves() -> None:
