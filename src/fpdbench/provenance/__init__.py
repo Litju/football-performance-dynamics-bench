@@ -2,6 +2,13 @@
 
 from dataclasses import dataclass
 
+from fpdbench.provenance.scientific_lock import (
+    build_scientific_lock,
+    canonical_scientific_bytes,
+    compute_scientific_lock_hash,
+    verify_scientific_lock,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceReference:
@@ -15,3 +22,13 @@ class HistoricalAlias:
     value: str
     canonical_id: str
     evidence: EvidenceReference
+
+
+__all__ = [
+    "EvidenceReference",
+    "HistoricalAlias",
+    "build_scientific_lock",
+    "canonical_scientific_bytes",
+    "compute_scientific_lock_hash",
+    "verify_scientific_lock",
+]
