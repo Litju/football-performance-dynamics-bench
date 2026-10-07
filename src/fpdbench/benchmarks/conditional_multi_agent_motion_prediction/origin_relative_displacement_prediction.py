@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from fpdbench.benchmarks.base import (
+    UNKNOWN,
     BenchmarkDefinition,
     BenchmarkIdentity,
     CausalStatus,
@@ -17,6 +18,7 @@ from fpdbench.benchmarks.base import (
     ScientificTaskType,
     TechnicalTaskContract,
     TemporalContract,
+    UnknownValue,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.forecast_origin import (
     ForecastOrigin,
@@ -29,7 +31,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.geometry impo
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.information import (
     validate_information_boundary,
 )
-from fpdbench.evaluation.metrics import PITCH_SCALE_M
+from fpdbench.evaluation.metrics import PITCH_SCALE_M, population_standardized_relative_error
 
 from .absolute_position_prediction import (
     HISTORY_HZ,
@@ -41,11 +43,103 @@ from .absolute_position_prediction import (
 )
 
 BENCHMARK_ID = "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction"
+HISTORICAL_FINAL_MODEL_ID = "historical_final_public_displacement_reference"
 REFERENCE_FRAME = (
     "Per-player future displacement relative to the same player's exact observed position "
     "at the causal forecast origin."
 )
 TARGET_SHAPE = (HORIZON_STEPS, 11, 2)
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedCalibrationContract:
+    """Known wrapper settings; the displacement calibration lock is absent."""
+
+    lower_is_better: bool = True
+    target_weight: float = 1.0
+    floor: float = 1.0
+    perfect: float = 0.0
+    quality_floor_mode: str = "effective_no_info"
+    naive_score_bounds: tuple[float, float] = (1e-6, 0.10)
+    calibration_lock_state: UnknownValue = UNKNOWN
+    reference_vector: tuple[float, ...] | UnknownValue = UNKNOWN
+    no_information_ceiling_vector: tuple[float, ...] | UnknownValue = UNKNOWN
+    x_ref: float | UnknownValue = UNKNOWN
+    calibrated_reward: float | UnknownValue = UNKNOWN
+
+
+@dataclass(frozen=True, slots=True)
+class RawDisplacementEvaluatorConfiguration:
+    metric_id: str = "sre.rmse_over_population_std.v1"
+    target_type: str = "PopulationSRETarget"
+    target_count: int = 330
+    degrees_of_freedom: int = 0
+    standard_deviation_population: str = "evaluated population truth per scalar target"
+    per_target_weight: float = 1.0
+    raw_clipping: None = None
+    zero_variance_policy: str = "rmse"
+    perfect_score: float = 0.0
+    population_mean_predictor_sre: float = 1.0
+    no_information_condition: str = "target variance is nonzero"
+    generated_calibration: GeneratedCalibrationContract = GeneratedCalibrationContract()
+
+
+RAW_DISPLACEMENT_EVALUATOR = RawDisplacementEvaluatorConfiguration()
+
+
+@dataclass(frozen=True, slots=True)
+class RawDisplacementSRE:
+    per_scalar_sre: tuple[float, ...]
+    raw_sre: float
+    population_rows: int
+
+    def __post_init__(self) -> None:
+        if len(self.per_scalar_sre) != TARGET_SHAPE[0] * TARGET_SHAPE[1] * TARGET_SHAPE[2]:
+            raise ValueError("raw displacement SRE must contain 330 scalar targets")
+        if self.population_rows <= 0 or not math.isfinite(self.raw_sre):
+            raise ValueError("raw displacement SRE requires a finite score and nonempty population")
+
+
+def evaluate_raw_displacement_sre(
+    prediction: Sequence[PositionTrajectory],
+    truth: Sequence[PositionTrajectory],
+) -> RawDisplacementSRE:
+    """Score 330 scalars with evaluation-population SD and equal unit weights."""
+    if not truth or len(prediction) != len(truth):
+        raise ValueError("prediction and truth must have the same nonempty population")
+    predicted_rows = tuple(
+        immutable_xy_trajectory(
+            row,
+            expected_steps=HORIZON_STEPS,
+            expected_entities=11,
+            name=f"prediction[{index}]",
+        )
+        for index, row in enumerate(prediction)
+    )
+    truth_rows = tuple(
+        immutable_xy_trajectory(
+            row,
+            expected_steps=HORIZON_STEPS,
+            expected_entities=11,
+            name=f"truth[{index}]",
+        )
+        for index, row in enumerate(truth)
+    )
+    scores = tuple(
+        population_standardized_relative_error(
+            [predicted_rows[row][step][player][coordinate] for row in range(len(truth_rows))],
+            [truth_rows[row][step][player][coordinate] for row in range(len(truth_rows))],
+            zero_variance="rmse",
+        )
+        for step in range(HORIZON_STEPS)
+        for player in range(11)
+        for coordinate in range(2)
+    )
+    return RawDisplacementSRE(
+        per_scalar_sre=scores,
+        raw_sre=math.fsum(scores) / len(scores),
+        population_rows=len(truth_rows),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,9 +301,14 @@ __all__ = [
     "BENCHMARK_ID",
     "REFERENCE_FRAME",
     "TARGET_SHAPE",
+    "GeneratedCalibrationContract",
+    "RAW_DISPLACEMENT_EVALUATOR",
+    "RawDisplacementEvaluatorConfiguration",
+    "RawDisplacementSRE",
     "DisplacementEvaluator",
     "DisplacementInputs",
     "evaluate_displacement",
+    "evaluate_raw_displacement_sre",
     "invert_origin_relative_displacement",
     "make_origin_relative_displacement_target",
     "normalized_displacement_to_physical",
@@ -258,9 +357,9 @@ _TASK = TechnicalTaskContract(
         ),
     ),
     population_semantics="Directed target-team player trajectories within evaluated match windows.",
-    data_state_binding=None,
-    split_protocol_binding=None,
-    evaluator_binding=None,
+    data_state_binding="repaired_position_measurement_state",
+    split_protocol_binding="match_grouped_public_and_cross_match_splits",
+    evaluator_binding="origin_relative_displacement_raw_population_sre",
     execution_status=ExecutionStatus.PARTIAL,
     scientific_maturity=ScientificMaturity.PARTIAL,
     reconstruction_blockers=(
@@ -316,5 +415,6 @@ BENCHMARK = BenchmarkDefinition(
         research_object_type=ResearchObjectType.BENCHMARK,
     ),
     task=_TASK,
+    direct_model_bindings=(HISTORICAL_FINAL_MODEL_ID,),
 )
 DISPLACEMENT_BENCHMARK = BENCHMARK
