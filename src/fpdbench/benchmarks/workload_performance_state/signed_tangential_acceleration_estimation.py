@@ -1,8 +1,5 @@
 """Supported full-row RMSE behavior for the invalidated 10 Hz formulation."""
 
-from collections.abc import Sequence
-from dataclasses import dataclass
-
 from fpdbench.benchmarks.base import (
     UNKNOWN,
     CausalStatus,
@@ -17,9 +14,16 @@ from fpdbench.benchmarks.base import (
     TechnicalTaskContract,
     TemporalContract,
 )
-from fpdbench.evaluation.metrics.relative_error import rmse
+from fpdbench.evaluation.evaluators import (
+    SignedTangentialAccelerationEvaluation as _SignedTangentialAccelerationEvaluation,
+)
+from fpdbench.evaluation.evaluators import (
+    evaluate_signed_tangential_acceleration as _evaluate_signed_tangential_acceleration,
+)
 
 RESEARCH_OBJECT_ID = "workload_performance_state/signed_tangential_acceleration_estimation"
+SignedTangentialAccelerationEvaluation = _SignedTangentialAccelerationEvaluation
+evaluate_signed_tangential_acceleration = _evaluate_signed_tangential_acceleration
 DOCUMENTED_RMSE_INTERVAL_M_S2 = (0.04, 0.075)
 DIAGNOSTIC_MODEL_BINDINGS = (
     "sha256:024f04e1cdb385916a431a84658bc0507a843c43bcdb10d3c0c8ff1d96789258",
@@ -30,24 +34,6 @@ DIAGNOSTIC_MODEL_BINDINGS = (
     "sha256:d1cbc6aa31455da0694a96fe021770720e9abee951fb48b98e5cdcfba1ddea62",
     "sha256:679b3a6026f33912c6e9d4c3b69d6989594ae674f6904749f6f4a4e0ef2855e5",
 )
-
-
-@dataclass(frozen=True, slots=True)
-class SignedTangentialAccelerationEvaluation:
-    rmse_m_s2: float
-    scored_samples: int
-    normalization: str = "none"
-    aggregation: str = "global full-row RMSE"
-
-
-def evaluate_signed_tangential_acceleration(
-    prediction_m_s2: Sequence[float], truth_m_s2: Sequence[float]
-) -> SignedTangentialAccelerationEvaluation:
-    """Return the recovered global RMSE; no lost B5 submetric is inferred."""
-    return SignedTangentialAccelerationEvaluation(
-        rmse_m_s2=rmse(prediction_m_s2, truth_m_s2),
-        scored_samples=len(truth_m_s2),
-    )
 
 
 _TASK = TechnicalTaskContract(

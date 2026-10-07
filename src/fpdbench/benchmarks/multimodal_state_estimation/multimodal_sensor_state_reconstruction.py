@@ -19,11 +19,25 @@ from fpdbench.benchmarks.base import (
     TechnicalTaskContract,
     TemporalContract,
 )
-from fpdbench.evaluation.metrics.relative_error import population_standardized_relative_error
+from fpdbench.evaluation.evaluators import (
+    SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL as _SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL,
+)
+from fpdbench.evaluation.evaluators import (
+    SENSOR_GATE_MAX_QUALITY,
+)
+from fpdbench.evaluation.evaluators import (
+    evaluate_sensor_state_channels as _evaluate_sensor_state_channels,
+)
+from fpdbench.evaluation.evaluators import (
+    evaluate_sensor_state_gate as _evaluate_sensor_state_gate,
+)
+from fpdbench.evaluation.evaluators import (
+    quality_from_sre as _quality_from_sre,
+)
 
 RESEARCH_OBJECT_ID = "multimodal_state_estimation/multimodal_sensor_state_reconstruction"
-SENSOR_GATE_MAX_QUALITY = 0.30
-SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL = 256
+SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL = _SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL
+quality_from_sre = _quality_from_sre
 
 
 class SensorCandidateFamily(StrEnum):
@@ -145,12 +159,6 @@ class SensorStateEvaluation:
     benchmark_reward_emitted: bool = False
 
 
-def quality_from_sre(raw_sre: float) -> float:
-    if not math.isfinite(raw_sre):
-        raise ValueError("SRE must be finite")
-    return min(1.0, max(0.0, 1.0 - raw_sre))
-
-
 def evaluate_sensor_state_channels(
     predictions: Mapping[str, Sequence[float]],
     truths: Mapping[str, Sequence[float]],
@@ -164,38 +172,15 @@ def evaluate_sensor_state_channels(
     if candidate_family is SensorCandidateFamily.CORRUPTION_REGION:
         if region_mask is None:
             raise ValueError("corruption-region scoring requires the fixed region mask")
-        if any(
-            len(values) != len(region_mask) for values in (*predictions.values(), *truths.values())
-        ):
-            raise ValueError("region mask and channel vectors must have equal lengths")
-        selected = tuple(index for index, include in enumerate(region_mask) if include)
-        if len(selected) < SENSOR_CORRUPTION_MIN_ROWS_PER_CHANNEL:
-            raise ValueError("corruption region requires 256 rows per channel")
-        predictions = {
-            name: tuple(values[index] for index in selected) for name, values in predictions.items()
-        }
-        truths = {
-            name: tuple(values[index] for index in selected) for name, values in truths.items()
-        }
     elif region_mask is not None:
         raise ValueError("a region mask is only valid for corruption-region scoring")
-
-    channel_sre = tuple(
-        (
-            name,
-            population_standardized_relative_error(
-                predictions[name], truths[name], zero_variance="error"
-            ),
-        )
-        for name in sorted(truths)
-    )
-    channel_quality = tuple((name, quality_from_sre(value)) for name, value in channel_sre)
+    result = _evaluate_sensor_state_channels(predictions, truths, region_mask=region_mask)
     return SensorStateEvaluation(
         candidate_family=candidate_family,
-        per_channel_sre=channel_sre,
-        per_channel_quality=channel_quality,
-        mean_sre=sum(value for _, value in channel_sre) / len(channel_sre),
-        mean_quality=sum(value for _, value in channel_quality) / len(channel_quality),
+        per_channel_sre=result.per_channel_sre,
+        per_channel_quality=result.per_channel_quality,
+        mean_sre=result.mean_sre,
+        mean_quality=result.mean_quality,
     )
 
 
@@ -207,14 +192,11 @@ class SensorGateResult:
 
 
 def evaluate_sensor_state_gate(public_nonexpert_qualities: Sequence[float]) -> SensorGateResult:
-    if not public_nonexpert_qualities or not all(
-        math.isfinite(value) for value in public_nonexpert_qualities
-    ):
-        raise ValueError("gate requires finite public-only non-expert qualities")
-    maximum = max(public_nonexpert_qualities)
+    result = _evaluate_sensor_state_gate(public_nonexpert_qualities)
     return SensorGateResult(
-        maximum_public_nonexpert_quality=maximum,
-        passes=maximum <= SENSOR_GATE_MAX_QUALITY,
+        maximum_public_nonexpert_quality=result.maximum_public_nonexpert_quality,
+        threshold=result.threshold,
+        passes=result.passes,
     )
 
 
