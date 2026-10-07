@@ -27,6 +27,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     DISPLACEMENT_DATA_STATE,
     DISPLACEMENT_DATA_STATE_EVIDENCE,
     DISPLACEMENT_FEATURE_COUNT,
+    DISPLACEMENT_GENERATED_CALIBRATION,
     DISPLACEMENT_SPLIT,
     DISPLACEMENT_TARGET_COUNT,
     FINAL_PUBLIC_MODEL,
@@ -126,6 +127,10 @@ def test_package_import_and_registry_discovery() -> None:
     assert version("football-performance-dynamics-bench") == __version__
     registry = default_registry()
     assert len(registry.discover()) == 2
+    assert {item.identity.scientific_id for item in registry.discover()} == {
+        "conditional_multi_agent_motion_prediction/absolute_position_prediction",
+        "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+    }
     assert len(registry.research_objects()) == 5
     assert (
         registry.lookup(ABSOLUTE_POSITION_BENCHMARK.identity.scientific_id)
@@ -133,6 +138,15 @@ def test_package_import_and_registry_discovery() -> None:
     )
     assert len(registry.families()) == 4
     assert registry.discover("future_response_forecasting") == ()
+    assert all(
+        item.identity.scientific_id
+        not in {
+            WHOLE_SESSION_RESEARCH_OBJECT.identity.scientific_id,
+            SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT.identity.scientific_id,
+            SENSOR_STATE.identity.scientific_id,
+        }
+        for item in registry.discover()
+    )
 
 
 def test_historical_alias_is_not_a_primary_identifier() -> None:
@@ -568,6 +582,34 @@ def test_displacement_raw_population_sre_is_scalar_weighted_and_uncalibrated() -
     nonzero_prediction = (tuple(_trajectory(15, 0.0)), tuple(_trajectory(15, 1.0)))
     zero_variance = evaluate_raw_displacement_sre(nonzero_prediction, constant_truth)
     assert zero_variance.raw_sre == pytest.approx(2**-0.5)
+
+    truth_zero = _trajectory(15, 0.0)
+    truth_two = _trajectory(15, 2.0)
+    prediction_zero = _trajectory(15, 0.0)
+    prediction_two = _trajectory(15, 2.0)
+    for scalar_index in range(165):
+        step, offset = divmod(scalar_index, 22)
+        player, coordinate = divmod(offset, 2)
+        prediction_zero[step][player][coordinate] = 5.0
+        prediction_two[step][player][coordinate] = 5.0
+    mixed = evaluate_raw_displacement_sre(
+        (tuple(prediction_zero), tuple(prediction_two)),
+        (tuple(truth_zero), tuple(truth_two)),
+    )
+    assert len(mixed.per_scalar_sre) == 330
+    assert mixed.per_scalar_sre[:165] == pytest.approx((17**0.5,) * 165)
+    assert mixed.per_scalar_sre[165:] == (0.0,) * 165
+    assert mixed.raw_sre == pytest.approx((17**0.5) / 2)
+
+    with pytest.raises(ValueError, match="same nonempty population"):
+        evaluate_raw_displacement_sre((), ())
+    with pytest.raises(ValueError, match="same nonempty population"):
+        evaluate_raw_displacement_sre((tuple(truth_zero),), ())
+    nonfinite = _trajectory(15, 0.0)
+    nonfinite[-1][0][0] = float("inf")
+    with pytest.raises(ValueError, match="finite XY pairs"):
+        evaluate_raw_displacement_sre((tuple(nonfinite),), (tuple(truth_zero),))
+
     assert RAW_DISPLACEMENT_EVALUATOR.metric_id == "sre.rmse_over_population_std.v1"
     assert RAW_DISPLACEMENT_EVALUATOR.target_type == "PopulationSRETarget"
     assert RAW_DISPLACEMENT_EVALUATOR.target_count == 330
@@ -577,26 +619,28 @@ def test_displacement_raw_population_sre_is_scalar_weighted_and_uncalibrated() -
     assert RAW_DISPLACEMENT_EVALUATOR.population_mean_predictor_sre == 1.0
     assert RAW_DISPLACEMENT_EVALUATOR.aggregation == "equal arithmetic mean across scalar targets"
     assert RAW_DISPLACEMENT_EVALUATOR.lower_is_better
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.floor == 1.0
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.perfect == 0.0
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.lower_is_better
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.target_weight == 1.0
-    assert (
-        RAW_DISPLACEMENT_EVALUATOR.generated_calibration.quality_floor_mode == "effective_no_info"
-    )
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.naive_score_bounds == (1e-6, 0.10)
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.calibration_lock_state is UNKNOWN
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.reference_vector is UNKNOWN
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.no_information_ceiling_vector is UNKNOWN
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.x_ref is UNKNOWN
-    assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.calibrated_reward is UNKNOWN
+    assert DISPLACEMENT_GENERATED_CALIBRATION.floor == 1.0
+    assert DISPLACEMENT_GENERATED_CALIBRATION.perfect == 0.0
+    assert DISPLACEMENT_GENERATED_CALIBRATION.lower_is_better
+    assert DISPLACEMENT_GENERATED_CALIBRATION.target_weight == 1.0
+    assert DISPLACEMENT_GENERATED_CALIBRATION.quality_floor_mode == "effective_no_info"
+    assert DISPLACEMENT_GENERATED_CALIBRATION.naive_score_bounds == (1e-6, 0.10)
+    assert DISPLACEMENT_GENERATED_CALIBRATION.calibration_lock_state is UNKNOWN
+    assert DISPLACEMENT_GENERATED_CALIBRATION.reference_vector is UNKNOWN
+    assert DISPLACEMENT_GENERATED_CALIBRATION.no_information_ceiling_vector is UNKNOWN
+    assert DISPLACEMENT_GENERATED_CALIBRATION.x_ref is UNKNOWN
+    assert DISPLACEMENT_GENERATED_CALIBRATION.calibrated_reward is UNKNOWN
+    with pytest.raises(ValueError, match="requires a known calibration lock"):
+        replace(DISPLACEMENT_GENERATED_CALIBRATION, calibrated_reward=0.6)
+    assert not hasattr(score, "calibrated_reward")
 
 
 def test_generated_calibration_metadata_does_not_churn_raw_scientific_lock() -> None:
-    calibration_a = RAW_DISPLACEMENT_EVALUATOR.generated_calibration
+    calibration_a = DISPLACEMENT_GENERATED_CALIBRATION
     # Hypothetical mutation fixture only; these values are not historical calibration facts.
     calibration_b = replace(
         calibration_a,
+        calibration_lock_state="hypothetical",
         lower_is_better=False,
         target_weight=2.0,
         floor=0.75,
@@ -609,17 +653,21 @@ def test_generated_calibration_metadata_does_not_churn_raw_scientific_lock() -> 
         calibrated_reward=0.6,
     )
     evaluator_a = RAW_DISPLACEMENT_EVALUATOR
-    evaluator_b = replace(evaluator_a, generated_calibration=calibration_b)
 
     assert isinstance(calibration_a, GeneratedCalibrationContract)
     assert calibration_a.reference_vector is UNKNOWN
     assert calibration_a.no_information_ceiling_vector is UNKNOWN
     assert calibration_a.x_ref is UNKNOWN
     assert calibration_a.calibrated_reward is UNKNOWN
-    assert raw_evaluator_hash(evaluator_a) == raw_evaluator_hash(evaluator_b)
+    assert calibration_b.calibration_lock_state == "hypothetical"
+    assert calibration_b != calibration_a
+    assert not hasattr(evaluator_a, "generated_calibration")
+    assert "calibrated_reward" not in evaluator_a.scientific_state()
+    assert raw_evaluator_hash(evaluator_a) == (
+        "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b"
+    )
     expected = (PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH, LOMO_RAW_SCIENTIFIC_LOCK_HASH)
     assert _raw_lock_hashes_for(evaluator_a) == expected
-    assert _raw_lock_hashes_for(evaluator_b) == expected
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,8 @@ import math
 from dataclasses import dataclass
 from enum import StrEnum
 
+from fpdbench.unknown import UNKNOWN, UnknownValue
+
 
 class ExecutionStatus(StrEnum):
     EXECUTABLE = "executable"
@@ -45,11 +47,6 @@ class ResearchObjectType(StrEnum):
     DATA_STATE = "data_state"
 
 
-class UnknownValue(StrEnum):
-    UNKNOWN = "UNKNOWN"
-
-
-UNKNOWN = UnknownValue.UNKNOWN
 type TextOrUnknown = str | UnknownValue
 type StringListOrUnknown = tuple[str, ...] | UnknownValue
 

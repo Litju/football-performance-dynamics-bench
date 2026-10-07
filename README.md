@@ -14,6 +14,7 @@ Only `conditional_multi_agent_motion_prediction/absolute_position_prediction` an
 Conditional multi-agent response uses realized future opponent and ball context while withholding the target team's future positions. Causal forecasting instead requires ex-ante available exposures and an explicit causal information boundary; the two tasks are not interchangeable.
 
 See [the benchmark transition record](docs/benchmark-transitions.md) for the final R2 parity and lineage decisions.
+See [the scientific evaluation library](docs/evaluation.md) for formulas, units, population semantics, zero-variance handling, and calibration limits.
 
 Reproducibility binds benchmark definition, data state and membership, split protocol, evaluator, schema, fixtures, and scientific provenance in a deterministic scientific lock. Governance and hosting state live separately. Population semantics are independent of the dataset membership used in one study.
 
