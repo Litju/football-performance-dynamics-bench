@@ -3,9 +3,9 @@ import pytest
 from fpdbench.benchmarks import (
     UNKNOWN,
     BenchmarkRegistry,
+    FamilyLifecycleStatus,
     ReleaseStatus,
     ResearchFamilyDefinition,
-    ScientificMaturity,
 )
 from fpdbench.benchmarks.registry import default_registry
 
@@ -50,12 +50,26 @@ def test_four_typed_family_definitions_keep_object_counts_unambiguous() -> None:
         assert family.release_status is ReleaseStatus.UNRELEASED
         assert registry.lookup_family(family.family_id) is family
 
-    maturities = {family.family_id: family.scientific_maturity for family in families}
-    assert maturities == {
-        "workload_performance_state": ScientificMaturity.PARTIAL,
-        "multimodal_state_estimation": ScientificMaturity.NEGATIVE,
-        "future_response_forecasting": ScientificMaturity.UNRECOVERABLE,
-        "conditional_multi_agent_motion_prediction": ScientificMaturity.RECONSTRUCTED,
+    lifecycle = {
+        family.family_id: (family.r1_lifecycle, family.current_lifecycle) for family in families
+    }
+    assert lifecycle == {
+        "workload_performance_state": (
+            FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+            FamilyLifecycleStatus.RECONSTRUCTION_COMPLETE_NO_QUALIFIED_BENCHMARK,
+        ),
+        "multimodal_state_estimation": (
+            FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+            FamilyLifecycleStatus.RECONSTRUCTION_COMPLETE_SCOPED_NEGATIVE_NO_SELECTED_BENCHMARK,
+        ),
+        "future_response_forecasting": (
+            FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+            FamilyLifecycleStatus.NO_RECOVERABLE_HISTORICAL_BENCHMARK_RESEARCH_INTENT,
+        ),
+        "conditional_multi_agent_motion_prediction": (
+            FamilyLifecycleStatus.RECOVERED_BENCHMARKS_AVAILABLE,
+            FamilyLifecycleStatus.RECOVERED_BENCHMARKS_AVAILABLE,
+        ),
     }
     future_response = registry.lookup_family("future_response_forecasting")
     assert dict(future_response.unresolved_task_fields) == {
@@ -71,7 +85,15 @@ def test_four_typed_family_definitions_keep_object_counts_unambiguous() -> None:
     assert "No recovered benchmark identity exists." in future_response.known_non_claims
     assert registry.family_ids() == tuple(expected_questions)
     assert len(registry.discover()) == 2
-    assert len(registry.research_objects()) == 6
+    assert len(registry.research_objects()) == 5
+    assert registry.discover("future_response_forecasting") == ()
+    assert not any(
+        family.family_id == item.identity.scientific_id
+        for family in families
+        for item in registry.research_objects()
+    )
+    with pytest.raises(KeyError, match="unknown canonical research-object ID"):
+        registry.lookup_research_object("future_response_forecasting")
 
     with pytest.raises(KeyError, match="unknown research family"):
         registry.lookup_family("unknown_family")

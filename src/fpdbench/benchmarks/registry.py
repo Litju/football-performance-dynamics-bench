@@ -5,11 +5,11 @@ import re
 from fpdbench.benchmarks.base import (
     UNKNOWN,
     BenchmarkDefinition,
+    FamilyLifecycleStatus,
     ReleaseStatus,
     ResearchFamilyDefinition,
     ResearchObjectDefinition,
     ResearchObjectType,
-    ScientificMaturity,
 )
 from fpdbench.provenance import HistoricalAlias
 
@@ -34,7 +34,8 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "Signed tangential acceleration is an invalidated historical formulation, "
             "not a validated benchmark.",
         ),
-        scientific_maturity=ScientificMaturity.PARTIAL,
+        r1_lifecycle=FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+        current_lifecycle=(FamilyLifecycleStatus.RECONSTRUCTION_COMPLETE_NO_QUALIFIED_BENCHMARK),
         release_status=ReleaseStatus.UNRELEASED,
         unresolved_task_fields=(
             ("whole_session.target_formulas", UNKNOWN),
@@ -63,7 +64,10 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "not a universal impossibility claim.",
             "No target family was selected.",
         ),
-        scientific_maturity=ScientificMaturity.NEGATIVE,
+        r1_lifecycle=FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+        current_lifecycle=(
+            FamilyLifecycleStatus.RECONSTRUCTION_COMPLETE_SCOPED_NEGATIVE_NO_SELECTED_BENCHMARK
+        ),
         release_status=ReleaseStatus.UNRELEASED,
         unresolved_task_fields=(
             ("exact_temporal_alignment", UNKNOWN),
@@ -89,7 +93,10 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "not ex-ante exposure.",
             "No target, exposure definition, scorer, horizon, or population is assigned.",
         ),
-        scientific_maturity=ScientificMaturity.UNRECOVERABLE,
+        r1_lifecycle=FamilyLifecycleStatus.RECONSTRUCTION_PENDING,
+        current_lifecycle=(
+            FamilyLifecycleStatus.NO_RECOVERABLE_HISTORICAL_BENCHMARK_RESEARCH_INTENT
+        ),
         release_status=ReleaseStatus.UNRELEASED,
         unresolved_task_fields=(
             ("benchmark_identity", UNKNOWN),
@@ -122,7 +129,8 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "The displacement reconstruction remains partial; "
             "its scorer/result parity is unresolved.",
         ),
-        scientific_maturity=ScientificMaturity.RECONSTRUCTED,
+        r1_lifecycle=FamilyLifecycleStatus.RECOVERED_BENCHMARKS_AVAILABLE,
+        current_lifecycle=FamilyLifecycleStatus.RECOVERED_BENCHMARKS_AVAILABLE,
         release_status=ReleaseStatus.UNRELEASED,
         unresolved_task_fields=(("displacement.scorer_result_parity", UNKNOWN),),
     ),
@@ -145,6 +153,8 @@ class BenchmarkRegistry:
             raise ValueError(f"not a canonical scientific research-object ID: {identifier}")
         if research_object.identity.family_id not in self._families:
             raise ValueError(f"unknown research family: {research_object.identity.family_id}")
+        if identifier in self._families:
+            raise ValueError(f"research-object ID conflicts with research family: {identifier}")
         if identifier in self._research_objects or identifier in self._aliases:
             raise ValueError(f"duplicate research-object identity: {identifier}")
         if research_object.descriptor.research_object_type is ResearchObjectType.BENCHMARK:
@@ -160,6 +170,8 @@ class BenchmarkRegistry:
             raise ValueError("provenance alias must be unique and complete")
         if alias.value in self._research_objects:
             raise ValueError("a provenance alias cannot be a canonical research-object ID")
+        if alias.value in self._families:
+            raise ValueError("a provenance alias cannot be a research-family ID")
         self._aliases[alias.value] = alias
 
     def lookup(self, scientific_id: str) -> BenchmarkDefinition:
@@ -223,7 +235,6 @@ def default_registry() -> BenchmarkRegistry:
     from .conditional_multi_agent_motion_prediction.origin_relative_displacement_prediction import (
         BENCHMARK as displacement,
     )
-    from .future_response_forecasting import RESEARCH_OBJECT as future_response
     from .multimodal_state_estimation import RESEARCH_OBJECT as sensor_state
     from .workload_performance_state import (
         SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT,
@@ -235,7 +246,6 @@ def default_registry() -> BenchmarkRegistry:
         WHOLE_SESSION_RESEARCH_OBJECT,
         SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT,
         sensor_state,
-        future_response,
         absolute_position,
         displacement,
     ):

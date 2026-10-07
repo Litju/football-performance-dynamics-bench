@@ -12,6 +12,13 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     absolute_position_prediction,
     origin_relative_displacement_prediction,
 )
+from fpdbench.benchmarks.transitions import (
+    IdentityConsequence,
+    ScientificTransition,
+    TransitionEndpoint,
+    TransitionKind,
+    TransitionStatus,
+)
 from fpdbench.data import SplitProtocolDescriptor
 from fpdbench.experiments import (
     EvaluatorState,
@@ -29,12 +36,6 @@ from fpdbench.provenance.aliases import DISPLACEMENT_HISTORICAL_ALIASES
 
 BENCHMARK_ID = origin_relative_displacement_prediction.BENCHMARK_ID
 HISTORICAL_FINAL_MODEL_ID = origin_relative_displacement_prediction.HISTORICAL_FINAL_MODEL_ID
-
-
-class ParityStatus(StrEnum):
-    SAME = "SAME"
-    CHANGED = "CHANGED"
-    UNKNOWN = "UNKNOWN"
 
 
 class HistoricalModelRole(StrEnum):
@@ -108,12 +109,34 @@ _SCORER_BINDING_EVIDENCE = _evidence(
 )
 
 
-@dataclass(frozen=True, slots=True)
-class ParityEntry:
-    field: str
-    status: ParityStatus
-    explanation: str
-    evidence: tuple[EvidenceReference, ...]
+def _parity(
+    field: str,
+    status: TransitionStatus,
+    explanation: str,
+    evidence: tuple[EvidenceReference, ...],
+) -> ScientificTransition:
+    return ScientificTransition(
+        transition_id=f"absolute_position_to_displacement:{field}",
+        transition_group_id="absolute_position_to_displacement",
+        source=TransitionEndpoint(absolute_position_prediction.BENCHMARK_ID, "benchmark"),
+        target=TransitionEndpoint(
+            origin_relative_displacement_prediction.BENCHMARK_ID, "benchmark"
+        ),
+        transition_kind=TransitionKind.BENCHMARK_PARITY,
+        layer=field,
+        status=status,
+        explanation=explanation,
+        evidence=evidence,
+        identity_consequence=IdentityConsequence.NEW_BENCHMARK_IDENTITY,
+        data_state_consequence=(
+            status if field == "data_state" else TransitionStatus.NOT_APPLICABLE
+        ),
+        evaluator_consequence=(
+            status
+            if field in {"evaluator_scorer", "calibration"}
+            else TransitionStatus.NOT_APPLICABLE
+        ),
+    )
 
 
 PARITY_FIELDS = (
@@ -144,165 +167,165 @@ PARITY_FIELDS = (
 )
 
 PREDECESSOR_PARITY = (
-    ParityEntry(
+    _parity(
         "benchmark_identity",
-        ParityStatus.CHANGED,
+        TransitionStatus.CHANGED,
         "The target/reference frame changes, so these remain distinct benchmark identities.",
         (_ABSOLUTE_DEFINITION, _TRANSITION_EVIDENCE, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "research_question",
-        ParityStatus.CHANGED,
+        TransitionStatus.CHANGED,
         "The predicted response changes from absolute future XY to origin-relative displacement.",
         (_ABSOLUTE_DEFINITION, _TRANSITION_EVIDENCE, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "scientific_task_type",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both are conditional multi-agent target-team response prediction.",
         (_ABSOLUTE_DEFINITION, _TRANSITION_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "scene_history_inputs",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use observed target-team, opponent-team, and ball scene history.",
         (_ABSOLUTE_INPUTS, _DISPLACEMENT_PUBLIC_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "supplied_realized_future_context",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both condition on realized future opponent-team XY and ball XY.",
         (_ABSOLUTE_INPUTS, _DISPLACEMENT_PUBLIC_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "information_boundary",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Future target-team values are withheld; realized opponent and ball paths remain context.",
         (_ABSOLUTE_BOUNDARY, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "history_duration",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use five seconds of history.",
         (_ABSOLUTE_TEMPORAL, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "history_cadence",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use 25 history steps at five hertz from the repaired measurement state.",
         (_ABSOLUTE_TEMPORAL, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "horizon_duration",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use a three-second forecast horizon.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "horizon_cadence",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use 15 forecast steps at five hertz.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "target_cadence",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both target the canonical five-hertz grid.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "target_entities",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both predict 11 target-team players and two coordinates per step.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "population_semantics",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both use two directed target-team scenes per physical match window.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "data_source",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both derive from the same seven-match DFL/IDSSE source population.",
         (_ABSOLUTE_DATA_STATE, _DATA_ASSET_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "data_state",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         (
             "The repaired position and causal-velocity measurement state is reused; displacement "
             "is a target transform, not a new measurement state."
         ),
         (_ABSOLUTE_DATA_STATE, _DATA_ASSET_EVIDENCE, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "split_protocol",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         (
             "Train, public validation, and historical-private match roles are the same; "
             "displacement has regenerated target fixtures and its own manifest."
         ),
         (_ABSOLUTE_SPLITS, _SPLIT_EVIDENCE, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "target_representation",
-        ParityStatus.CHANGED,
+        TransitionStatus.CHANGED,
         (
             "Absolute pitch XY is replaced by each player's future XY minus exact causal-origin "
             "XY, scaled by pitch dimensions."
         ),
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_TARGET_SCHEMA, _TRANSITION_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "reference_frame",
-        ParityStatus.CHANGED,
+        TransitionStatus.CHANGED,
         (
             "The predecessor uses the pitch frame; displacement uses each target player's "
             "observed origin frame."
         ),
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_TARGET_SCHEMA),
     ),
-    ParityEntry(
+    _parity(
         "raw_metric_family",
-        ParityStatus.SAME,
+        TransitionStatus.SAME,
         "Both records identify per-scalar evaluation-population SRE with equal target weights.",
         (_SCORER_EVIDENCE, _SCORER_BINDING_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "evaluator_scorer",
-        ParityStatus.UNKNOWN,
+        TransitionStatus.UNKNOWN,
         (
             "The raw SRE kernel is shared; the exact predecessor-to-generated-wrapper "
             "relationship is not fully recoverable."
         ),
         (_SCORER_EVIDENCE, _SCORER_BINDING_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "calibration",
-        ParityStatus.UNKNOWN,
+        TransitionStatus.UNKNOWN,
         "The displacement GeneratedCalibration lock and its reference vectors are absent.",
         (_SCORER_EVIDENCE, _SCORER_BINDING_EVIDENCE),
     ),
-    ParityEntry(
+    _parity(
         "baseline_ladder",
-        ParityStatus.UNKNOWN,
+        TransitionStatus.UNKNOWN,
         (
             "Some public-validation baselines survive, but a complete predecessor-matched "
             "ladder is not recovered."
         ),
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "model_architecture",
-        ParityStatus.UNKNOWN,
+        TransitionStatus.UNKNOWN,
         "Both lineages name the CCT family; exact architecture parity is not established.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),
-    ParityEntry(
+    _parity(
         "model_selection_protocol",
-        ParityStatus.UNKNOWN,
+        TransitionStatus.UNKNOWN,
         "The displacement public confirmation is recovered, but exact selection parity is not.",
         (_ABSOLUTE_DEFINITION, _DISPLACEMENT_FIXTURE),
     ),

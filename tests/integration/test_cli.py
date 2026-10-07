@@ -47,15 +47,16 @@ def test_cli_list_describe_and_validate(capsys: object) -> None:
     family = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert family["family_id"] == "future_response_forecasting"
     assert family["research_question"]
+    assert family["current_lifecycle"] == "NO_RECOVERABLE_HISTORICAL_BENCHMARK_RESEARCH_INTENT"
     assert dict(family["unresolved_task_fields"])["target"] == "UNKNOWN"
 
     assert main(["research-objects", "list"]) == 0
     object_lines = capsys.readouterr().out.splitlines()  # type: ignore[attr-defined]
-    assert len(object_lines) == 6
-    assert any("\tresearch_family\tunrecoverable" in line for line in object_lines)
+    assert len(object_lines) == 5
+    assert not any("future_response_forecasting" in line for line in object_lines)
 
-    assert main(["research-objects", "describe", "future_response_forecasting"]) == 0
-    assert '"research_object_type": "research_family"' in capsys.readouterr().out  # type: ignore[attr-defined]
+    assert main(["research-objects", "describe", "future_response_forecasting"]) == 2
+    assert "is a research family" in capsys.readouterr().err  # type: ignore[attr-defined]
     assert (
         main(
             [
@@ -69,6 +70,8 @@ def test_cli_list_describe_and_validate(capsys: object) -> None:
     assert "origin_relative_displacement_prediction" in capsys.readouterr().out  # type: ignore[attr-defined]
     assert main(["validate-naming", "--root", str(root)]) == 0
     assert main(["validate", "--root", str(root)]) == 0
+    assert main(["evidence", "validate"]) == 0
+    assert "evidence reference shape passed" in capsys.readouterr().out  # type: ignore[attr-defined]
 
 
 def test_cli_computes_and_verifies_scientific_lock(tmp_path: Path, capsys: object) -> None:

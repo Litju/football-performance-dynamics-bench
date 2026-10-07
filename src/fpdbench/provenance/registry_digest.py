@@ -8,6 +8,7 @@ import json
 import os
 import stat
 import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -21,15 +22,22 @@ def _raise_walk_error(error: OSError) -> None:
     raise error
 
 
-def registry_content_digest(root: Path) -> tuple[str, int]:
-    """Hash regular files and symlink targets, excluding every ``.git`` path."""
+@dataclass(frozen=True, slots=True)
+class RegistryManifestEntry:
+    path: str
+    kind: str
+    sha256: str
+
+
+def registry_content_manifest(root: Path) -> tuple[RegistryManifestEntry, ...]:
+    """Return the canonical file and symlink records used by the registry digest."""
     if root.is_symlink():
         raise ValueError("registry root must not be a symlink")
     root = root.resolve(strict=True)
     if not root.is_dir():
         raise ValueError("registry root must be a directory")
 
-    records: list[tuple[bytes, dict[str, str]]] = []
+    records: list[tuple[bytes, RegistryManifestEntry]] = []
     for base, directories, filenames in os.walk(root, followlinks=False, onerror=_raise_walk_error):
         base_path = Path(base)
         retained_directories: list[str] = []
@@ -44,11 +52,9 @@ def registry_content_digest(root: Path) -> tuple[str, int]:
                 records.append(
                     (
                         normalized.encode("utf-8"),
-                        {
-                            "kind": "symlink",
-                            "path": normalized,
-                            "sha256": hashlib.sha256(target).hexdigest(),
-                        },
+                        RegistryManifestEntry(
+                            normalized, "symlink", hashlib.sha256(target).hexdigest()
+                        ),
                     )
                 )
             else:
@@ -76,23 +82,35 @@ def registry_content_digest(root: Path) -> tuple[str, int]:
             records.append(
                 (
                     normalized.encode("utf-8"),
-                    {"kind": kind, "path": normalized, "sha256": digest.hexdigest()},
+                    RegistryManifestEntry(normalized, kind, digest.hexdigest()),
                 )
             )
 
     records.sort(key=lambda item: item[0])
-    normalized_paths = [record["path"] for _, record in records]
+    normalized_paths = [record.path for _, record in records]
     if len(normalized_paths) != len(set(normalized_paths)):
         raise ValueError("registry paths collide after NFC normalization")
+    return tuple(record for _, record in records)
+
+
+def registry_content_digest(root: Path) -> tuple[str, int]:
+    """Hash regular files and symlink targets, excluding every ``.git`` path."""
+    entries = registry_content_manifest(root)
 
     aggregate = hashlib.sha256()
-    for _, record in records:
+    for entry in entries:
         aggregate.update(
             (
-                json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+                json.dumps(
+                    {"kind": entry.kind, "path": entry.path, "sha256": entry.sha256},
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                + "\n"
             ).encode("utf-8")
         )
-    return aggregate.hexdigest(), len(records)
+    return aggregate.hexdigest(), len(entries)
 
 
 def main() -> int:

@@ -6,6 +6,7 @@ from fpdbench.benchmarks.base import (
     CanonicalSampling,
     CausalStatus,
     ExecutionStatus,
+    FamilyLifecycleStatus,
     InformationBoundary,
     ReleaseStatus,
     ResearchFamilyDefinition,
@@ -21,6 +22,13 @@ from fpdbench.benchmarks.base import (
     UnknownValue,
 )
 from fpdbench.benchmarks.registry import BenchmarkRegistry
+from fpdbench.benchmarks.transitions import (
+    IdentityConsequence,
+    ScientificTransition,
+    TransitionEndpoint,
+    TransitionKind,
+    TransitionStatus,
+)
 
 __all__ = [
     "BenchmarkDefinition",
@@ -30,6 +38,8 @@ __all__ = [
     "CanonicalSampling",
     "CausalStatus",
     "ExecutionStatus",
+    "FamilyLifecycleStatus",
+    "IdentityConsequence",
     "InformationBoundary",
     "ResearchFamilyDefinition",
     "ReleaseStatus",
@@ -38,9 +48,13 @@ __all__ = [
     "ResearchObjectType",
     "ScientificDescriptor",
     "ScientificMaturity",
+    "ScientificTransition",
     "ScientificTaskType",
     "TechnicalTaskContract",
     "TemporalWindowContract",
+    "TransitionEndpoint",
+    "TransitionKind",
+    "TransitionStatus",
     "TemporalContract",
     "UNKNOWN",
     "UnknownValue",

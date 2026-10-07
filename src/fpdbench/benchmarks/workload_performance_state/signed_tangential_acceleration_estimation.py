@@ -21,6 +21,15 @@ from fpdbench.evaluation.metrics.relative_error import rmse
 
 RESEARCH_OBJECT_ID = "workload_performance_state/signed_tangential_acceleration_estimation"
 DOCUMENTED_RMSE_INTERVAL_M_S2 = (0.04, 0.075)
+DIAGNOSTIC_MODEL_BINDINGS = (
+    "sha256:024f04e1cdb385916a431a84658bc0507a843c43bcdb10d3c0c8ff1d96789258",
+    "sha256:c26cc227531d035e4c2e7f1203e29c6cd70b19c2f6d5f5c42a330db69a47886e",
+    "sha256:e3061e7e0c7b4af2166bbd8156432c491566968c374db4b15b64fe93f1c95646",
+    "sha256:807817dbeaf6bae32c193b09206b543238749e5c4f8c5e77a6108f2b8cf425a7",
+    "sha256:b4ec06f3f317cc9eb1b0b7d60f930ad6e670e3dd856c9c53db4b14c7828a6ac0",
+    "sha256:d1cbc6aa31455da0694a96fe021770720e9abee951fb48b98e5cdcfba1ddea62",
+    "sha256:679b3a6026f33912c6e9d4c3b69d6989594ae674f6904749f6f4a4e0ef2855e5",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,4 +107,5 @@ RESEARCH_OBJECT = ResearchObjectDefinition(
         research_object_type=ResearchObjectType.INVALIDATED_FORMULATION,
     ),
     task=_TASK,
+    direct_model_bindings=DIAGNOSTIC_MODEL_BINDINGS,
 )

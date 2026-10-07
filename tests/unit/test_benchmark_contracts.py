@@ -16,6 +16,7 @@ from fpdbench.benchmarks import (
     ResearchObjectDefinition,
     ResearchObjectIdentity,
     ResearchObjectType,
+    TransitionStatus,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     ABSOLUTE_POSITION_BENCHMARK,
@@ -65,7 +66,6 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     DisplacementInputs,
     ForecastOrigin,
     GeneratedCalibrationContract,
-    ParityStatus,
     RawDisplacementEvaluatorConfiguration,
     absolute_position_to_physical,
     build_lomo_raw_scientific_lock,
@@ -80,7 +80,6 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     raw_evaluator_hash,
     validate_information_boundary,
 )
-from fpdbench.benchmarks.future_response_forecasting import RESEARCH_OBJECT as FORECASTING
 from fpdbench.benchmarks.multimodal_state_estimation import (
     CANDIDATE_TARGET_FAMILIES,
     MODALITIES,
@@ -127,7 +126,7 @@ def test_package_import_and_registry_discovery() -> None:
     assert version("football-performance-dynamics-bench") == __version__
     registry = default_registry()
     assert len(registry.discover()) == 2
-    assert len(registry.research_objects()) == 6
+    assert len(registry.research_objects()) == 5
     assert (
         registry.lookup(ABSOLUTE_POSITION_BENCHMARK.identity.scientific_id)
         is ABSOLUTE_POSITION_BENCHMARK
@@ -162,10 +161,6 @@ def test_historical_negative_and_invalidated_objects_are_not_benchmarks() -> Non
     assert WHOLE_SESSION_RESEARCH_OBJECT.direct_model_bindings == ()
     assert isinstance(WHOLE_SESSION_RESEARCH_OBJECT.identity, ResearchObjectIdentity)
     assert not isinstance(WHOLE_SESSION_RESEARCH_OBJECT.identity, BenchmarkIdentity)
-    assert FORECASTING.identity.task_id is None
-    assert FORECASTING.descriptor.research_object_type is ResearchObjectType.RESEARCH_FAMILY
-    assert FORECASTING.task.execution_status is ExecutionStatus.UNRECOVERABLE
-    assert FORECASTING.task.targets == ()
     assert SENSOR_STATE.descriptor.research_object_type is ResearchObjectType.NEGATIVE_RESULT
     assert SENSOR_STATE.task.scientific_maturity.value == "negative"
     assert SELECTED_TARGET_FAMILY is None
@@ -181,7 +176,6 @@ def test_historical_negative_and_invalidated_objects_are_not_benchmarks() -> Non
         WHOLE_SESSION_RESEARCH_OBJECT.identity.scientific_id,
         SENSOR_STATE.identity.scientific_id,
         SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT.identity.scientific_id,
-        FORECASTING.identity.scientific_id,
     ):
         with pytest.raises(KeyError, match="not a benchmark"):
             registry.lookup(object_id)
@@ -239,19 +233,18 @@ def test_all_registered_research_objects_have_typed_complete_descriptors() -> No
         assert descriptor.technical_name
         for name in required_fields:
             assert getattr(descriptor, name) is not None
-    assert FORECASTING.descriptor.prediction_or_inference_target is UNKNOWN
-    assert FORECASTING.descriptor.history_contract.duration_seconds is UNKNOWN
     classifications = {
         research_object.descriptor.research_object_type
         for research_object in default_registry().research_objects()
     }
     assert classifications == {
-        ResearchObjectType.RESEARCH_FAMILY,
         ResearchObjectType.HISTORICAL_STUDY,
         ResearchObjectType.INVALIDATED_FORMULATION,
         ResearchObjectType.NEGATIVE_RESULT,
         ResearchObjectType.BENCHMARK,
     }
+    assert WHOLE_SESSION_RESEARCH_OBJECT.direct_model_bindings == ()
+    assert len(SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT.direct_model_bindings) == 7
 
 
 def test_signed_acceleration_uses_full_row_rmse_for_supported_vectors() -> None:
@@ -735,9 +728,9 @@ def test_lock_provenance_validator_rejects_result_output_citations() -> None:
 
 
 def test_displacement_parity_contract_is_complete_and_distinct() -> None:
-    assert {entry.field for entry in PREDECESSOR_PARITY} == set(PARITY_FIELDS)
+    assert {entry.layer for entry in PREDECESSOR_PARITY} == set(PARITY_FIELDS)
     assert len(PREDECESSOR_PARITY) == len(PARITY_FIELDS)
-    assert {entry.status for entry in PREDECESSOR_PARITY} <= set(ParityStatus)
+    assert {entry.status for entry in PREDECESSOR_PARITY} <= set(TransitionStatus)
     assert all(entry.evidence for entry in PREDECESSOR_PARITY)
     assert ABSOLUTE_POSITION_BENCHMARK.identity.scientific_id != (
         DISPLACEMENT_BENCHMARK.identity.scientific_id
@@ -745,15 +738,15 @@ def test_displacement_parity_contract_is_complete_and_distinct() -> None:
     assert {
         entry.status
         for entry in PREDECESSOR_PARITY
-        if entry.field in {"target_representation", "reference_frame", "benchmark_identity"}
-    } == {ParityStatus.CHANGED}
+        if entry.layer in {"target_representation", "reference_frame", "benchmark_identity"}
+    } == {TransitionStatus.CHANGED}
     assert any(
-        entry.field == "calibration" and entry.status is ParityStatus.UNKNOWN
+        entry.layer == "calibration" and entry.status is TransitionStatus.UNKNOWN
         for entry in PREDECESSOR_PARITY
     )
     assert all(
-        next(entry for entry in PREDECESSOR_PARITY if entry.field == field).status
-        is ParityStatus.UNKNOWN
+        next(entry for entry in PREDECESSOR_PARITY if entry.layer == field).status
+        is TransitionStatus.UNKNOWN
         for field in ("baseline_ladder", "model_architecture", "model_selection_protocol")
     )
 

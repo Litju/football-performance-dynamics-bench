@@ -49,7 +49,6 @@ from .displacement_reconstruction import (
     TARGET_TEAM_ORIENTATION_EVIDENCE,
     TARGET_TEAM_ORIENTATION_SEMANTICS,
     TRAINING_REEXECUTED_DURING_RECONSTRUCTION,
-    ParityStatus,
     build_lomo_raw_scientific_lock,
     build_public_validation_raw_scientific_lock,
 )
@@ -116,7 +115,6 @@ __all__ = [
     "PARITY_FIELDS",
     "POSITION_MEASUREMENT_EVIDENCE",
     "POSITION_MEASUREMENT_SEMANTICS",
-    "ParityStatus",
     "PREDECESSOR_PARITY",
     "PRIVATE_RESULT_RECORDS",
     "PUBLIC_TRAIN",

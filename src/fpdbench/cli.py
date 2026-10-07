@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import cast
 
 from fpdbench.benchmarks.registry import default_registry
+from fpdbench.benchmarks.transition_graph import (
+    transition_evidence_references,
+    validate_transition_graph,
+)
+from fpdbench.provenance.evidence_resolution import resolve_evidence_references
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
 from fpdbench.validation import validate_naming, validate_repository
 
@@ -38,6 +43,10 @@ def _parser() -> argparse.ArgumentParser:
 
     validation = commands.add_parser("validate")
     validation.add_argument("--root", type=Path, default=Path.cwd())
+    evidence = commands.add_parser("evidence")
+    evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)
+    evidence_validation = evidence_commands.add_parser("validate")
+    evidence_validation.add_argument("--registry-root", type=Path)
     naming = commands.add_parser("validate-naming")
     naming.add_argument("--root", type=Path, default=Path.cwd())
 
@@ -101,11 +110,36 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         return 0
     if args.command == "research-objects" and args.research_object_command == "describe":
-        research_object = default_registry().lookup_research_object(args.scientific_id)
+        registry = default_registry()
+        if args.scientific_id in registry.family_ids():
+            print(
+                f"{args.scientific_id} is a research family; use 'families describe'.",
+                file=sys.stderr,
+            )
+            return 2
+        research_object = registry.lookup_research_object(args.scientific_id)
         print(json.dumps(asdict(research_object), indent=2, sort_keys=True))
         return 0
     if args.command == "validate":
         return _print_errors(validate_repository(args.root))
+    if args.command == "evidence" and args.evidence_command == "validate":
+        references = transition_evidence_references()
+        errors = list(validate_transition_graph())
+        if args.registry_root is None:
+            if errors:
+                return _print_errors(errors)
+            print(f"evidence reference shape passed ({len(references)} references)")
+            return 0
+        report = resolve_evidence_references(references, args.registry_root)
+        errors.extend(report.errors)
+        print(
+            json.dumps(
+                {"resolution": asdict(report), "validation_errors": sorted(set(errors))},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 1 if errors else 0
     if args.command == "validate-naming":
         return _print_errors(validate_naming(args.root))
     if args.command == "lock" and args.lock_command == "compute":

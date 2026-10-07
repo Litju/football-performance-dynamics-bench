@@ -9,9 +9,11 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 - `future_response_forecasting`: a research family with no recovered historical benchmark or assigned target, scorer, model, or horizon.
 - `conditional_multi_agent_motion_prediction`: the recovered absolute-position and origin-relative displacement benchmark identities; displacement reconstruction remains partial pending scorer/result parity.
 
-Only `conditional_multi_agent_motion_prediction/absolute_position_prediction` and `conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction` are benchmark identities. Families and other research objects remain discoverable with `fpdbench families list` and `fpdbench research-objects list`.
+Only `conditional_multi_agent_motion_prediction/absolute_position_prediction` and `conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction` are benchmark identities. Families and research objects have separate discovery commands: `fpdbench families list` and `fpdbench research-objects list`.
 
 Conditional multi-agent response uses realized future opponent and ball context while withholding the target team's future positions. Causal forecasting instead requires ex-ante available exposures and an explicit causal information boundary; the two tasks are not interchangeable.
+
+See [the benchmark transition record](docs/benchmark-transitions.md) for the final R2 parity and lineage decisions.
 
 Reproducibility binds benchmark definition, data state and membership, split protocol, evaluator, schema, fixtures, and scientific provenance in a deterministic scientific lock. Governance and hosting state live separately. Population semantics are independent of the dataset membership used in one study.
 

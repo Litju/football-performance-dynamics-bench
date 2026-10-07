@@ -22,8 +22,21 @@ class ScientificMaturity(StrEnum):
     UNRECOVERABLE = "unrecoverable"
 
 
+class FamilyLifecycleStatus(StrEnum):
+    RECONSTRUCTION_PENDING = "RECONSTRUCTION_PENDING"
+    RECONSTRUCTION_COMPLETE_NO_QUALIFIED_BENCHMARK = (
+        "RECONSTRUCTION_COMPLETE_NO_QUALIFIED_BENCHMARK"
+    )
+    RECONSTRUCTION_COMPLETE_SCOPED_NEGATIVE_NO_SELECTED_BENCHMARK = (
+        "RECONSTRUCTION_COMPLETE_SCOPED_NEGATIVE_NO_SELECTED_BENCHMARK"
+    )
+    NO_RECOVERABLE_HISTORICAL_BENCHMARK_RESEARCH_INTENT = (
+        "NO_RECOVERABLE_HISTORICAL_BENCHMARK_RESEARCH_INTENT"
+    )
+    RECOVERED_BENCHMARKS_AVAILABLE = "RECOVERED_BENCHMARKS_AVAILABLE"
+
+
 class ResearchObjectType(StrEnum):
-    RESEARCH_FAMILY = "research_family"
     HISTORICAL_STUDY = "historical_study"
     INVALIDATED_FORMULATION = "invalidated_formulation"
     NEGATIVE_RESULT = "negative_result"
@@ -324,14 +337,8 @@ class ResearchObjectDefinition:
             raise ValueError("descriptor and technical task population semantics must agree")
         if self.descriptor.known_non_claims != self.task.non_claims:
             raise ValueError("descriptor and technical task non-claims must agree")
-        if self.descriptor.research_object_type is ResearchObjectType.RESEARCH_FAMILY:
-            if (
-                self.identity.task_id is not None
-                or self.identity.scientific_id != self.identity.family_id
-            ):
-                raise ValueError("research families require a family-only scientific identity")
-        elif self.identity.task_id is None:
-            raise ValueError("non-family research objects require a task ID")
+        if self.identity.task_id is None:
+            raise ValueError("research objects require a task ID")
         object.__setattr__(self, "direct_model_bindings", tuple(self.direct_model_bindings))
 
 
@@ -348,7 +355,8 @@ class ResearchFamilyDefinition:
     research_question: str
     scientific_scope: str
     known_non_claims: tuple[str, ...]
-    scientific_maturity: ScientificMaturity
+    r1_lifecycle: FamilyLifecycleStatus
+    current_lifecycle: FamilyLifecycleStatus
     release_status: ReleaseStatus
     unresolved_task_fields: tuple[tuple[str, UnknownValue], ...] = ()
 
