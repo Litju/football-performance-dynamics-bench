@@ -5,6 +5,8 @@ from collections.abc import Sequence
 from typing import Literal
 
 ZeroVariancePolicy = Literal["error", "rmse"]
+RMSE_METRIC_ID = "rmse.global.v1"
+POPULATION_SRE_METRIC_ID = "sre.rmse_over_population_std.v1"
 
 
 def rmse(prediction: Sequence[float], truth: Sequence[float]) -> float:

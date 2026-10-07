@@ -60,6 +60,7 @@ from .information import (
 )
 from .origin_relative_displacement_prediction import (
     DISPLACEMENT_BENCHMARK,
+    DISPLACEMENT_GENERATED_CALIBRATION,
     HISTORICAL_FINAL_MODEL_ID,
     RAW_DISPLACEMENT_EVALUATOR,
     DisplacementEvaluator,
@@ -79,6 +80,7 @@ from .origin_relative_displacement_prediction import (
 __all__ = [
     "ABSOLUTE_POSITION_BENCHMARK",
     "DISPLACEMENT_BENCHMARK",
+    "DISPLACEMENT_GENERATED_CALIBRATION",
     "HISTORY_HZ",
     "HISTORY_SECONDS",
     "HISTORY_STEPS",

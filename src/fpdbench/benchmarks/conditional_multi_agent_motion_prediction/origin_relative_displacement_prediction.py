@@ -1,13 +1,11 @@
 """Recovered normalized origin-relative displacement benchmark contract."""
 
-import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 from fpdbench.benchmarks.base import (
-    UNKNOWN,
     BenchmarkDefinition,
     BenchmarkIdentity,
     CausalStatus,
@@ -19,7 +17,6 @@ from fpdbench.benchmarks.base import (
     ScientificTaskType,
     TechnicalTaskContract,
     TemporalContract,
-    UnknownValue,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.forecast_origin import (
     ForecastOrigin,
@@ -32,8 +29,19 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.geometry impo
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.information import (
     validate_information_boundary,
 )
-from fpdbench.evaluation.metrics import PITCH_SCALE_M, population_standardized_relative_error
-from fpdbench.provenance import canonical_scientific_bytes
+from fpdbench.evaluation import (
+    DISPLACEMENT_GENERATED_CALIBRATION,
+    RAW_DISPLACEMENT_EVALUATOR,
+    GeneratedCalibrationContract,
+    RawDisplacementEvaluatorConfiguration,
+    RawDisplacementSRE,
+    raw_evaluator_hash,
+    raw_evaluator_scientific_state,
+)
+from fpdbench.evaluation import (
+    evaluate_raw_displacement_sre as _evaluate_population_sre,
+)
+from fpdbench.evaluation.metrics import PITCH_SCALE_M
 
 from .absolute_position_prediction import (
     HISTORY_HZ,
@@ -53,100 +61,11 @@ REFERENCE_FRAME = (
 TARGET_SHAPE = (HORIZON_STEPS, 11, 2)
 
 
-@dataclass(frozen=True, slots=True)
-class GeneratedCalibrationContract:
-    """Known wrapper settings; the displacement calibration lock is absent."""
-
-    lower_is_better: bool = True
-    target_weight: float = 1.0
-    floor: float = 1.0
-    perfect: float = 0.0
-    quality_floor_mode: str = "effective_no_info"
-    naive_score_bounds: tuple[float, float] = (1e-6, 0.10)
-    calibration_lock_state: UnknownValue = UNKNOWN
-    reference_vector: tuple[float, ...] | UnknownValue = UNKNOWN
-    no_information_ceiling_vector: tuple[float, ...] | UnknownValue = UNKNOWN
-    x_ref: float | UnknownValue = UNKNOWN
-    calibrated_reward: float | UnknownValue = UNKNOWN
-
-
-@dataclass(frozen=True, slots=True)
-class RawDisplacementEvaluatorConfiguration:
-    metric_id: str = "sre.rmse_over_population_std.v1"
-    target_type: str = "PopulationSRETarget"
-    target_count: int = 330
-    degrees_of_freedom: int = 0
-    standard_deviation_population: str = "evaluated population truth per scalar target"
-    per_target_weight: float = 1.0
-    aggregation: str = "equal arithmetic mean across scalar targets"
-    raw_clipping: tuple[float, float] | None = None
-    zero_variance_policy: str = "rmse"
-    lower_is_better: bool = True
-    perfect_score: float = 0.0
-    population_mean_predictor_sre: float = 1.0
-    no_information_condition: str = "target variance is nonzero"
-    generated_calibration: GeneratedCalibrationContract = GeneratedCalibrationContract()
-
-    @property
-    def formula(self) -> str:
-        return f"RMSE(prediction, truth) / population_std(truth, ddof={self.degrees_of_freedom})"
-
-    def scientific_state(self) -> dict[str, str]:
-        """Return raw-result semantics, excluding GeneratedCalibration metadata."""
-        clipping = "none" if self.raw_clipping is None else ",".join(map(str, self.raw_clipping))
-        return {
-            "aggregation": self.aggregation,
-            "degrees_of_freedom": str(self.degrees_of_freedom),
-            "formula": self.formula,
-            "lower_is_better": str(self.lower_is_better).lower(),
-            "metric_id": self.metric_id,
-            "no_information_condition": self.no_information_condition,
-            "no_information_raw_sre": str(self.population_mean_predictor_sre),
-            "population": self.standard_deviation_population,
-            "raw_clipping": clipping,
-            "raw_perfect_score": str(self.perfect_score),
-            "per_target_weight": str(self.per_target_weight),
-            "target_count": str(self.target_count),
-            "target_type": self.target_type,
-            "zero_variance_policy": self.zero_variance_policy,
-        }
-
-
-RAW_DISPLACEMENT_EVALUATOR = RawDisplacementEvaluatorConfiguration()
-
-
-def raw_evaluator_scientific_state(
-    evaluator: RawDisplacementEvaluatorConfiguration = RAW_DISPLACEMENT_EVALUATOR,
-) -> dict[str, str]:
-    return evaluator.scientific_state()
-
-
-def raw_evaluator_hash(
-    evaluator: RawDisplacementEvaluatorConfiguration = RAW_DISPLACEMENT_EVALUATOR,
-) -> str:
-    return hashlib.sha256(
-        canonical_scientific_bytes(raw_evaluator_scientific_state(evaluator))
-    ).hexdigest()
-
-
-@dataclass(frozen=True, slots=True)
-class RawDisplacementSRE:
-    per_scalar_sre: tuple[float, ...]
-    raw_sre: float
-    population_rows: int
-
-    def __post_init__(self) -> None:
-        if len(self.per_scalar_sre) != TARGET_SHAPE[0] * TARGET_SHAPE[1] * TARGET_SHAPE[2]:
-            raise ValueError("raw displacement SRE must contain 330 scalar targets")
-        if self.population_rows <= 0 or not math.isfinite(self.raw_sre):
-            raise ValueError("raw displacement SRE requires a finite score and nonempty population")
-
-
 def evaluate_raw_displacement_sre(
     prediction: Sequence[PositionTrajectory],
     truth: Sequence[PositionTrajectory],
 ) -> RawDisplacementSRE:
-    """Score 330 scalars with evaluation-population SD and equal unit weights."""
+    """Map task trajectories to ordered scalar targets and delegate raw scoring."""
     if not truth or len(prediction) != len(truth):
         raise ValueError("prediction and truth must have the same nonempty population")
     predicted_rows = tuple(
@@ -167,21 +86,19 @@ def evaluate_raw_displacement_sre(
         )
         for index, row in enumerate(truth)
     )
-    scores = tuple(
-        population_standardized_relative_error(
-            [predicted_rows[row][step][player][coordinate] for row in range(len(truth_rows))],
-            [truth_rows[row][step][player][coordinate] for row in range(len(truth_rows))],
-            zero_variance="rmse",
-        )
+    prediction_targets = tuple(
+        tuple(predicted_rows[row][step][player][coordinate] for row in range(len(truth_rows)))
         for step in range(HORIZON_STEPS)
         for player in range(11)
         for coordinate in range(2)
     )
-    return RawDisplacementSRE(
-        per_scalar_sre=scores,
-        raw_sre=math.fsum(scores) / len(scores),
-        population_rows=len(truth_rows),
+    truth_targets = tuple(
+        tuple(truth_rows[row][step][player][coordinate] for row in range(len(truth_rows)))
+        for step in range(HORIZON_STEPS)
+        for player in range(11)
+        for coordinate in range(2)
     )
+    return _evaluate_population_sre(prediction_targets, truth_targets)
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,6 +260,7 @@ __all__ = [
     "BENCHMARK_ID",
     "REFERENCE_FRAME",
     "TARGET_SHAPE",
+    "DISPLACEMENT_GENERATED_CALIBRATION",
     "GeneratedCalibrationContract",
     "RAW_DISPLACEMENT_EVALUATOR",
     "RawDisplacementEvaluatorConfiguration",
