@@ -210,6 +210,7 @@ def test_absolute_position_contract_shapes_scaling_and_future_exclusion() -> Non
     assert ABSOLUTE_POSITION_BENCHMARK.task.temporal.horizon_seconds == 3.0
     assert ABSOLUTE_POSITION_BENCHMARK.task.temporal.horizon_hz == 5.0
     assert ABSOLUTE_POSITION_BENCHMARK.task.temporal.horizon_steps == 15
+    assert ABSOLUTE_POSITION_BENCHMARK.descriptor.canonical_sampling.target_hz == 5.0
     assert ABSOLUTE_POSITION_BENCHMARK.task.information_boundary.conditional_future_context == (
         "realized future opponent-team XY",
         "realized future ball XY",
@@ -232,6 +233,8 @@ def test_absolute_position_inputs_validate_history_and_realized_context_shapes()
     )
     assert len(inputs.history_target_team_xy_m) == 25
     assert len(inputs.realized_future_opponent_xy_m) == 15
+    assert "realized_future_opponent_xy" in inputs.feature_names
+    assert "realized_future_ball_xy" in inputs.feature_names
     with pytest.raises(ValueError, match="25 time steps"):
         AbsolutePositionInputs(
             history_target_team_xy_m=tuple(_trajectory(24, 0.0)),
@@ -279,8 +282,6 @@ def test_displacement_target_round_trip_and_causal_origin() -> None:
             "history_target_team_xy",
             "history_opponent_team_xy",
             "history_ball_xy",
-            "realized_future_opponent_xy",
-            "realized_future_ball_xy",
         ],
         target_origin_positions_m=origin_positions,
     )
@@ -307,6 +308,8 @@ def test_displacement_target_round_trip_and_causal_origin() -> None:
     )
     assert len(inputs.history_target_team_xy_m) == 25
     assert len(inputs.realized_future_opponent_xy_m) == 15
+    assert "realized_future_opponent_xy" in inputs.feature_names
+    assert "realized_future_ball_xy" in inputs.feature_names
     assert {field.name for field in fields(DisplacementInputs)}.isdisjoint(
         {"future_target_team_xy_m", "future_target_team_features"}
     )
@@ -317,6 +320,7 @@ def test_displacement_target_round_trip_and_causal_origin() -> None:
     assert descriptor.canonical_sampling.history_steps == 25
     assert descriptor.canonical_sampling.horizon_hz == 5.0
     assert descriptor.canonical_sampling.horizon_steps == 15
+    assert descriptor.canonical_sampling.target_hz == 5.0
     assert descriptor.reference_frame == (
         "Per-player future displacement relative to the same player's exact observed position "
         "at the causal forecast origin."
@@ -355,6 +359,14 @@ def test_forecast_origin_rejects_future_information_and_target_leakage() -> None
         ForecastOrigin.from_observations(1.0, [0.0, 1.1], ["observed_history"])
     with pytest.raises(ValueError, match="information-boundary"):
         ForecastOrigin.from_observations(1.0, [0.0, 1.0], ["future_target_team_xy"])
+    for name in (
+        "realized_future_opponent_xy",
+        "realized_future_ball_xy",
+        "future_opponent_xy",
+        "future_ball_xy",
+    ):
+        with pytest.raises(ValueError, match="cannot appear in ForecastOrigin"):
+            ForecastOrigin.from_observations(1.0, [0.0, 1.0], [name])
     with pytest.raises(ValueError, match="strictly increasing"):
         ForecastOrigin.from_observations(1.0, [0.0, 0.0], ["observed_history"])
     with pytest.raises(ValueError, match="observed at the forecast origin"):
@@ -384,6 +396,13 @@ def test_sensor_modalities_and_causal_alignment_prefix() -> None:
 
 def test_identity_and_release_temporal_compatibility_are_separate() -> None:
     descriptor = DISPLACEMENT_BENCHMARK.descriptor
+    changed_metric_family = replace(
+        descriptor,
+        scientific_metric_family=("independently versioned scorer",),
+    )
+    assert changed_metric_family.scientific_metric_family != descriptor.scientific_metric_family
+    assert descriptor.scientific_identity_compatible_with(changed_metric_family)
+
     source_only = replace(descriptor, source_sampling_hz=50.0)
     assert descriptor.scientific_identity_compatible_with(source_only)
     assert descriptor.release_compatible_with(source_only)

@@ -34,6 +34,20 @@ class ForecastOrigin:
             raise ValueError("future observations cross the causal forecast origin")
         feature_names = tuple(self.feature_names)
         validate_information_boundary(feature_names)
+        future_context = tuple(
+            name
+            for name in feature_names
+            if "future" in name.casefold().replace("-", "_").replace(" ", "_")
+            and any(
+                entity in name.casefold().replace("-", "_").replace(" ", "_")
+                for entity in ("opponent", "ball")
+            )
+        )
+        if future_context:
+            raise ValueError(
+                "future opponent and ball context cannot appear in ForecastOrigin: "
+                + ", ".join(sorted(future_context))
+            )
         object.__setattr__(self, "available_information_times_s", times)
         object.__setattr__(self, "feature_names", feature_names)
         if self.target_origin_positions_m is not None:

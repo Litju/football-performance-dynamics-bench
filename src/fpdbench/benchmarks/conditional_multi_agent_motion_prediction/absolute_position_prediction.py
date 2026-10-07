@@ -188,6 +188,7 @@ _TASK = TechnicalTaskContract(
         history_seconds=HISTORY_SECONDS,
         history_hz=HISTORY_HZ,
         history_steps=HISTORY_STEPS,
+        target_hz=HORIZON_HZ,
         horizon_seconds=HORIZON_SECONDS,
         horizon_hz=HORIZON_HZ,
         horizon_steps=HORIZON_STEPS,

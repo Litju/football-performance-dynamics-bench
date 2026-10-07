@@ -208,7 +208,6 @@ class ScientificDescriptor:
             "population_semantics",
             "unit_of_evaluation",
             "causal_status",
-            "scientific_metric_family",
         )
         return all(getattr(self, name) == getattr(other, name) for name in fields)
 
