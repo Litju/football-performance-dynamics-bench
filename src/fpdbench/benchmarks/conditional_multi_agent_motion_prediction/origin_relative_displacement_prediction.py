@@ -1,5 +1,6 @@
 """Recovered normalized origin-relative displacement benchmark contract."""
 
+import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.information i
     validate_information_boundary,
 )
 from fpdbench.evaluation.metrics import PITCH_SCALE_M, population_standardized_relative_error
+from fpdbench.provenance import canonical_scientific_bytes
 
 from .absolute_position_prediction import (
     HISTORY_HZ,
@@ -76,15 +78,55 @@ class RawDisplacementEvaluatorConfiguration:
     degrees_of_freedom: int = 0
     standard_deviation_population: str = "evaluated population truth per scalar target"
     per_target_weight: float = 1.0
-    raw_clipping: None = None
+    aggregation: str = "equal arithmetic mean across scalar targets"
+    raw_clipping: tuple[float, float] | None = None
     zero_variance_policy: str = "rmse"
+    lower_is_better: bool = True
     perfect_score: float = 0.0
     population_mean_predictor_sre: float = 1.0
     no_information_condition: str = "target variance is nonzero"
     generated_calibration: GeneratedCalibrationContract = GeneratedCalibrationContract()
 
+    @property
+    def formula(self) -> str:
+        return f"RMSE(prediction, truth) / population_std(truth, ddof={self.degrees_of_freedom})"
+
+    def scientific_state(self) -> dict[str, str]:
+        """Return raw-result semantics, excluding GeneratedCalibration metadata."""
+        clipping = "none" if self.raw_clipping is None else ",".join(map(str, self.raw_clipping))
+        return {
+            "aggregation": self.aggregation,
+            "degrees_of_freedom": str(self.degrees_of_freedom),
+            "formula": self.formula,
+            "lower_is_better": str(self.lower_is_better).lower(),
+            "metric_id": self.metric_id,
+            "no_information_condition": self.no_information_condition,
+            "no_information_raw_sre": str(self.population_mean_predictor_sre),
+            "population": self.standard_deviation_population,
+            "raw_clipping": clipping,
+            "raw_perfect_score": str(self.perfect_score),
+            "per_target_weight": str(self.per_target_weight),
+            "target_count": str(self.target_count),
+            "target_type": self.target_type,
+            "zero_variance_policy": self.zero_variance_policy,
+        }
+
 
 RAW_DISPLACEMENT_EVALUATOR = RawDisplacementEvaluatorConfiguration()
+
+
+def raw_evaluator_scientific_state(
+    evaluator: RawDisplacementEvaluatorConfiguration = RAW_DISPLACEMENT_EVALUATOR,
+) -> dict[str, str]:
+    return evaluator.scientific_state()
+
+
+def raw_evaluator_hash(
+    evaluator: RawDisplacementEvaluatorConfiguration = RAW_DISPLACEMENT_EVALUATOR,
+) -> str:
+    return hashlib.sha256(
+        canonical_scientific_bytes(raw_evaluator_scientific_state(evaluator))
+    ).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -305,6 +347,8 @@ __all__ = [
     "RAW_DISPLACEMENT_EVALUATOR",
     "RawDisplacementEvaluatorConfiguration",
     "RawDisplacementSRE",
+    "raw_evaluator_hash",
+    "raw_evaluator_scientific_state",
     "DisplacementEvaluator",
     "DisplacementInputs",
     "evaluate_displacement",

@@ -511,30 +511,6 @@ _BENCHMARK_DEFINITION_STATE = {
     "target": "(future XY - exact causal-origin XY) / [52.5, 34.0]",
     "target_shape": "[15, 11, 2]",
 }
-_RAW_EVALUATOR_STATE = {
-    "aggregation": "equal arithmetic mean across 330 scalar targets",
-    "calibration": "GeneratedCalibration lock unavailable; calibrated result excluded",
-    "calibration_lock_state": "UNKNOWN",
-    "ddof": "0",
-    "floor": "1.0",
-    "formula": "RMSE(prediction, truth) / population_std(truth, ddof=0)",
-    "lower_is_better": "true",
-    "metric": "sre.rmse_over_population_std.v1",
-    "naive_score_bounds": "0.000001,0.1",
-    "no_information": "population-mean predictor raw SRE is 1 when target variance is nonzero",
-    "no_information_ceiling_vector": "UNKNOWN",
-    "population": "evaluated truth rows per scalar target",
-    "raw_clipping": "none",
-    "scope": "raw displacement SRE only; physical diagnostics and private reward excluded",
-    "perfect": "0.0",
-    "quality_floor_mode": "effective_no_info",
-    "reference_vector": "UNKNOWN",
-    "target_type": "PopulationSRETarget",
-    "target_weight": "1.0",
-    "calibrated_reward": "UNKNOWN",
-    "x_ref": "UNKNOWN",
-    "zero_variance": "raw RMSE fallback",
-}
 _SCHEMA_HASH = hashlib.sha256(
     f"{DISPLACEMENT_PUBLIC_SCHEMA_SHA256}\n{DISPLACEMENT_TARGET_SCHEMA_SHA256}".encode()
 ).hexdigest()
@@ -571,7 +547,7 @@ RAW_SCIENTIFIC_LOCK = build_scientific_lock(
         "split_protocol_hash": _COMBINED_SPLIT_HASH,
         "evaluator_id": "origin_relative_displacement_raw_population_sre",
         "evaluator_version": "1.0.0",
-        "evaluator_hash": _payload_hash(_RAW_EVALUATOR_STATE),
+        "evaluator_hash": origin_relative_displacement_prediction.raw_evaluator_hash(),
         "schema_version": "displacement_public_schema.v1",
         "schema_hash": _SCHEMA_HASH,
         "fixture_manifest_hash": DISPLACEMENT_FIXTURE_MANIFEST_SHA256,

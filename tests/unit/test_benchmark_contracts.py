@@ -60,7 +60,9 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     AbsolutePositionInputs,
     DisplacementInputs,
     ForecastOrigin,
+    GeneratedCalibrationContract,
     ParityStatus,
+    RawDisplacementEvaluatorConfiguration,
     absolute_position_to_physical,
     evaluate_absolute_position_trajectories,
     evaluate_displacement,
@@ -69,6 +71,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     make_absolute_position_target,
     make_origin_relative_displacement_target,
     normalized_displacement_to_physical,
+    raw_evaluator_hash,
     validate_information_boundary,
 )
 from fpdbench.benchmarks.future_response_forecasting import RESEARCH_OBJECT as FORECASTING
@@ -90,7 +93,7 @@ from fpdbench.benchmarks.workload_performance_state import (
 )
 from fpdbench.experiments import EvaluatorState, ResultPopulation, ResultValidity
 from fpdbench.provenance.aliases import DISPLACEMENT_HISTORICAL_ALIASES
-from fpdbench.provenance.scientific_lock import verify_scientific_lock
+from fpdbench.provenance.scientific_lock import compute_scientific_lock_hash, verify_scientific_lock
 from fpdbench.validation.artifacts import validate_artifacts
 
 
@@ -100,6 +103,14 @@ def _frame(value: float) -> list[list[float]]:
 
 def _trajectory(steps: int, value: float) -> list[list[list[float]]]:
     return [_frame(value) for _ in range(steps)]
+
+
+def _raw_lock_hash_for(evaluator: RawDisplacementEvaluatorConfiguration) -> str:
+    state = {
+        key: value for key, value in RAW_SCIENTIFIC_LOCK.items() if key != "scientific_lock_hash"
+    }
+    state["evaluator_hash"] = raw_evaluator_hash(evaluator)
+    return compute_scientific_lock_hash(state)
 
 
 def test_package_import_and_registry_discovery() -> None:
@@ -562,6 +573,8 @@ def test_displacement_raw_population_sre_is_scalar_weighted_and_uncalibrated() -
     assert RAW_DISPLACEMENT_EVALUATOR.raw_clipping is None
     assert RAW_DISPLACEMENT_EVALUATOR.zero_variance_policy == "rmse"
     assert RAW_DISPLACEMENT_EVALUATOR.population_mean_predictor_sre == 1.0
+    assert RAW_DISPLACEMENT_EVALUATOR.aggregation == "equal arithmetic mean across scalar targets"
+    assert RAW_DISPLACEMENT_EVALUATOR.lower_is_better
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.floor == 1.0
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.perfect == 0.0
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.lower_is_better
@@ -575,6 +588,55 @@ def test_displacement_raw_population_sre_is_scalar_weighted_and_uncalibrated() -
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.no_information_ceiling_vector is UNKNOWN
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.x_ref is UNKNOWN
     assert RAW_DISPLACEMENT_EVALUATOR.generated_calibration.calibrated_reward is UNKNOWN
+
+
+def test_generated_calibration_metadata_does_not_churn_raw_scientific_lock() -> None:
+    calibration_a = RAW_DISPLACEMENT_EVALUATOR.generated_calibration
+    # Hypothetical mutation fixture only; these values are not historical calibration facts.
+    calibration_b = replace(
+        calibration_a,
+        lower_is_better=False,
+        target_weight=2.0,
+        floor=0.75,
+        perfect=0.25,
+        quality_floor_mode="mutation_fixture",
+        naive_score_bounds=(0.2, 0.8),
+        reference_vector=(0.1, 0.2),
+        no_information_ceiling_vector=(0.3, 0.4),
+        x_ref=0.5,
+        calibrated_reward=0.6,
+    )
+    evaluator_a = RAW_DISPLACEMENT_EVALUATOR
+    evaluator_b = replace(evaluator_a, generated_calibration=calibration_b)
+
+    assert isinstance(calibration_a, GeneratedCalibrationContract)
+    assert calibration_a.reference_vector is UNKNOWN
+    assert calibration_a.no_information_ceiling_vector is UNKNOWN
+    assert calibration_a.x_ref is UNKNOWN
+    assert calibration_a.calibrated_reward is UNKNOWN
+    assert raw_evaluator_hash(evaluator_a) == raw_evaluator_hash(evaluator_b)
+    assert _raw_lock_hash_for(evaluator_a) == RAW_SCIENTIFIC_LOCK_HASH
+    assert _raw_lock_hash_for(evaluator_a) == _raw_lock_hash_for(evaluator_b)
+
+
+@pytest.mark.parametrize(
+    "changed",
+    [
+        replace(RAW_DISPLACEMENT_EVALUATOR, degrees_of_freedom=1),
+        replace(RAW_DISPLACEMENT_EVALUATOR, zero_variance_policy="error"),
+        replace(RAW_DISPLACEMENT_EVALUATOR, per_target_weight=2.0),
+        replace(RAW_DISPLACEMENT_EVALUATOR, aggregation="weighted arithmetic mean"),
+        replace(RAW_DISPLACEMENT_EVALUATOR, raw_clipping=(0.0, 1.0)),
+        replace(RAW_DISPLACEMENT_EVALUATOR, target_count=331),
+        replace(RAW_DISPLACEMENT_EVALUATOR, metric_id="sre.alternate.v1"),
+        replace(RAW_DISPLACEMENT_EVALUATOR, lower_is_better=False),
+    ],
+)
+def test_raw_evaluator_scientific_changes_churn_raw_lock(
+    changed: RawDisplacementEvaluatorConfiguration,
+) -> None:
+    assert raw_evaluator_hash(changed) != raw_evaluator_hash(RAW_DISPLACEMENT_EVALUATOR)
+    assert _raw_lock_hash_for(changed) != RAW_SCIENTIFIC_LOCK_HASH
 
 
 def test_displacement_parity_contract_is_complete_and_distinct() -> None:

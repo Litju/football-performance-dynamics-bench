@@ -68,6 +68,8 @@ from .origin_relative_displacement_prediction import (
     invert_origin_relative_displacement,
     make_origin_relative_displacement_target,
     normalized_displacement_to_physical,
+    raw_evaluator_hash,
+    raw_evaluator_scientific_state,
 )
 
 __all__ = [
@@ -131,5 +133,7 @@ __all__ = [
     "make_absolute_position_target",
     "make_origin_relative_displacement_target",
     "normalized_displacement_to_physical",
+    "raw_evaluator_hash",
+    "raw_evaluator_scientific_state",
     "validate_information_boundary",
 ]
