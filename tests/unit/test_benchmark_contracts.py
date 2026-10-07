@@ -1,4 +1,5 @@
 from dataclasses import fields, replace
+from importlib.metadata import version
 
 import pytest
 
@@ -61,7 +62,8 @@ def _trajectory(steps: int, value: float) -> list[list[list[float]]]:
 
 
 def test_package_import_and_registry_discovery() -> None:
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.1.0.dev0"
+    assert version("football-performance-dynamics-bench") == __version__
     registry = default_registry()
     assert len(registry.discover()) == 2
     assert len(registry.research_objects()) == 6
