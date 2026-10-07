@@ -13,7 +13,7 @@ def validate_repository(root: Path) -> tuple[str, ...]:
     errors = list(validate_naming(root))
     errors.extend(validate_artifacts(root))
     registry = default_registry()
-    expected_families = set(registry.families())
+    expected_families = set(registry.family_ids())
     config_families: set[str] = set()
     for config_path in sorted((root / "benchmarks").glob("*/benchmark.toml")):
         try:

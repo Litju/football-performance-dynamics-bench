@@ -3,32 +3,144 @@
 import re
 
 from fpdbench.benchmarks.base import (
+    UNKNOWN,
     BenchmarkDefinition,
     ResearchObjectDefinition,
+    ResearchFamilyDefinition,
     ResearchObjectType,
+    ReleaseStatus,
+    ScientificMaturity,
 )
 from fpdbench.provenance import HistoricalAlias
 
 _CANONICAL_ID = re.compile(r"^[a-z][a-z0-9_]*(?:/[a-z][a-z0-9_]*)?$")
-RESEARCH_FAMILY_IDS = (
-    "conditional_multi_agent_motion_prediction",
-    "future_response_forecasting",
-    "multimodal_state_estimation",
-    "workload_performance_state",
+RESEARCH_FAMILY_DEFINITIONS = (
+    ResearchFamilyDefinition(
+        family_id="workload_performance_state",
+        public_name="Workload and Performance State",
+        technical_name="workload_performance_state",
+        research_question=(
+            "Can workload and performance state be inferred or reconstructed from observed or "
+            "synthetic training and session information, and which formulations are scientifically "
+            "recoverable from the historical evidence?"
+        ),
+        scientific_scope=(
+            "Observed or synthetic training and session information, including the historical "
+            "whole-session performance-state study and signed tangential-acceleration formulation."
+        ),
+        known_non_claims=(
+            "The historical whole-session study is partial and does not define an executable benchmark.",
+            "Signed tangential acceleration is an invalidated historical formulation, not a validated benchmark.",
+        ),
+        scientific_maturity=ScientificMaturity.PARTIAL,
+        release_status=ReleaseStatus.UNRELEASED,
+        unresolved_task_fields=(
+            ("whole_session.target_formulas", UNKNOWN),
+            ("whole_session.units", UNKNOWN),
+            ("whole_session.causal_boundary", UNKNOWN),
+            ("whole_session.horizon", UNKNOWN),
+            ("whole_session.population", UNKNOWN),
+            ("whole_session.direct_model_bindings", UNKNOWN),
+        ),
+    ),
+    ResearchFamilyDefinition(
+        family_id="multimodal_state_estimation",
+        public_name="Multimodal State Estimation",
+        technical_name="multimodal_state_estimation",
+        research_question=(
+            "Can noisy, asynchronous, multirate sensor observations support reconstruction of clean "
+            "or latent athlete state, and which target families are identifiable?"
+        ),
+        scientific_scope=(
+            "Reconstruction from noisy, asynchronous, multirate sensor observations, preserving the "
+            "historical pilot's scoped negative result."
+        ),
+        known_non_claims=(
+            "The historical negative result is scoped to the recovered pilot, not a universal impossibility claim.",
+            "No target family was selected.",
+        ),
+        scientific_maturity=ScientificMaturity.NEGATIVE,
+        release_status=ReleaseStatus.UNRELEASED,
+        unresolved_task_fields=(
+            ("exact_temporal_alignment", UNKNOWN),
+            ("selected_target_family", UNKNOWN),
+            ("target_family_viability", UNKNOWN),
+        ),
+    ),
+    ResearchFamilyDefinition(
+        family_id="future_response_forecasting",
+        public_name="Future Response Forecasting",
+        technical_name="future_response_forecasting",
+        research_question=(
+            "Given causal history and ex-ante available future exposure, can subsequent athlete or "
+            "performance response be forecast?"
+        ),
+        scientific_scope=(
+            "Research into response forecasting from causal history and future exposure available "
+            "ex ante; no historical benchmark identity has been recovered."
+        ),
+        known_non_claims=(
+            "No recovered benchmark identity exists.",
+            "Realized future opponent and ball trajectories are conditional context, not ex-ante exposure.",
+            "No target, exposure definition, scorer, horizon, or population is assigned.",
+        ),
+        scientific_maturity=ScientificMaturity.UNRECOVERABLE,
+        release_status=ReleaseStatus.UNRELEASED,
+        unresolved_task_fields=(
+            ("benchmark_identity", UNKNOWN),
+            ("history_variables", UNKNOWN),
+            ("input_modalities", UNKNOWN),
+            ("target", UNKNOWN),
+            ("ex_ante_exposure_definition", UNKNOWN),
+            ("scorer", UNKNOWN),
+            ("horizon", UNKNOWN),
+            ("population", UNKNOWN),
+        ),
+    ),
+    ResearchFamilyDefinition(
+        family_id="conditional_multi_agent_motion_prediction",
+        public_name="Conditional Multi-Agent Motion Prediction",
+        technical_name="conditional_multi_agent_motion_prediction",
+        research_question=(
+            "Given observed scene history plus supplied realized future opponent-team and ball "
+            "trajectories, can the target team's future response be predicted?"
+        ),
+        scientific_scope=(
+            "Conditional target-team trajectory prediction from observed scene history and supplied "
+            "realized future opponent-team and ball trajectories; owns the absolute-position and "
+            "origin-relative displacement benchmarks."
+        ),
+        known_non_claims=(
+            "Supplied realized future opponent and ball trajectories are conditional context, not information observed at the forecast origin.",
+            "The displacement reconstruction remains partial; its scorer/result parity is unresolved.",
+        ),
+        scientific_maturity=ScientificMaturity.RECONSTRUCTED,
+        release_status=ReleaseStatus.UNRELEASED,
+        unresolved_task_fields=(("displacement.scorer_result_parity", UNKNOWN),),
+    ),
 )
+RESEARCH_FAMILY_IDS = tuple(definition.family_id for definition in RESEARCH_FAMILY_DEFINITIONS)
 
 
 class BenchmarkRegistry:
     def __init__(self) -> None:
+        self._families: dict[str, ResearchFamilyDefinition] = {}
         self._research_objects: dict[str, ResearchObjectDefinition] = {}
         self._benchmarks: dict[str, BenchmarkDefinition] = {}
         self._aliases: dict[str, HistoricalAlias] = {}
+
+    def register_family(self, family: ResearchFamilyDefinition) -> None:
+        if not _CANONICAL_ID.fullmatch(family.family_id):
+            raise ValueError(f"not a canonical scientific research-family ID: {family.family_id}")
+        if family.family_id in self._families:
+            raise ValueError(f"duplicate research-family ID: {family.family_id}")
+        self._families[family.family_id] = family
 
     def register(self, research_object: ResearchObjectDefinition) -> None:
         identifier = research_object.identity.scientific_id
         if not _CANONICAL_ID.fullmatch(identifier):
             raise ValueError(f"not a canonical scientific research-object ID: {identifier}")
-        if research_object.identity.family_id not in RESEARCH_FAMILY_IDS:
+        if research_object.identity.family_id not in self._families:
             raise ValueError(f"unknown research family: {research_object.identity.family_id}")
         if identifier in self._research_objects or identifier in self._aliases:
             raise ValueError(f"duplicate research-object identity: {identifier}")
@@ -79,8 +191,17 @@ class BenchmarkRegistry:
             values = (item for item in values if item.identity.family_id == family_id)
         return tuple(sorted(values, key=lambda item: item.identity.scientific_id))
 
-    def families(self) -> tuple[str, ...]:
-        return RESEARCH_FAMILY_IDS
+    def families(self) -> tuple[ResearchFamilyDefinition, ...]:
+        return tuple(self._families.values())
+
+    def family_ids(self) -> tuple[str, ...]:
+        return tuple(self._families)
+
+    def lookup_family(self, family_id: str) -> ResearchFamilyDefinition:
+        try:
+            return self._families[family_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown research family: {family_id}") from exc
 
     def resolve_alias(self, value: str) -> HistoricalAlias:
         return self._aliases[value]
@@ -107,6 +228,8 @@ def default_registry() -> BenchmarkRegistry:
     )
 
     registry = BenchmarkRegistry()
+    for family in RESEARCH_FAMILY_DEFINITIONS:
+        registry.register_family(family)
     for research_object in (
         WHOLE_SESSION_RESEARCH_OBJECT,
         SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT,

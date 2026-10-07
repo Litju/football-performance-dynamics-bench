@@ -342,6 +342,32 @@ class BenchmarkDefinition(ResearchObjectDefinition):
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchFamilyDefinition:
+    family_id: str
+    public_name: str
+    technical_name: str
+    research_question: str
+    scientific_scope: str
+    known_non_claims: tuple[str, ...]
+    scientific_maturity: ScientificMaturity
+    release_status: ReleaseStatus
+    unresolved_task_fields: tuple[tuple[str, UnknownValue], ...] = ()
+
+    def __post_init__(self) -> None:
+        if not all((self.family_id, self.public_name, self.technical_name)):
+            raise ValueError("research-family identifiers and names are required")
+        if not self.research_question or not self.scientific_scope:
+            raise ValueError("research-family question and scope are required")
+        object.__setattr__(self, "known_non_claims", tuple(self.known_non_claims))
+        object.__setattr__(self, "unresolved_task_fields", tuple(self.unresolved_task_fields))
+        fields = [name for name, _ in self.unresolved_task_fields]
+        if len(fields) != len(set(fields)) or any(not name for name in fields):
+            raise ValueError("unresolved research-family task fields must be uniquely named")
+        if any(value is not UNKNOWN for _, value in self.unresolved_task_fields):
+            raise ValueError("unresolved research-family task fields must be UNKNOWN")
+
+
+@dataclass(frozen=True, slots=True)
 class BenchmarkRelease:
     benchmark_id: str
     version: str

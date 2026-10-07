@@ -25,7 +25,10 @@ def _parser() -> argparse.ArgumentParser:
     description.add_argument("scientific_id")
 
     families = commands.add_parser("families")
-    families.add_subparsers(dest="family_command", required=True).add_parser("list")
+    family_commands = families.add_subparsers(dest="family_command", required=True)
+    family_commands.add_parser("list")
+    family_description = family_commands.add_parser("describe")
+    family_description.add_argument("family_id")
 
     research_objects = commands.add_parser("research-objects")
     object_commands = research_objects.add_subparsers(dest="research_object_command", required=True)
@@ -82,7 +85,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(asdict(benchmark), indent=2, sort_keys=True))
         return 0
     if args.command == "families" and args.family_command == "list":
-        print("\n".join(default_registry().families()))
+        print("\n".join(family.family_id for family in default_registry().families()))
+        return 0
+    if args.command == "families" and args.family_command == "describe":
+        family = default_registry().lookup_family(args.family_id)
+        print(json.dumps(asdict(family), indent=2, sort_keys=True))
         return 0
     if args.command == "research-objects" and args.research_object_command == "list":
         for research_object in default_registry().research_objects():

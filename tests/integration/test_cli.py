@@ -40,7 +40,14 @@ def test_cli_list_describe_and_validate(capsys: object) -> None:
     assert all("conditional_multi_agent_motion_prediction/" in line for line in benchmark_lines)
 
     assert main(["families", "list"]) == 0
-    assert len(capsys.readouterr().out.splitlines()) == 4  # type: ignore[attr-defined]
+    family_lines = capsys.readouterr().out.splitlines()  # type: ignore[attr-defined]
+    assert len(family_lines) == 4
+
+    assert main(["families", "describe", "future_response_forecasting"]) == 0
+    family = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert family["family_id"] == "future_response_forecasting"
+    assert family["research_question"]
+    assert dict(family["unresolved_task_fields"])["target"] == "UNKNOWN"
 
     assert main(["research-objects", "list"]) == 0
     object_lines = capsys.readouterr().out.splitlines()  # type: ignore[attr-defined]
