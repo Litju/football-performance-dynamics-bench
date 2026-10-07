@@ -23,4 +23,4 @@ The pre-reconstruction baseline for `/home/litju/Research-Benchmarks-Registry` i
 
 The matching path count and aggregate claims alone cannot distinguish a serialization difference from changed bytes, so the earlier discrepancy remains unexplained; this baseline is the first reproducible canonical digest.
 
-The origin-relative displacement lock is scoped to raw public and cross-match SRE. It binds the repaired measurement state, target/schema and split manifests, raw population-SRE semantics, fixtures, and source evidence. Physical diagnostics and the missing generated-calibration instance/private reward are outside this lock.
+Origin-relative displacement raw results use separate public-validation and LOMO scientific locks. Each binds its own split protocol and fixture population, the repaired measurement state, displacement schemas, raw population-SRE semantics, and execution sources. Physical diagnostics and the missing generated-calibration instance/private reward remain outside both locks.

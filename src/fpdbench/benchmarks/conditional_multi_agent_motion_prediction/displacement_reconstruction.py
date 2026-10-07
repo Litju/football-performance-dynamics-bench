@@ -492,13 +492,6 @@ LOMO_SPLIT = SplitProtocolDescriptor(
         "five public training matches only; public validation and private qualification excluded"
     ),
 )
-_COMBINED_SPLIT_HASH = _payload_hash(
-    {
-        "public_split_manifest_sha256": DISPLACEMENT_SPLIT.assignment_sha256,
-        "cross_match_assignment_sha256": LOMO_SPLIT.assignment_sha256,
-    }
-)
-
 _BENCHMARK_DEFINITION_STATE = {
     "benchmark_id": BENCHMARK_ID,
     "data_source": "DFL/IDSSE tracking and event source",
@@ -514,47 +507,179 @@ _BENCHMARK_DEFINITION_STATE = {
 _SCHEMA_HASH = hashlib.sha256(
     f"{DISPLACEMENT_PUBLIC_SCHEMA_SHA256}\n{DISPLACEMENT_TARGET_SCHEMA_SHA256}".encode()
 ).hexdigest()
-_PROVENANCE_CITATIONS = [
-    "registry://sha256/68f194e0465a1a13a4f432d8e33f0d997089c4e396b4d155f25d238ef2bcc4b2",
-    "registry://sha256/6a86019ed3e474816dfc5188aa5cbb6a36cbf841a582a6b7a3515fb02e4dc15f",
-    "registry://sha256/2fe0fb974931b2fb691c56aa50c66689f37a184c1a923f77d34ed1343f5e03b3",
-    "registry://sha256/4518e928fd09eee940e4093329ddf35cbaf6ea537bfde817cc454ce8f5b6313a",
-    "registry://sha256/eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
-    "scope:raw-displacement-public-and-cross-match-evaluation; "
-    "physical diagnostics and private calibrated reward excluded",
-]
-_PROVENANCE_SNAPSHOT = {
-    "snapshot_id": "displacement_raw_evaluator_evidence_set",
-    "snapshot_hash": _payload_hash(
-        {
-            "citations": "\n".join(_PROVENANCE_CITATIONS),
-            "snapshot_id": "displacement_raw_evaluator_evidence_set",
-        }
+_LOMO_TRAIN_FIXTURE_MEMBERS = (
+    (
+        "data/train/part-000.parquet",
+        "0fc6c73ead81703c7f903e23aebedd1bb014725865a2c881f385073540497c09",
     ),
-    "citations": _PROVENANCE_CITATIONS,
-}
-RAW_SCIENTIFIC_LOCK = build_scientific_lock(
+    (
+        "data/train/part-001.parquet",
+        "cfc387102b3bca15d4267dee1f00c676d1cecca61afcc599a952ed27f7d54a63",
+    ),
+    (
+        "data/train/part-002.parquet",
+        "2b37f03650e19bcea6efd978360d23a8a004a2bc71305ddb02ef577153c07bd9",
+    ),
+    (
+        "data/train/part-003.parquet",
+        "6ce3562d0599dc50f50d2572fa606681364cb89c0ed97e7cb8b6a7e9668935b0",
+    ),
+    (
+        "data/train/part-004.parquet",
+        "217be8efb71158fce7db3d040674e0a6e15c22eabf0bdbcfa5d3aad8d8e47878",
+    ),
+    (
+        "data/train/part-005.parquet",
+        "9235845c95190d78e68637ec8b6404fa3ffc8121be7c114453f32d8462b77d3c",
+    ),
+    (
+        "data/train/part-006.parquet",
+        "47001b3862af99a38b0b07cafab3292012562b4599b36d6e36eeba5fa66a9993",
+    ),
+    (
+        "data/train/part-007.parquet",
+        "86ccf6b83070c5381693ea3c47d8dc76edf4c9cc3ef383dabf1473c849989288",
+    ),
+    (
+        "data/train/part-008.parquet",
+        "c1ec8b9e245383b5792c6bc9f1084d68b86debe92199313260acada197f21041",
+    ),
+)
+_LOMO_FIXTURE_MANIFEST_SHA256 = _payload_hash(
     {
-        "lock_schema_version": "fpdbench-scientific-lock.v1",
-        "benchmark_id": BENCHMARK_ID,
-        "benchmark_definition_hash": _payload_hash(_BENCHMARK_DEFINITION_STATE),
-        "data_release_id": "historical_public_displacement_fixtures",
-        "data_release_version": "0.0.0",
-        "data_manifest_hash": DISPLACEMENT_FIXTURE_MANIFEST_SHA256,
-        "data_state_id": DISPLACEMENT_DATA_STATE.state_id,
-        "split_protocol_id": "match_grouped_public_and_cross_match_splits",
-        "split_protocol_version": "1.0.0",
-        "split_protocol_hash": _COMBINED_SPLIT_HASH,
-        "evaluator_id": "origin_relative_displacement_raw_population_sre",
-        "evaluator_version": "1.0.0",
-        "evaluator_hash": origin_relative_displacement_prediction.raw_evaluator_hash(),
-        "schema_version": "displacement_public_schema.v1",
-        "schema_hash": _SCHEMA_HASH,
-        "fixture_manifest_hash": DISPLACEMENT_FIXTURE_MANIFEST_SHA256,
-        "scientific_provenance_snapshot": _PROVENANCE_SNAPSHOT,
+        "files": "\n".join(f"{path}:{digest}" for path, digest in _LOMO_TRAIN_FIXTURE_MEMBERS),
+        "public_schema_sha256": DISPLACEMENT_PUBLIC_SCHEMA_SHA256,
+        "target_schema_sha256": DISPLACEMENT_TARGET_SCHEMA_SHA256,
     }
 )
-RAW_SCIENTIFIC_LOCK_HASH = cast(str, RAW_SCIENTIFIC_LOCK["scientific_lock_hash"])
+_PUBLIC_DATA_MANIFEST_SHA256 = _payload_hash(
+    {
+        "data_state_id": DISPLACEMENT_DATA_STATE.state_id,
+        "fixture_manifest_sha256": DISPLACEMENT_FIXTURE_MANIFEST_SHA256,
+        "match_ids": ",".join((*TRAIN_MATCHES, *PUBLIC_VALIDATION_MATCHES)),
+        "measurement_semantics": POSITION_MEASUREMENT_SEMANTICS,
+    }
+)
+_LOMO_DATA_MANIFEST_SHA256 = _payload_hash(
+    {
+        "data_state_id": DISPLACEMENT_DATA_STATE.state_id,
+        "fixture_manifest_sha256": _LOMO_FIXTURE_MANIFEST_SHA256,
+        "match_ids": ",".join(TRAIN_MATCHES),
+        "measurement_semantics": POSITION_MEASUREMENT_SEMANTICS,
+    }
+)
+_RAW_EVALUATOR_SOURCE = (
+    "registry://sha256/cd20733d029a4d78ed8bccf7dd6f5cde51211fc591914f81c7776de2cf415773"
+)
+_MEASUREMENT_STATE_SOURCE = (
+    "registry://sha256/3de6fc6e9ea566379bc7a7197cf6b1106571bc01c1e94c64498a1e43998f5947"
+)
+_PUBLIC_VALIDATION_RAW_PROVENANCE_CITATIONS = (
+    _MEASUREMENT_STATE_SOURCE,
+    "registry://sha256/134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4",
+    "registry://sha256/5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c",
+    f"registry://sha256/{DISPLACEMENT_PUBLIC_SCHEMA_SHA256}",
+    f"registry://sha256/{DISPLACEMENT_TARGET_SCHEMA_SHA256}",
+    _RAW_EVALUATOR_SOURCE,
+)
+_LOMO_RAW_PROVENANCE_CITATIONS = (
+    _MEASUREMENT_STATE_SOURCE,
+    *(f"registry://sha256/{digest}" for _, digest in _LOMO_TRAIN_FIXTURE_MEMBERS),
+    f"registry://sha256/{DISPLACEMENT_PUBLIC_SCHEMA_SHA256}",
+    f"registry://sha256/{DISPLACEMENT_TARGET_SCHEMA_SHA256}",
+    _RAW_EVALUATOR_SOURCE,
+)
+
+
+def _provenance_snapshot(snapshot_id: str, citations: tuple[str, ...]) -> dict[str, object]:
+    return {
+        "snapshot_id": snapshot_id,
+        "snapshot_hash": _payload_hash(
+            {"citations": "\n".join(citations), "snapshot_id": snapshot_id}
+        ),
+        "citations": list(citations),
+    }
+
+
+_PUBLIC_VALIDATION_RAW_PROVENANCE = _provenance_snapshot(
+    "displacement_public_validation_raw_execution_sources",
+    _PUBLIC_VALIDATION_RAW_PROVENANCE_CITATIONS,
+)
+_LOMO_RAW_PROVENANCE = _provenance_snapshot(
+    "displacement_lomo_raw_execution_sources",
+    _LOMO_RAW_PROVENANCE_CITATIONS,
+)
+
+
+def _build_raw_scientific_lock(
+    split: SplitProtocolDescriptor,
+    data_release_id: str,
+    data_manifest_hash: str,
+    fixture_manifest_hash: str,
+    scientific_provenance_snapshot: dict[str, object],
+    evaluator: origin_relative_displacement_prediction.RawDisplacementEvaluatorConfiguration,
+) -> dict[str, object]:
+    return build_scientific_lock(
+        {
+            "lock_schema_version": "fpdbench-scientific-lock.v1",
+            "benchmark_id": BENCHMARK_ID,
+            "benchmark_definition_hash": _payload_hash(_BENCHMARK_DEFINITION_STATE),
+            "data_release_id": data_release_id,
+            "data_release_version": "0.0.0",
+            "data_manifest_hash": data_manifest_hash,
+            "data_state_id": DISPLACEMENT_DATA_STATE.state_id,
+            "split_protocol_id": split.protocol_id,
+            "split_protocol_version": split.version,
+            "split_protocol_hash": split.assignment_sha256,
+            "evaluator_id": "origin_relative_displacement_raw_population_sre",
+            "evaluator_version": "1.0.0",
+            "evaluator_hash": origin_relative_displacement_prediction.raw_evaluator_hash(evaluator),
+            "schema_version": "displacement_public_schema.v1",
+            "schema_hash": _SCHEMA_HASH,
+            "fixture_manifest_hash": fixture_manifest_hash,
+            "scientific_provenance_snapshot": scientific_provenance_snapshot,
+        }
+    )
+
+
+def build_public_validation_raw_scientific_lock(
+    split: SplitProtocolDescriptor = DISPLACEMENT_SPLIT,
+    evaluator: origin_relative_displacement_prediction.RawDisplacementEvaluatorConfiguration = (
+        origin_relative_displacement_prediction.RAW_DISPLACEMENT_EVALUATOR
+    ),
+) -> dict[str, object]:
+    return _build_raw_scientific_lock(
+        split,
+        "historical_public_displacement_fixtures",
+        _PUBLIC_DATA_MANIFEST_SHA256,
+        DISPLACEMENT_FIXTURE_MANIFEST_SHA256,
+        _PUBLIC_VALIDATION_RAW_PROVENANCE,
+        evaluator,
+    )
+
+
+def build_lomo_raw_scientific_lock(
+    split: SplitProtocolDescriptor = LOMO_SPLIT,
+    evaluator: origin_relative_displacement_prediction.RawDisplacementEvaluatorConfiguration = (
+        origin_relative_displacement_prediction.RAW_DISPLACEMENT_EVALUATOR
+    ),
+) -> dict[str, object]:
+    return _build_raw_scientific_lock(
+        split,
+        "historical_public_displacement_train_fixtures",
+        _LOMO_DATA_MANIFEST_SHA256,
+        _LOMO_FIXTURE_MANIFEST_SHA256,
+        _LOMO_RAW_PROVENANCE,
+        evaluator,
+    )
+
+
+PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK = build_public_validation_raw_scientific_lock()
+PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH = cast(
+    str, PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
+)
+LOMO_RAW_SCIENTIFIC_LOCK = build_lomo_raw_scientific_lock()
+LOMO_RAW_SCIENTIFIC_LOCK_HASH = cast(str, LOMO_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -688,7 +813,7 @@ def _fold_record(row: tuple[int, str, float, str, str]) -> LomoFoldResult:
         evidence.append(_evidence(_PHASE_A_RESULT_SHA256, "reused five-fold campaign result"))
     result = ResultRecord(
         run_id=f"cross_match_seed_{seed}_{match.casefold()}",
-        scientific_lock_hash=RAW_SCIENTIFIC_LOCK_HASH,
+        scientific_lock_hash=LOMO_RAW_SCIENTIFIC_LOCK_HASH,
         model_checkpoint_sha256=checkpoint_sha256,
         metrics=(("raw_sre", raw_sre),),
         population=ResultPopulation.LOMO_CROSS_MATCH,
@@ -704,7 +829,7 @@ LOMO_FOLD_RESULTS = tuple(_fold_record(row) for row in _FOLD_ROWS)
 CORRECTED_LOMO_GRAND_MEAN_RAW_SRE = 0.27000500438140806
 CORRECTED_LOMO_AGGREGATE = ResultRecord(
     run_id="cross_match_three_seed_aggregate",
-    scientific_lock_hash=RAW_SCIENTIFIC_LOCK_HASH,
+    scientific_lock_hash=LOMO_RAW_SCIENTIFIC_LOCK_HASH,
     model_checkpoint_sha256=None,
     metrics=(("grand_mean_raw_sre", CORRECTED_LOMO_GRAND_MEAN_RAW_SRE),),
     population=ResultPopulation.LOMO_CROSS_MATCH,
@@ -716,7 +841,7 @@ CORRECTED_LOMO_AGGREGATE = ResultRecord(
 FIRST_LOMO_MEAN_RAW_SRE = 0.2720811027147715
 FIRST_LOMO_AGGREGATE = ResultRecord(
     run_id="cross_match_first_campaign_aggregate",
-    scientific_lock_hash=RAW_SCIENTIFIC_LOCK_HASH,
+    scientific_lock_hash=LOMO_RAW_SCIENTIFIC_LOCK_HASH,
     model_checkpoint_sha256=None,
     metrics=(("mean_raw_sre", FIRST_LOMO_MEAN_RAW_SRE),),
     population=ResultPopulation.LOMO_CROSS_MATCH,
@@ -812,7 +937,7 @@ FINAL_PUBLIC_MODEL = HistoricalModelRecord(
 
 PUBLIC_VALIDATION_RAW_RESULT = ResultRecord(
     run_id="selected_model_public_validation_raw",
-    scientific_lock_hash=RAW_SCIENTIFIC_LOCK_HASH,
+    scientific_lock_hash=PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH,
     model_checkpoint_sha256=FINAL_PUBLIC_MODEL.checkpoint_sha256,
     metrics=(("raw_sre", 0.25698394782524847),),
     population=ResultPopulation.PUBLIC_VALIDATION,

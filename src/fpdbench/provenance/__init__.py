@@ -6,6 +6,7 @@ from fpdbench.provenance.scientific_lock import (
     build_scientific_lock,
     canonical_scientific_bytes,
     compute_scientific_lock_hash,
+    validate_scientific_lock_provenance,
     verify_scientific_lock,
 )
 
@@ -39,5 +40,6 @@ __all__ = [
     "build_scientific_lock",
     "canonical_scientific_bytes",
     "compute_scientific_lock_hash",
+    "validate_scientific_lock_provenance",
     "verify_scientific_lock",
 ]

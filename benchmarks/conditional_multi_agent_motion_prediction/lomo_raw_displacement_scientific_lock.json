@@ -1,0 +1,38 @@
+{
+  "benchmark_definition_hash": "ef8b245e9743eb7744dceaac70449a9a6702ebf0dcc09e6769da463d0edf93e5",
+  "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+  "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+  "data_release_id": "historical_public_displacement_train_fixtures",
+  "data_release_version": "0.0.0",
+  "data_state_id": "repaired_position_measurement_state",
+  "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+  "evaluator_id": "origin_relative_displacement_raw_population_sre",
+  "evaluator_version": "1.0.0",
+  "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+  "lock_schema_version": "fpdbench-scientific-lock.v1",
+  "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+  "schema_version": "displacement_public_schema.v1",
+  "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+  "scientific_provenance_snapshot": {
+    "citations": [
+      "registry://sha256/3de6fc6e9ea566379bc7a7197cf6b1106571bc01c1e94c64498a1e43998f5947",
+      "registry://sha256/0fc6c73ead81703c7f903e23aebedd1bb014725865a2c881f385073540497c09",
+      "registry://sha256/cfc387102b3bca15d4267dee1f00c676d1cecca61afcc599a952ed27f7d54a63",
+      "registry://sha256/2b37f03650e19bcea6efd978360d23a8a004a2bc71305ddb02ef577153c07bd9",
+      "registry://sha256/6ce3562d0599dc50f50d2572fa606681364cb89c0ed97e7cb8b6a7e9668935b0",
+      "registry://sha256/217be8efb71158fce7db3d040674e0a6e15c22eabf0bdbcfa5d3aad8d8e47878",
+      "registry://sha256/9235845c95190d78e68637ec8b6404fa3ffc8121be7c114453f32d8462b77d3c",
+      "registry://sha256/47001b3862af99a38b0b07cafab3292012562b4599b36d6e36eeba5fa66a9993",
+      "registry://sha256/86ccf6b83070c5381693ea3c47d8dc76edf4c9cc3ef383dabf1473c849989288",
+      "registry://sha256/c1ec8b9e245383b5792c6bc9f1084d68b86debe92199313260acada197f21041",
+      "registry://sha256/7d2a117d0fbb4d3ed3b2d29b8f2ae6103fc13d37bf4cd306bb1886d461218ca7",
+      "registry://sha256/3cbc2b3cbdc800e4cf2c9bee3c6478f28f486d700472cf363450d8bc5a8fa891",
+      "registry://sha256/cd20733d029a4d78ed8bccf7dd6f5cde51211fc591914f81c7776de2cf415773"
+    ],
+    "snapshot_hash": "555b5179b185fcc39c597c9969c47c64f856490b9c2f6780e07c4cd210423c1e",
+    "snapshot_id": "displacement_lomo_raw_execution_sources"
+  },
+  "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+  "split_protocol_id": "match_grouped_cross_match_split",
+  "split_protocol_version": "1.0.0"
+}

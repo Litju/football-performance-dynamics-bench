@@ -4,7 +4,13 @@ import tomllib
 from pathlib import Path
 from typing import cast
 
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    HISTORICAL_RESULTS,
+    LOMO_RAW_SCIENTIFIC_LOCK,
+    PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+)
 from fpdbench.benchmarks.registry import default_registry
+from fpdbench.provenance.scientific_lock import validate_scientific_lock_provenance
 from fpdbench.validation.artifacts import validate_artifacts
 from fpdbench.validation.naming import validate_naming
 
@@ -12,6 +18,17 @@ from fpdbench.validation.naming import validate_naming
 def validate_repository(root: Path) -> tuple[str, ...]:
     errors = list(validate_naming(root))
     errors.extend(validate_artifacts(root))
+    result_output_hashes = tuple(
+        result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
+    )
+    for name, lock in (
+        ("public-validation raw lock", PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK),
+        ("LOMO raw lock", LOMO_RAW_SCIENTIFIC_LOCK),
+    ):
+        errors.extend(
+            f"{name}: {error}"
+            for error in validate_scientific_lock_provenance(lock, result_output_hashes)
+        )
     registry = default_registry()
     expected_families = set(registry.family_ids())
     config_families: set[str] = set()

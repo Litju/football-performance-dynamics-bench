@@ -1,0 +1,31 @@
+{
+  "benchmark_definition_hash": "ef8b245e9743eb7744dceaac70449a9a6702ebf0dcc09e6769da463d0edf93e5",
+  "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+  "data_manifest_hash": "c759a1aaf11b948edcef3cef2e5a90cecd1bb21c2a4d7275bc70c9c7dcbb2dd8",
+  "data_release_id": "historical_public_displacement_fixtures",
+  "data_release_version": "0.0.0",
+  "data_state_id": "repaired_position_measurement_state",
+  "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+  "evaluator_id": "origin_relative_displacement_raw_population_sre",
+  "evaluator_version": "1.0.0",
+  "fixture_manifest_hash": "134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4",
+  "lock_schema_version": "fpdbench-scientific-lock.v1",
+  "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+  "schema_version": "displacement_public_schema.v1",
+  "scientific_lock_hash": "d56ef8e1ff37276e258d516fa9ce26231403222e549296777ee27e5f38cfeedc",
+  "scientific_provenance_snapshot": {
+    "citations": [
+      "registry://sha256/3de6fc6e9ea566379bc7a7197cf6b1106571bc01c1e94c64498a1e43998f5947",
+      "registry://sha256/134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4",
+      "registry://sha256/5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c",
+      "registry://sha256/7d2a117d0fbb4d3ed3b2d29b8f2ae6103fc13d37bf4cd306bb1886d461218ca7",
+      "registry://sha256/3cbc2b3cbdc800e4cf2c9bee3c6478f28f486d700472cf363450d8bc5a8fa891",
+      "registry://sha256/cd20733d029a4d78ed8bccf7dd6f5cde51211fc591914f81c7776de2cf415773"
+    ],
+    "snapshot_hash": "c12ad8a5939d7a96680381fade2ba5f608ae802f0e28646b5a07f19d7fd1297b",
+    "snapshot_id": "displacement_public_validation_raw_execution_sources"
+  },
+  "split_protocol_hash": "5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c",
+  "split_protocol_id": "match_grouped_displacement_public_split",
+  "split_protocol_version": "1.0.0"
+}

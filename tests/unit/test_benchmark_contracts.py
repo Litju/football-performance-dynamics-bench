@@ -1,3 +1,4 @@
+import hashlib
 import json
 from dataclasses import fields, replace
 from importlib.metadata import version
@@ -37,6 +38,9 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     HISTORY_STEPS,
     INVALIDATED_SECOND_CAMPAIGN_AGGREGATE,
     LOMO_FOLD_RESULTS,
+    LOMO_RAW_SCIENTIFIC_LOCK,
+    LOMO_RAW_SCIENTIFIC_LOCK_HASH,
+    LOMO_SPLIT,
     ORIGINAL_POSITION_DATA_STATE,
     PARITY_FIELDS,
     POSITION_MEASUREMENT_EVIDENCE,
@@ -47,9 +51,9 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     PUBLIC_VALIDATION,
     PUBLIC_VALIDATION_PHYSICAL_RESULT,
     PUBLIC_VALIDATION_RAW_RESULT,
+    PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+    PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH,
     RAW_DISPLACEMENT_EVALUATOR,
-    RAW_SCIENTIFIC_LOCK,
-    RAW_SCIENTIFIC_LOCK_HASH,
     REPAIRED_POSITION_DATA_STATE,
     SECOND_LOMO_CAMPAIGN,
     SYSTEM_VALIDATION_EVIDENCE,
@@ -64,6 +68,8 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     ParityStatus,
     RawDisplacementEvaluatorConfiguration,
     absolute_position_to_physical,
+    build_lomo_raw_scientific_lock,
+    build_public_validation_raw_scientific_lock,
     evaluate_absolute_position_trajectories,
     evaluate_displacement,
     evaluate_raw_displacement_sre,
@@ -93,7 +99,12 @@ from fpdbench.benchmarks.workload_performance_state import (
 )
 from fpdbench.experiments import EvaluatorState, ResultPopulation, ResultValidity
 from fpdbench.provenance.aliases import DISPLACEMENT_HISTORICAL_ALIASES
-from fpdbench.provenance.scientific_lock import compute_scientific_lock_hash, verify_scientific_lock
+from fpdbench.provenance.scientific_lock import (
+    build_scientific_lock,
+    canonical_scientific_bytes,
+    validate_scientific_lock_provenance,
+    verify_scientific_lock,
+)
 from fpdbench.validation.artifacts import validate_artifacts
 
 
@@ -105,12 +116,10 @@ def _trajectory(steps: int, value: float) -> list[list[list[float]]]:
     return [_frame(value) for _ in range(steps)]
 
 
-def _raw_lock_hash_for(evaluator: RawDisplacementEvaluatorConfiguration) -> str:
-    state = {
-        key: value for key, value in RAW_SCIENTIFIC_LOCK.items() if key != "scientific_lock_hash"
-    }
-    state["evaluator_hash"] = raw_evaluator_hash(evaluator)
-    return compute_scientific_lock_hash(state)
+def _raw_lock_hashes_for(evaluator: RawDisplacementEvaluatorConfiguration) -> tuple[str, str]:
+    public_lock = build_public_validation_raw_scientific_lock(evaluator=evaluator)
+    lomo_lock = build_lomo_raw_scientific_lock(evaluator=evaluator)
+    return str(public_lock["scientific_lock_hash"]), str(lomo_lock["scientific_lock_hash"])
 
 
 def test_package_import_and_registry_discovery() -> None:
@@ -615,8 +624,9 @@ def test_generated_calibration_metadata_does_not_churn_raw_scientific_lock() -> 
     assert calibration_a.x_ref is UNKNOWN
     assert calibration_a.calibrated_reward is UNKNOWN
     assert raw_evaluator_hash(evaluator_a) == raw_evaluator_hash(evaluator_b)
-    assert _raw_lock_hash_for(evaluator_a) == RAW_SCIENTIFIC_LOCK_HASH
-    assert _raw_lock_hash_for(evaluator_a) == _raw_lock_hash_for(evaluator_b)
+    expected = (PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH, LOMO_RAW_SCIENTIFIC_LOCK_HASH)
+    assert _raw_lock_hashes_for(evaluator_a) == expected
+    assert _raw_lock_hashes_for(evaluator_b) == expected
 
 
 @pytest.mark.parametrize(
@@ -636,7 +646,92 @@ def test_raw_evaluator_scientific_changes_churn_raw_lock(
     changed: RawDisplacementEvaluatorConfiguration,
 ) -> None:
     assert raw_evaluator_hash(changed) != raw_evaluator_hash(RAW_DISPLACEMENT_EVALUATOR)
-    assert _raw_lock_hash_for(changed) != RAW_SCIENTIFIC_LOCK_HASH
+    public_hash, lomo_hash = _raw_lock_hashes_for(changed)
+    assert public_hash != PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+    assert lomo_hash != LOMO_RAW_SCIENTIFIC_LOCK_HASH
+
+
+def test_raw_locks_bind_only_their_own_split() -> None:
+    changed_lomo = replace(LOMO_SPLIT, assignment_sha256="a" * 64)
+    changed_public = replace(DISPLACEMENT_SPLIT, assignment_sha256="b" * 64)
+
+    lomo_changed_lock = build_lomo_raw_scientific_lock(changed_lomo)
+    public_unchanged_lock = build_public_validation_raw_scientific_lock(DISPLACEMENT_SPLIT)
+    public_changed_lock = build_public_validation_raw_scientific_lock(changed_public)
+    lomo_unchanged_lock = build_lomo_raw_scientific_lock(LOMO_SPLIT)
+
+    assert lomo_changed_lock["scientific_lock_hash"] != LOMO_RAW_SCIENTIFIC_LOCK_HASH
+    assert public_unchanged_lock["scientific_lock_hash"] == (
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+    )
+    assert public_changed_lock["scientific_lock_hash"] != (
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+    )
+    assert lomo_unchanged_lock["scientific_lock_hash"] == LOMO_RAW_SCIENTIFIC_LOCK_HASH
+
+
+def test_result_values_and_output_hashes_do_not_change_raw_locks() -> None:
+    changed_fold_metric = replace(LOMO_FOLD_RESULTS[0].result, metrics=(("raw_sre", 0.9),))
+    changed_aggregate_metric = replace(
+        CORRECTED_LOMO_AGGREGATE, metrics=(("grand_mean_raw_sre", 0.9),)
+    )
+    changed_fold_output = replace(LOMO_FOLD_RESULTS[0].result, output_sha256="c" * 64)
+    changed_public_metric = replace(PUBLIC_VALIDATION_RAW_RESULT, metrics=(("raw_sre", 0.9),))
+    changed_public_output = replace(PUBLIC_VALIDATION_RAW_RESULT, output_sha256="d" * 64)
+    mutated_results = (
+        changed_fold_metric,
+        changed_aggregate_metric,
+        changed_fold_output,
+        changed_public_metric,
+        changed_public_output,
+    )
+    assert changed_fold_metric.metrics != LOMO_FOLD_RESULTS[0].result.metrics
+    assert changed_aggregate_metric.metrics != CORRECTED_LOMO_AGGREGATE.metrics
+    assert changed_fold_output.output_sha256 == "c" * 64
+    assert changed_public_metric.metrics != PUBLIC_VALIDATION_RAW_RESULT.metrics
+    assert changed_public_output.output_sha256 == "d" * 64
+    assert all(
+        result.scientific_lock_hash == LOMO_RAW_SCIENTIFIC_LOCK_HASH
+        for result in mutated_results[:3]
+    )
+    assert all(
+        result.scientific_lock_hash == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+        for result in mutated_results[3:]
+    )
+    assert _raw_lock_hashes_for(RAW_DISPLACEMENT_EVALUATOR) == (
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH,
+        LOMO_RAW_SCIENTIFIC_LOCK_HASH,
+    )
+    result_output_hashes = tuple(
+        result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
+    ) + ("c" * 64, "d" * 64)
+    assert all(
+        validate_scientific_lock_provenance(lock, result_output_hashes) == ()
+        for lock in (PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK, LOMO_RAW_SCIENTIFIC_LOCK)
+    )
+
+
+def test_lock_provenance_validator_rejects_result_output_citations() -> None:
+    result_output_sha256 = "e" * 64
+    state = {
+        key: value
+        for key, value in PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK.items()
+        if key != "scientific_lock_hash"
+    }
+    snapshot = dict(state["scientific_provenance_snapshot"])
+    citations = list(snapshot["citations"])
+    citations.append(f"registry://sha256/{result_output_sha256}")
+    snapshot_id = str(snapshot["snapshot_id"])
+    snapshot["citations"] = citations
+    snapshot["snapshot_hash"] = hashlib.sha256(
+        canonical_scientific_bytes({"citations": "\n".join(citations), "snapshot_id": snapshot_id})
+    ).hexdigest()
+    state["scientific_provenance_snapshot"] = snapshot
+
+    lock_with_result_citation = build_scientific_lock(state)
+    assert validate_scientific_lock_provenance(
+        lock_with_result_citation, (result_output_sha256,)
+    ) == (f"scientific provenance cites result output SHA-256 {result_output_sha256}",)
 
 
 def test_displacement_parity_contract_is_complete_and_distinct() -> None:
@@ -705,7 +800,8 @@ def test_lomo_campaigns_keep_invalid_aggregate_out_of_result_records() -> None:
         fold.result.model_checkpoint_sha256 == fold.checkpoint_sha256 for fold in LOMO_FOLD_RESULTS
     )
     assert all(
-        fold.result.scientific_lock_hash == RAW_SCIENTIFIC_LOCK_HASH for fold in LOMO_FOLD_RESULTS
+        fold.result.scientific_lock_hash == LOMO_RAW_SCIENTIFIC_LOCK_HASH
+        for fold in LOMO_FOLD_RESULTS
     )
     assert not TRAINING_REEXECUTED_DURING_RECONSTRUCTION
     assert CORRECTED_AGGREGATION.aggregate_validity is ResultValidity.RECOMPUTED
@@ -748,7 +844,10 @@ def test_selected_model_and_validation_results_keep_evidence_populations() -> No
         EvaluatorState.RAW_EVALUATION,
         EvaluatorState.PHYSICAL_DIAGNOSTIC,
     }
-    assert PUBLIC_VALIDATION_RAW_RESULT.scientific_lock_hash == RAW_SCIENTIFIC_LOCK_HASH
+    assert (
+        PUBLIC_VALIDATION_RAW_RESULT.scientific_lock_hash
+        == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+    )
     assert PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash is None
     assert PUBLIC_VALIDATION_RAW_RESULT.metrics == (("raw_sre", 0.25698394782524847),)
     assert PUBLIC_VALIDATION_PHYSICAL_RESULT.metrics == (
@@ -775,16 +874,85 @@ def test_selected_model_and_validation_results_keep_evidence_populations() -> No
     )
 
 
-def test_displacement_raw_scientific_lock_is_scoped_and_aliases_stay_provenance() -> None:
-    assert verify_scientific_lock(RAW_SCIENTIFIC_LOCK)
-    assert RAW_SCIENTIFIC_LOCK["evaluator_id"] == "origin_relative_displacement_raw_population_sre"
-    assert "x_ref" not in RAW_SCIENTIFIC_LOCK
-    assert "calibrated_reward" not in RAW_SCIENTIFIC_LOCK
-    citations = RAW_SCIENTIFIC_LOCK["scientific_provenance_snapshot"]["citations"]
-    assert any(
-        "raw-displacement" in citation and "private calibrated reward excluded" in citation
-        for citation in citations
+def test_displacement_raw_scientific_locks_bind_exact_result_groups() -> None:
+    assert verify_scientific_lock(PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK)
+    assert verify_scientific_lock(LOMO_RAW_SCIENTIFIC_LOCK)
+    assert (
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["evaluator_id"]
+        == "origin_relative_displacement_raw_population_sre"
     )
+    assert PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["split_protocol_id"] == (
+        DISPLACEMENT_SPLIT.protocol_id
+    )
+    assert PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["split_protocol_hash"] == (
+        DISPLACEMENT_SPLIT.assignment_sha256
+    )
+    assert LOMO_RAW_SCIENTIFIC_LOCK["split_protocol_id"] == LOMO_SPLIT.protocol_id
+    assert LOMO_RAW_SCIENTIFIC_LOCK["split_protocol_hash"] == LOMO_SPLIT.assignment_sha256
+    assert "x_ref" not in PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK
+    assert "calibrated_reward" not in PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK
+    assert "x_ref" not in LOMO_RAW_SCIENTIFIC_LOCK
+    assert "calibrated_reward" not in LOMO_RAW_SCIENTIFIC_LOCK
+
+    raw_lomo_results = [
+        result
+        for result in HISTORICAL_RESULTS
+        if result.population is ResultPopulation.LOMO_CROSS_MATCH
+        and result.evaluator_state is EvaluatorState.RAW_EVALUATION
+    ]
+    raw_public_results = [
+        result
+        for result in HISTORICAL_RESULTS
+        if result.population is ResultPopulation.PUBLIC_VALIDATION
+        and result.evaluator_state is EvaluatorState.RAW_EVALUATION
+    ]
+    assert len(raw_lomo_results) == 17
+    assert all(
+        result.scientific_lock_hash == LOMO_RAW_SCIENTIFIC_LOCK_HASH for result in raw_lomo_results
+    )
+    assert len(raw_public_results) == 1
+    assert raw_public_results[0] is PUBLIC_VALIDATION_RAW_RESULT
+    assert raw_public_results[0].scientific_lock_hash == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
+    assert PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash is None
+    assert PRIVATE_RESULT_RECORDS == ()
+
+    result_output_hashes = tuple(
+        result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
+    )
+    for lock in (PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK, LOMO_RAW_SCIENTIFIC_LOCK):
+        assert validate_scientific_lock_provenance(lock, result_output_hashes) == ()
+        citations = lock["scientific_provenance_snapshot"]["citations"]
+        assert (
+            "registry://sha256/eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+            not in citations
+        )
+        assert all(
+            result.output_sha256 not in citations
+            for result in HISTORICAL_RESULTS
+            if result.output_sha256 is not None
+        )
+
+    public_citations = PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["scientific_provenance_snapshot"][
+        "citations"
+    ]
+    lomo_citations = LOMO_RAW_SCIENTIFIC_LOCK["scientific_provenance_snapshot"]["citations"]
+    assert (
+        "registry://sha256/134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4"
+        in public_citations
+    )
+    assert (
+        "registry://sha256/5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c"
+        in public_citations
+    )
+    assert (
+        "registry://sha256/134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4"
+        not in lomo_citations
+    )
+    assert (
+        "registry://sha256/5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c"
+        not in lomo_citations
+    )
+
     assert all(
         alias.canonical_id == DISPLACEMENT_BENCHMARK.identity.scientific_id
         for alias in DISPLACEMENT_HISTORICAL_ALIASES
@@ -796,7 +964,10 @@ def test_displacement_raw_scientific_lock_is_scoped_and_aliases_stay_provenance(
         root
         / "benchmarks"
         / "conditional_multi_agent_motion_prediction"
-        / "raw_displacement_scientific_lock.json"
+        / "public_validation_raw_displacement_scientific_lock.json"
     )
-    assert json.loads(lock_path.read_text()) == RAW_SCIENTIFIC_LOCK
+    lomo_lock_path = lock_path.with_name("lomo_raw_displacement_scientific_lock.json")
+    assert json.loads(lock_path.read_text()) == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK
+    assert json.loads(lomo_lock_path.read_text()) == LOMO_RAW_SCIENTIFIC_LOCK
+    assert not lock_path.with_name("raw_displacement_scientific_lock.json").exists()
     assert validate_artifacts(root) == ()

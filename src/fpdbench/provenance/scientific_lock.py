@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import cast
 
 type JsonObject = dict[str, object]
@@ -183,3 +183,16 @@ def build_scientific_lock(scientific_state: Mapping[str, object]) -> JsonObject:
 def verify_scientific_lock(lock: Mapping[str, object]) -> bool:
     expected = lock.get("scientific_lock_hash")
     return isinstance(expected, str) and expected == compute_scientific_lock_hash(lock)
+
+
+def validate_scientific_lock_provenance(
+    lock: Mapping[str, object], result_output_sha256s: Iterable[str]
+) -> tuple[str, ...]:
+    snapshot = cast(dict[str, object], _scientific_payload(lock)["scientific_provenance_snapshot"])
+    citations = cast(list[str], snapshot["citations"])
+    output_hashes = {digest for digest in result_output_sha256s if _SHA256.fullmatch(digest)}
+    return tuple(
+        f"scientific provenance cites result output SHA-256 {digest}"
+        for digest in sorted(output_hashes)
+        if any(digest in citation for citation in citations)
+    )
