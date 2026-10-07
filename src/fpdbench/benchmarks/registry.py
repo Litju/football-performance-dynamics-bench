@@ -5,10 +5,10 @@ import re
 from fpdbench.benchmarks.base import (
     UNKNOWN,
     BenchmarkDefinition,
-    ResearchObjectDefinition,
-    ResearchFamilyDefinition,
-    ResearchObjectType,
     ReleaseStatus,
+    ResearchFamilyDefinition,
+    ResearchObjectDefinition,
+    ResearchObjectType,
     ScientificMaturity,
 )
 from fpdbench.provenance import HistoricalAlias
@@ -29,8 +29,10 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "whole-session performance-state study and signed tangential-acceleration formulation."
         ),
         known_non_claims=(
-            "The historical whole-session study is partial and does not define an executable benchmark.",
-            "Signed tangential acceleration is an invalidated historical formulation, not a validated benchmark.",
+            "The historical whole-session study is partial and "
+            "does not define an executable benchmark.",
+            "Signed tangential acceleration is an invalidated historical formulation, "
+            "not a validated benchmark.",
         ),
         scientific_maturity=ScientificMaturity.PARTIAL,
         release_status=ReleaseStatus.UNRELEASED,
@@ -48,15 +50,17 @@ RESEARCH_FAMILY_DEFINITIONS = (
         public_name="Multimodal State Estimation",
         technical_name="multimodal_state_estimation",
         research_question=(
-            "Can noisy, asynchronous, multirate sensor observations support reconstruction of clean "
-            "or latent athlete state, and which target families are identifiable?"
+            "Can noisy, asynchronous, multirate sensor observations "
+            "support reconstruction of clean or latent athlete state, and "
+            "which target families are identifiable?"
         ),
         scientific_scope=(
-            "Reconstruction from noisy, asynchronous, multirate sensor observations, preserving the "
+            "Reconstruction from noisy, asynchronous, multirate sensor observations, preserving "
             "historical pilot's scoped negative result."
         ),
         known_non_claims=(
-            "The historical negative result is scoped to the recovered pilot, not a universal impossibility claim.",
+            "The historical negative result is scoped to the recovered pilot, "
+            "not a universal impossibility claim.",
             "No target family was selected.",
         ),
         scientific_maturity=ScientificMaturity.NEGATIVE,
@@ -81,7 +85,8 @@ RESEARCH_FAMILY_DEFINITIONS = (
         ),
         known_non_claims=(
             "No recovered benchmark identity exists.",
-            "Realized future opponent and ball trajectories are conditional context, not ex-ante exposure.",
+            "Realized future opponent and ball trajectories are conditional context, "
+            "not ex-ante exposure.",
             "No target, exposure definition, scorer, horizon, or population is assigned.",
         ),
         scientific_maturity=ScientificMaturity.UNRECOVERABLE,
@@ -106,13 +111,16 @@ RESEARCH_FAMILY_DEFINITIONS = (
             "trajectories, can the target team's future response be predicted?"
         ),
         scientific_scope=(
-            "Conditional target-team trajectory prediction from observed scene history and supplied "
+            "Conditional target-team trajectory prediction from observed scene history "
+            "and supplied "
             "realized future opponent-team and ball trajectories; owns the absolute-position and "
             "origin-relative displacement benchmarks."
         ),
         known_non_claims=(
-            "Supplied realized future opponent and ball trajectories are conditional context, not information observed at the forecast origin.",
-            "The displacement reconstruction remains partial; its scorer/result parity is unresolved.",
+            "Supplied realized future opponent and ball trajectories are conditional context, "
+            "not information observed at the forecast origin.",
+            "The displacement reconstruction remains partial; "
+            "its scorer/result parity is unresolved.",
         ),
         scientific_maturity=ScientificMaturity.RECONSTRUCTED,
         release_status=ReleaseStatus.UNRELEASED,
@@ -124,17 +132,12 @@ RESEARCH_FAMILY_IDS = tuple(definition.family_id for definition in RESEARCH_FAMI
 
 class BenchmarkRegistry:
     def __init__(self) -> None:
-        self._families: dict[str, ResearchFamilyDefinition] = {}
+        self._families = {
+            definition.family_id: definition for definition in RESEARCH_FAMILY_DEFINITIONS
+        }
         self._research_objects: dict[str, ResearchObjectDefinition] = {}
         self._benchmarks: dict[str, BenchmarkDefinition] = {}
         self._aliases: dict[str, HistoricalAlias] = {}
-
-    def register_family(self, family: ResearchFamilyDefinition) -> None:
-        if not _CANONICAL_ID.fullmatch(family.family_id):
-            raise ValueError(f"not a canonical scientific research-family ID: {family.family_id}")
-        if family.family_id in self._families:
-            raise ValueError(f"duplicate research-family ID: {family.family_id}")
-        self._families[family.family_id] = family
 
     def register(self, research_object: ResearchObjectDefinition) -> None:
         identifier = research_object.identity.scientific_id
@@ -228,8 +231,6 @@ def default_registry() -> BenchmarkRegistry:
     )
 
     registry = BenchmarkRegistry()
-    for family in RESEARCH_FAMILY_DEFINITIONS:
-        registry.register_family(family)
     for research_object in (
         WHOLE_SESSION_RESEARCH_OBJECT,
         SIGNED_TANGENTIAL_ACCELERATION_RESEARCH_OBJECT,

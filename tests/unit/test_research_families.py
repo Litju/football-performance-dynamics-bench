@@ -1,6 +1,12 @@
 import pytest
 
-from fpdbench.benchmarks import UNKNOWN, ResearchFamilyDefinition, ReleaseStatus, ScientificMaturity
+from fpdbench.benchmarks import (
+    UNKNOWN,
+    BenchmarkRegistry,
+    ReleaseStatus,
+    ResearchFamilyDefinition,
+    ScientificMaturity,
+)
 from fpdbench.benchmarks.registry import default_registry
 
 
@@ -14,8 +20,9 @@ def test_four_typed_family_definitions_keep_object_counts_unambiguous() -> None:
             "recoverable from the historical evidence?"
         ),
         "multimodal_state_estimation": (
-            "Can noisy, asynchronous, multirate sensor observations support reconstruction of clean "
-            "or latent athlete state, and which target families are identifiable?"
+            "Can noisy, asynchronous, multirate sensor observations "
+            "support reconstruction of clean or latent athlete state, and "
+            "which target families are identifiable?"
         ),
         "future_response_forecasting": (
             "Given causal history and ex-ante available future exposure, can subsequent athlete or "
@@ -31,6 +38,10 @@ def test_four_typed_family_definitions_keep_object_counts_unambiguous() -> None:
     assert all(isinstance(family, ResearchFamilyDefinition) for family in families)
     assert {family.family_id for family in families} == set(expected_questions)
     assert {family.technical_name for family in families} == set(expected_questions)
+    assert BenchmarkRegistry().families() == families
+    assert all(
+        value is UNKNOWN for family in families for _, value in family.unresolved_task_fields
+    )
     for family in families:
         assert family.public_name
         assert family.research_question == expected_questions[family.family_id]
