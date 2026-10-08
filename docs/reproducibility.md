@@ -25,6 +25,42 @@ The matching path count and aggregate claims alone cannot distinguish a serializ
 
 Origin-relative displacement raw results use separate public-validation and LOMO scientific locks. Each binds its own split protocol and fixture population, the repaired measurement state, displacement schemas, raw population-SRE semantics, and execution sources. Physical diagnostics and the missing generated-calibration instance/private reward remain outside both locks.
 
+## Public reproducibility boundary
+
+The public checkout can execute the target transforms, displacement inversion, information-boundary checks, raw evaluators, absolute-position calibration, physical diagnostics, canonical protocols, scientific-lock construction, and result-manifest hashing. `benchmarks/reproducibility_snapshot.json` records their deterministic public state. It contains no runtime timestamp, host path, CI address, governance field, or Git revision.
+
+The public synthetic reference is a small transformation regression: 25 history steps at 5 Hz, 11 target and 11 opponent players, a ball, the final observed target frame as the forecast origin, and 15 future target steps. It runs both absolute and origin-relative target transforms and verifies displacement inversion to within `1e-12` metres. Future target-team values are withheld from inputs; realized future opponent and ball values remain conditional context. This reference exercises transformations and does not stand in for a historical dataset or produce a test set.
+
+The calibrated absolute-position score anchors are reference `0.5`, no-information `0`, and perfect `1`. The reference anchor allows `1e-14` floating-point tolerance; its current computed value is `0.49999999999999806`. The other two anchors compare exactly.
+
+Historical result records, fixture manifests, population counts, output digests, and checkpoint identifiers can be checked as public metadata. The underlying historical tracking bytes and learned checkpoint bytes are not in the public repository. Historical source-to-full-fixture regeneration, learned checkpoint loading, and historical learned-model deterministic inference are therefore `UNAVAILABLE_PUBLIC_ARTIFACT`. The J03WMX qualification truth is `FORBIDDEN_PRIVATE_TRUTH` and is never read. The displacement calibrated reward remains `UNKNOWN`.
+
+The capability matrix is checked by `fpdbench reproducibility check` and distinguishes `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT`, and `FORBIDDEN_PRIVATE_TRUTH`. `fpdbench evidence validate` checks the complete public SHA-reference inventory without reading external files or using the network. Optional strict resolution reads the supplied registry only, requires its canonical 793-path digest before and after, and reports every zero or multiple content match:
+
+```bash
+uv run fpdbench evidence validate --registry-root /home/litju/Research-Benchmarks-Registry
+```
+
+Run the public regeneration and package checks with:
+
+```bash
+uv sync --locked --all-groups
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest
+uv run fpdbench validate-naming
+uv run fpdbench validate
+uv run fpdbench evidence validate
+uv run fpdbench reproducibility check
+uv build
+uv run python tools/wheel_smoke.py dist/*.whl
+```
+
+The wheel smoke installs offline into a temporary virtual environment outside the checkout, verifies the packaged calibration bytes and evaluator imports, and exercises the installed CLI. The artifact guard blocks `.safetensors`, `.onnx`, `.h5`, `.hdf5`, and `.keras`; `.pb` is blocked for model/checkpoint/weights paths or names. A small generic `.bin` remains allowed, while model/checkpoint/weights `.bin` paths are blocked and all files retain the 10 MiB size cap.
+
+Reproduction policy: **NO TRAINING. NO PRIVATE TRUTH. NO PUBLIC TEST GENERATION. NO NETWORK ARTIFACT DOWNLOAD.**
+
 ## Canonical conditional-motion split protocols
 
 The canonical R3-era implementation in `fpdbench.protocols` defines role and LOMO protocols for absolute position and origin-relative displacement. Both benchmarks share the same match-role assignment:

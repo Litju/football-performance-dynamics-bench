@@ -1,0 +1,1069 @@
+{
+  "absolute_position_calibration_sha256": "f3b4155899c5d8e9632e9cab7a25e471411c62c4a9a7489c58c1edb16180ce94",
+  "artifact_availability": {
+    "absolute_position_calibration_bytes": "PUBLIC_EXECUTABLE",
+    "displacement_scientific_lock_files": "PUBLIC_VERIFIABLE",
+    "historical_learned_checkpoint_bytes": "UNAVAILABLE_PUBLIC_ARTIFACT",
+    "historical_tracking_dataset_bytes": "UNAVAILABLE_PUBLIC_ARTIFACT",
+    "j03wmx_qualification_truth": "FORBIDDEN_PRIVATE_TRUTH"
+  },
+  "benchmark_ids": [
+    "conditional_multi_agent_motion_prediction/absolute_position_prediction",
+    "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction"
+  ],
+  "capabilities": {
+    "absolute_position.historical_calibrated_score": "PUBLIC_EXECUTABLE",
+    "absolute_position.progress_transform": "PUBLIC_EXECUTABLE",
+    "absolute_position.raw_per_target_sre": "PUBLIC_EXECUTABLE",
+    "absolute_position.target_transform": "PUBLIC_EXECUTABLE",
+    "canonical_protocol_generation_and_hashing": "PUBLIC_EXECUTABLE",
+    "canonical_registry_evidence_resolution": "LOCAL_EVIDENCE_VERIFIABLE",
+    "displacement.inversion_to_physical_xy": "PUBLIC_EXECUTABLE",
+    "displacement.raw_330_target_sre": "PUBLIC_EXECUTABLE",
+    "displacement.target_transform": "PUBLIC_EXECUTABLE",
+    "historical_checkpoint_metadata": "PUBLIC_VERIFIABLE",
+    "historical_fixture_manifests_and_population_counts": "PUBLIC_VERIFIABLE",
+    "historical_learned_checkpoint_loading": "UNAVAILABLE_PUBLIC_ARTIFACT",
+    "historical_learned_model_deterministic_inference": "UNAVAILABLE_PUBLIC_ARTIFACT",
+    "historical_result_manifest_hashing_and_scope": "PUBLIC_EXECUTABLE",
+    "historical_result_records_and_output_hashes": "PUBLIC_VERIFIABLE",
+    "historical_source_to_full_fixture_regeneration": "UNAVAILABLE_PUBLIC_ARTIFACT",
+    "information_boundary_validation": "PUBLIC_EXECUTABLE",
+    "j03wmx_private_qualification_truth_evaluation": "FORBIDDEN_PRIVATE_TRUTH",
+    "physical_trajectory.ade_fde_xy_rmse": "PUBLIC_EXECUTABLE",
+    "scientific_lock_generation_and_verification": "PUBLIC_EXECUTABLE"
+  },
+  "evaluator_regeneration": {
+    "absolute_position_calibration_sha256": "f3b4155899c5d8e9632e9cab7a25e471411c62c4a9a7489c58c1edb16180ce94",
+    "absolute_position_score_anchors": {
+      "no_information": 0.0,
+      "perfect": 1.0,
+      "reference": 0.5,
+      "reference_actual": 0.49999999999999806,
+      "reference_tolerance": 1e-14
+    },
+    "absolute_position_target_count": 330,
+    "displacement_calibrated_reward": "UNKNOWN",
+    "displacement_raw_evaluator_sha256": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+    "evaluator_scientific_config_sha256": {
+      "absolute_position.historical_continuous_pwl_v3": "3e4782253e14e6416753898794ad863ad899a659f7cf24716d6013e7434ca2e8",
+      "absolute_position.per_target_progress": "084e1b87c2139a95dd162d56d7a85e78d572a54538b70f9af5cd140dfb294554",
+      "absolute_position.population_sre_targets": "2bf4692ba8987caf656ac3243b7c89a0947c3a426f1da8d57475cad811c1fcc0",
+      "multimodal_sensor_state.equal_channel_population_sre": "d07ded665d687efea4e53ea4957c9d7b9bbd7f571647c255541ee9b9d267abe4",
+      "multimodal_sensor_state.public_nonexpert_quality_gate": "4c056bbba1a4b140b507af4b5d37a8562932344445cf1bfcf1867002ab4f6c0a",
+      "origin_relative_displacement_raw_population_sre": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+      "physical_trajectory.ade_fde_xy_rmse": "7ce838398fc0939145362077dea7d62023129cd7936086cf042269a48d918b10",
+      "signed_tangential_acceleration.global_full_row_rmse": "ddaa8c7d78a32fee1bfb3c5fcf1542d0a852cb6bf73dfe7b8321d33cdbcea88f"
+    },
+    "physical_trajectory_evaluator_sha256": "7ce838398fc0939145362077dea7d62023129cd7936086cf042269a48d918b10",
+    "sensor_benchmark_reward_emitted": false,
+    "sensor_corruption_minimum_rows": 256,
+    "sensor_public_nonexpert_gate_maximum": 0.3,
+    "sensor_selected_target_family": null,
+    "signed_acceleration_aggregation": "global full-row RMSE",
+    "signed_acceleration_formulation": "invalidated",
+    "signed_acceleration_unrecovered_b5_submetric": "ABSENT"
+  },
+  "evaluator_scientific_config_sha256": {
+    "absolute_position.historical_continuous_pwl_v3": "3e4782253e14e6416753898794ad863ad899a659f7cf24716d6013e7434ca2e8",
+    "absolute_position.per_target_progress": "084e1b87c2139a95dd162d56d7a85e78d572a54538b70f9af5cd140dfb294554",
+    "absolute_position.population_sre_targets": "2bf4692ba8987caf656ac3243b7c89a0947c3a426f1da8d57475cad811c1fcc0",
+    "multimodal_sensor_state.equal_channel_population_sre": "d07ded665d687efea4e53ea4957c9d7b9bbd7f571647c255541ee9b9d267abe4",
+    "multimodal_sensor_state.public_nonexpert_quality_gate": "4c056bbba1a4b140b507af4b5d37a8562932344445cf1bfcf1867002ab4f6c0a",
+    "origin_relative_displacement_raw_population_sre": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+    "physical_trajectory.ade_fde_xy_rmse": "7ce838398fc0939145362077dea7d62023129cd7936086cf042269a48d918b10",
+    "signed_tangential_acceleration.global_full_row_rmse": "ddaa8c7d78a32fee1bfb3c5fcf1542d0a852cb6bf73dfe7b8321d33cdbcea88f"
+  },
+  "evidence_inventory": {
+    "category_counts": {
+      "evaluator_scorer_provenance": 3,
+      "historical_campaign_state": 6,
+      "historical_displacement_state": 18,
+      "historical_model_state": 3,
+      "historical_results": 40,
+      "historical_system_state": 3,
+      "protocol_memberships": 6,
+      "scientific_lock_provenance": 24,
+      "sha_addressed_provenance_aliases": 7,
+      "transition_graph": 122
+    },
+    "legacy_alias_count": 5,
+    "legacy_alias_sha_reference_count": 7,
+    "reference_count": 232,
+    "unique_digests": 63
+  },
+  "historical_final_model": {
+    "architecture_config_sha256": "5de99f809def5f85b1ee1b59d2568e0f6fd03c0f567e2c19216c203da5c0db55",
+    "architecture_family": "Context-Conditioned Transformer",
+    "checkpoint_sha256": "3c5297b7c53f07e288c239d1f59b6df003ba349ea227c97377ba58d4cbac53c6",
+    "epochs": 42,
+    "model_id": "historical_final_public_displacement_reference",
+    "model_selection_protocol": "UNKNOWN",
+    "optimization_steps": 22848,
+    "parameter_count": 936962,
+    "public_validation_directed_rows": 430,
+    "public_validation_matches": [
+      "J03WN1"
+    ],
+    "seed": 20260912,
+    "training_directed_rows": 34772,
+    "training_matches": [
+      "J03WOH",
+      "J03WOY",
+      "J03WPY",
+      "J03WQQ",
+      "J03WR9"
+    ]
+  },
+  "historical_results": [
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "3c08e3d6dbadd34fb9a14eeb581541cdd44c0601deee2c3bf54cea65885303a1",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "d24207159c1194e175b851980429b6e3e774b44ac7339a818218598b7a128d66",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.25932555860260476,
+          "value_hex": "0x1.098ca3a4dc482p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "97c3645694f234d6360bf0540f33f4a3036f34b7fa3df5e3f2be31f7af188e12",
+      "output_sha256s": [
+        "3c08e3d6dbadd34fb9a14eeb581541cdd44c0601deee2c3bf54cea65885303a1"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "59d33070c746bf83c992dcb3a1f3e566e1d2e53097040f5757db416e6e3d8cf9",
+      "run_id": "cross_match_seed_20260911_j03woh",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "596f85851ec9d9fd7f393b0042554ed530204abdafe55ad630ac2d2d5e3fb25d",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "c1912f1f29f820a189ac5a813654e870888aed9a32d2a5cd288e05b471541e39",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.27084781435275795,
+          "value_hex": "0x1.155921235a4a8p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "a305eb1d70021170edace7baa8f491674e3a558e9e508199b67a582ca03d9d12",
+      "output_sha256s": [
+        "596f85851ec9d9fd7f393b0042554ed530204abdafe55ad630ac2d2d5e3fb25d"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "f8bf287602907c7de175074454276ec77b9ddbd51905dff9e8e27e3c9abf5d0d",
+      "run_id": "cross_match_seed_20260911_j03woy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "22e04574cae94586e95960032e82b34e51d4aa79aa273795ab034528967c0a79",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "03dd15cbce8f4ec0423f2d7cb263076509e648e47474e77781e5779c0b41a404",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2643390758994499,
+          "value_hex": "0x1.0eaee7182c07fp-2"
+        }
+      ],
+      "model_checkpoint_sha256": "84b8c129642f08ec3fac558070ec52338d5bee1f88769f3bccf2d6d4295b8447",
+      "output_sha256s": [
+        "22e04574cae94586e95960032e82b34e51d4aa79aa273795ab034528967c0a79"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "c7081041d7b8762489122dda4e0ffca713f2bc9c9afb0ffe4847114b64f01962",
+      "run_id": "cross_match_seed_20260911_j03wpy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "9377d343b2a3f042530ae4756903222b2e47d37ecb4296462e68a7b34c0c445e",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "c90992926f6bd36e19d362b16a98551efb610f7c9aee9e85c7bb9e586f357650",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.27932539079736074,
+          "value_hex": "0x1.1e0779a9ab180p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "b3265a984c9ee66bd12b608ec816cc50fee212e6b01d33c8d8770ef7e83cd7da",
+      "output_sha256s": [
+        "9377d343b2a3f042530ae4756903222b2e47d37ecb4296462e68a7b34c0c445e"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "d0a5ea622accd6929709942975c0e69db0f135f900cdd32c1f1284cb294ee8ff",
+      "run_id": "cross_match_seed_20260911_j03wqq",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "4d9aceb52ed2a554eae81657c3174f5f2dbe9c7fd5717c7ac08958b881053f14",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527",
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "e95ee69cb80c2f2732f7d363e105c58cfb1e8779cd5e397b4e65ad56ae761a20",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2865676739216841,
+          "value_hex": "0x1.2571ff0e56739p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "0a1a9a2f4e5142ea5d3fdb50cf085043d6e635b748cbd036f68ef08d4f7e040c",
+      "output_sha256s": [
+        "4d9aceb52ed2a554eae81657c3174f5f2dbe9c7fd5717c7ac08958b881053f14"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "3447bb9daf2ee7ca013ac91f2c38dfc024ecea9ece59409636aa0e98ab3b041e",
+      "run_id": "cross_match_seed_20260911_j03wr9",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "be4b13493fe85c5fb2eb78686ca19a933aa1eae459ede77b2f525bd15d4e8656",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "b8da7d75664e7867b224ee3de224c1dc569ddeade8e0de11bf3400292913b5de",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2605804813500815,
+          "value_hex": "0x1.0ad59c157f86ep-2"
+        }
+      ],
+      "model_checkpoint_sha256": "7b4f4090b005912dbe14acad2a58a6c2a8c96b1c214c5157e82784a7093b311f",
+      "output_sha256s": [
+        "be4b13493fe85c5fb2eb78686ca19a933aa1eae459ede77b2f525bd15d4e8656"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "07ed801aa605e4c635e010b3be2081b2f83d12844b4e7997869a86de99f1b004",
+      "run_id": "cross_match_seed_20260912_j03woh",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "711e0cedecde715d9ce2bdbf66d343ce53964e3561a9165b5394fd6667e3fc77",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "477eabca06fe3e365ff2e4aadb901b6f65257de3c2fbd5854a7fcbdd3cfd2b41",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2725670967290143,
+          "value_hex": "0x1.171bd439aac9bp-2"
+        }
+      ],
+      "model_checkpoint_sha256": "c050b060a62e6f7923b36dbcc8c45c7f622d76c6a334506d5c8f1c06444c2d5a",
+      "output_sha256s": [
+        "711e0cedecde715d9ce2bdbf66d343ce53964e3561a9165b5394fd6667e3fc77"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "30b418712d83a12e328669d74d6076f0a585c95ad066b063bcb2a8c6a8361cc9",
+      "run_id": "cross_match_seed_20260912_j03woy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "70839d48be43b327dc63b6b693833a3a84c3e05fd5166f5b5e4a8d9e23e4165a",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "71acf6e62cb6709b01d363a6cb8fca04528c6dff2bc1c7f40d455c34be46c3cd",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2590377380395033,
+          "value_hex": "0x1.094130553ce8dp-2"
+        }
+      ],
+      "model_checkpoint_sha256": "0d015c589b96fcc4c28f9121a15f70fe919db1e7f5140f9720de2ada98446963",
+      "output_sha256s": [
+        "70839d48be43b327dc63b6b693833a3a84c3e05fd5166f5b5e4a8d9e23e4165a"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "692a8672b7cc5ee84813a5e91ef42fcc7c598a6d539c658abc7a6201db0ab6d7",
+      "run_id": "cross_match_seed_20260912_j03wpy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "0399fb930f34bf7a222637d5a4e9d27c7930585e8ceffc6d4d7079b326f0e138",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "1cc14f57224675d2e14444a47f80fef3e969ba39ee0ac57dab7c7f077d758321",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.27279057262924333,
+          "value_hex": "0x1.17566970661b2p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "caacaf7ac60701a2fe01953326ac8988d602ecd2e3289aab902bbe3d7f952d02",
+      "output_sha256s": [
+        "0399fb930f34bf7a222637d5a4e9d27c7930585e8ceffc6d4d7079b326f0e138"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "f197ea77f6079160787281ec9048a5d5a8b7aed88ada39e4efcde5326da6593b",
+      "run_id": "cross_match_seed_20260912_j03wqq",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "2bea9735b6d9456a8b182d574e32a16a67d257e8de040b66e50c470578ce5270",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "5359e148f91d080bcf5db5961e58b1dc6e24886d1f49f68f920ceab5ef26baac",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2823719022746008,
+          "value_hex": "0x1.21261996509b9p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "da45e7d902d59d910311715354ea3e86c4fbf94d06094243b427ab420540bee8",
+      "output_sha256s": [
+        "2bea9735b6d9456a8b182d574e32a16a67d257e8de040b66e50c470578ce5270"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "df642343217187dff0a3ef3cbf2ab575e8b761bc88936ed3ebc2f0353f6139df",
+      "run_id": "cross_match_seed_20260912_j03wr9",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "b8fb9a9acaa5e3c0b2911eab1700606dd943d4ea239cff1f6c5e332f96620966",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "d8d69d6169a9438048600e6db33522256fecb0cf88bae67c746e699e10e0a75f",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.25916422292514346,
+          "value_hex": "0x1.0962589706e81p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "274d636740a37fd5ca5ab927b0b56e65136450972b94eee43cdbca3f1d4e75a7",
+      "output_sha256s": [
+        "b8fb9a9acaa5e3c0b2911eab1700606dd943d4ea239cff1f6c5e332f96620966"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "5bd6f43aace9683dd6a836b582f97af2194fb35aa5579cb6b8044420ceba5a1f",
+      "run_id": "cross_match_seed_20260913_j03woh",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "6eca397b1c54fa77233da43792fb1774b5b35af2a4a5feb82beea5e7548163a5",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "9526f6812a880e5510d1921e6352df00b0fd631eb7afb7b0a0ebcb14c1e0f6c0",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2698469915847975,
+          "value_hex": "0x1.1452c50f1f6dep-2"
+        }
+      ],
+      "model_checkpoint_sha256": "bd1dcf3a25866df55e4e2b2cc27931cb425463bb53027298c7153db49bf99daf",
+      "output_sha256s": [
+        "6eca397b1c54fa77233da43792fb1774b5b35af2a4a5feb82beea5e7548163a5"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "0c71d6eb0e0d3cfbb1acea410d9d57580db9ae363e7cb98b8d7335581efc3f9d",
+      "run_id": "cross_match_seed_20260913_j03woy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "79fca149ae8d63cfcd841c4fc17e055153457279562783213b918399ebd7e4c2",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "6bb556371c869d9b65df2b6734ac89e615b74e2d05ab0c28ad0720c864c17f27",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2589903047900061,
+          "value_hex": "0x1.0934c1243772bp-2"
+        }
+      ],
+      "model_checkpoint_sha256": "b6a016e0b77de4ef8fa604c79457a9816d653cb44f9df03a7ac5973fbd46752a",
+      "output_sha256s": [
+        "79fca149ae8d63cfcd841c4fc17e055153457279562783213b918399ebd7e4c2"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "ad4dc553e6f0745c26a562aafdf56a3b4923f3c1655eeaf237b8d8d85f5c6281",
+      "run_id": "cross_match_seed_20260913_j03wpy",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "57b6e06b505ea827a149534db3e2e1c70ecfa9f9ca0e52d61a8b3e89659e4bed",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "5e68876d3265e25da6c592620beb277dffdc2c2fbee05a086defdf2d7cfe427b",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.27224452546238836,
+          "value_hex": "0x1.16c744d581057p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "f1a5071f9861bd20b7b8ccbb5672f712326a6b8a715fc7e7ba221e207cfffc5b",
+      "output_sha256s": [
+        "57b6e06b505ea827a149534db3e2e1c70ecfa9f9ca0e52d61a8b3e89659e4bed"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "1d83837706c3c9817c1bbd7523204d18a6b44ef99cad59b7e82f935b5a7c8722",
+      "run_id": "cross_match_seed_20260913_j03wqq",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "350dfa42c7b44b9ae3e2362496703b8b3ba86604a44a980ce0d2be633f2fdcc6",
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "b512ded677be2de2734763c8be26c2ece813ffe0a776e0e8f38c2f2a22b59e91",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.2820757163624851,
+          "value_hex": "0x1.20d874e317306p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "c7f838b8b675fc840a2c27a603cba3188cc69ff03ebea68231165da04c3beb2c",
+      "output_sha256s": [
+        "350dfa42c7b44b9ae3e2362496703b8b3ba86604a44a980ce0d2be633f2fdcc6"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "4248d5f92b4cd2361e81c0f94e9084de6019244fa0655f57227ae297e6cdeb1b",
+      "run_id": "cross_match_seed_20260913_j03wr9",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recovered"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "manifest_sha256": "7cf84ca64940274a839a9cfd73aa8b0347d26aa9154d6b7a7f6ebabc0a44b076",
+      "metrics": [
+        {
+          "metric_id": "grand_mean_raw_sre",
+          "unit": null,
+          "value": 0.27000500438140806,
+          "value_hex": "0x1.147c311e4c45ap-2"
+        }
+      ],
+      "model_checkpoint_sha256": null,
+      "output_sha256s": [
+        "eb83130616d3d77c6d0d49c7d9ebe89ed8099741fa5c6163b295a084d73ac527"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "c0452940b8dfefa348b21e4aafe80f75ffccb4802b65415572205a11e23ac5b2",
+      "run_id": "cross_match_three_seed_aggregate",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recomputed"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "manifest_sha256": "3d1a3c0db7dbbc19f2f3ca4fbedb467c377031e474fa1847ac206a8e600b1d44",
+      "metrics": [
+        {
+          "metric_id": "mean_raw_sre",
+          "unit": null,
+          "value": 0.2720811027147715,
+          "value_hex": "0x1.169c6db81407ap-2"
+        }
+      ],
+      "model_checkpoint_sha256": null,
+      "output_sha256s": [
+        "f09dc83c1c9d121ed97cf001620658a6757b0fa4c35e704a652b84ffb0e4aec2"
+      ],
+      "population": "lomo_cross_match",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "ad7f12f8d651d140c0d3e8d9bcfcaf5d1345581e7292862275057583ae552406",
+      "run_id": "cross_match_first_campaign_aggregate",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "2113da2bd51eb62af6954c5b246c2063f8c25b6d9d3b0e787dc0fdaae0bd6ffc",
+        "data_release_id": "historical_public_displacement_train_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "b843b1db58c05a36a5a1506a8c589a4588b06230b200bfce8dc6b42d9b213234",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0",
+        "split_protocol_hash": "1011a509d84dda10a58ce8e4e48330ca24f91dc7c3c1337df682711e18e2868b",
+        "split_protocol_id": "match_grouped_cross_match_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "raw_evaluation",
+      "evidence_sha256": [
+        "13a92c677cc9a11b2e492a8efe7ae81bb3b744b54195a096da19ff7c2380ed62",
+        "b29250984c897c1184cb1208a390c6fdeb2a4764cfe5ee530c73c0a1c9269528"
+      ],
+      "manifest_sha256": "0e3d52265f4ac91349e0ced5a67e40f5c4d5535a180bf5c3edd0c28f5f42d044",
+      "metrics": [
+        {
+          "metric_id": "raw_sre",
+          "unit": null,
+          "value": 0.25698394782524847,
+          "value_hex": "0x1.0726ccce06910p-2"
+        }
+      ],
+      "model_checkpoint_sha256": "3c5297b7c53f07e288c239d1f59b6df003ba349ea227c97377ba58d4cbac53c6",
+      "output_sha256s": [
+        "b29250984c897c1184cb1208a390c6fdeb2a4764cfe5ee530c73c0a1c9269528"
+      ],
+      "population": "public_validation",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "4605d775478fb0e59b3dcf35665b42b31296ef21a2cdf184d2107e889479305b",
+      "run_id": "selected_model_public_validation_raw",
+      "scientific_lock_sha256": "d56ef8e1ff37276e258d516fa9ce26231403222e549296777ee27e5f38cfeedc",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "c759a1aaf11b948edcef3cef2e5a90cecd1bb21c2a4d7275bc70c9c7dcbb2dd8",
+        "data_release_id": "historical_public_displacement_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "e7ae84ae81bf25cfc121fcb1e00bcb27804adcd4bfa349c1e6117ecf0176275b",
+        "evaluator_id": "origin_relative_displacement_raw_population_sre",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "d56ef8e1ff37276e258d516fa9ce26231403222e549296777ee27e5f38cfeedc",
+        "split_protocol_hash": "5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c",
+        "split_protocol_id": "match_grouped_displacement_public_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    },
+    {
+      "evaluator_state": "physical_trajectory_diagnostic",
+      "evidence_sha256": [
+        "b29250984c897c1184cb1208a390c6fdeb2a4764cfe5ee530c73c0a1c9269528"
+      ],
+      "manifest_sha256": "0e1248cd518f8abb97718e6653f1304ee1d5e531fd884bcc5c64b29f89d95829",
+      "metrics": [
+        {
+          "metric_id": "ade_m",
+          "unit": null,
+          "value": 0.7728278283223137,
+          "value_hex": "0x1.8bb016d02a843p-1"
+        },
+        {
+          "metric_id": "fde_m",
+          "unit": null,
+          "value": 1.745128730406117,
+          "value_hex": "0x1.bec0c1a8677e7p+0"
+        },
+        {
+          "metric_id": "xy_rmse_m",
+          "unit": null,
+          "value": 0.8841436584705827,
+          "value_hex": "0x1.c4ae7a4431a2fp-1"
+        }
+      ],
+      "model_checkpoint_sha256": "3c5297b7c53f07e288c239d1f59b6df003ba349ea227c97377ba58d4cbac53c6",
+      "output_sha256s": [
+        "b29250984c897c1184cb1208a390c6fdeb2a4764cfe5ee530c73c0a1c9269528"
+      ],
+      "population": "public_validation",
+      "provenance_completeness": "historical_evidence_bound",
+      "result_sha256": "db25692b8452a806652f385bedf61a34ff4f0032ebbfe65f55ab9100f16820a3",
+      "run_id": "selected_model_public_validation_physical_diagnostics",
+      "scientific_lock_sha256": "2fa5bbb3f5e56f0b2e2256f8b53483480168b098ab569dc6509548a0dba4a3d5",
+      "scientific_state_binding": {
+        "benchmark_id": "conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction",
+        "data_manifest_hash": "c759a1aaf11b948edcef3cef2e5a90cecd1bb21c2a4d7275bc70c9c7dcbb2dd8",
+        "data_release_id": "historical_public_displacement_fixtures",
+        "data_release_version": "0.0.0",
+        "data_state_id": "repaired_position_measurement_state",
+        "evaluator_hash": "7ce838398fc0939145362077dea7d62023129cd7936086cf042269a48d918b10",
+        "evaluator_id": "physical_trajectory.ade_fde_xy_rmse",
+        "evaluator_version": "1.0.0",
+        "fixture_manifest_hash": "134cfd7a6a3b5bcdf04d1d03772e8674c37b2da301e81245aabe2be5b11519b4",
+        "schema_hash": "54d8ccffd5a62be9a6e0edce30b9c0d2b5025acb6a7d8d3f2caf79b45c05e4e0",
+        "schema_version": "displacement_public_schema.v1",
+        "scientific_lock_hash": "2fa5bbb3f5e56f0b2e2256f8b53483480168b098ab569dc6509548a0dba4a3d5",
+        "split_protocol_hash": "5e060c84952cd4544fde6b80a93675c02c06036440ef9d2c97aa96eec618709c",
+        "split_protocol_id": "match_grouped_displacement_public_split",
+        "split_protocol_version": "1.0.0"
+      },
+      "validity": "recorded"
+    }
+  ],
+  "lomo_folds": [
+    {
+      "fold_id": "fold-1",
+      "held_out_match": "J03WOH",
+      "training_matches": [
+        "J03WOY",
+        "J03WPY",
+        "J03WQQ",
+        "J03WR9"
+      ]
+    },
+    {
+      "fold_id": "fold-2",
+      "held_out_match": "J03WOY",
+      "training_matches": [
+        "J03WOH",
+        "J03WPY",
+        "J03WQQ",
+        "J03WR9"
+      ]
+    },
+    {
+      "fold_id": "fold-3",
+      "held_out_match": "J03WPY",
+      "training_matches": [
+        "J03WOH",
+        "J03WOY",
+        "J03WQQ",
+        "J03WR9"
+      ]
+    },
+    {
+      "fold_id": "fold-4",
+      "held_out_match": "J03WQQ",
+      "training_matches": [
+        "J03WOH",
+        "J03WOY",
+        "J03WPY",
+        "J03WR9"
+      ]
+    },
+    {
+      "fold_id": "fold-5",
+      "held_out_match": "J03WR9",
+      "training_matches": [
+        "J03WOH",
+        "J03WOY",
+        "J03WPY",
+        "J03WQQ"
+      ]
+    }
+  ],
+  "private_result_records_count": 0,
+  "protocols": [
+    {
+      "id": "conditional_motion.match_role_assignment",
+      "sha256": "4fe08dd448096f0f54c3c773dcbd672e2f2e47c0b7faca591c72ba9167c0d444",
+      "version": "1.0.0"
+    },
+    {
+      "id": "conditional_motion.public_train_lomo",
+      "sha256": "17d8e3bbc388971f4b52266c706830f449e5a4fbec77e1be214c52f703d289ee",
+      "version": "1.0.0"
+    }
+  ],
+  "public_synthetic_reference": {
+    "absolute_raw_sre_targets": 330,
+    "ball_history_steps": 25,
+    "displacement_raw_sre_targets": 330,
+    "forecast_origin_is_final_observed_target_frame": true,
+    "future_ball_steps": 15,
+    "future_opponent_and_ball_are_conditional_context": true,
+    "future_opponent_steps": 15,
+    "future_target_withheld": true,
+    "history_hz": 5,
+    "history_steps": 25,
+    "identity_event_score_timestamp_leakage_rejected": true,
+    "information_boundary_rejects_future_target": true,
+    "input_sha256": "f9df854987a09da6e592bccf36d1fd6e1a6a9d2fc259fbe0960a3f9c783d95e9",
+    "opponent_players": 11,
+    "output_sha256": "8f4f6d4cbf001706f2f9753a081e4ce49c619f070f84b479d509a3b0e97dc069",
+    "physical_diagnostics_m": {
+      "ade": 0.0,
+      "fde": 0.0,
+      "xy_rmse": 0.0
+    },
+    "pitch_scale_m": [
+      52.5,
+      34.0
+    ],
+    "roundtrip_absolute_tolerance_m": 1e-12,
+    "target_players": 11,
+    "target_steps": 15
+  },
+  "registry_counts": {
+    "benchmark_count": 2,
+    "research_family_count": 4,
+    "research_object_count": 5
+  },
+  "schema_id": "fpdbench.reproducibility-snapshot",
+  "schema_version": "1.0.0",
+  "scientific_locks": [
+    {
+      "lock_file_sha256": "1f0254c5d687aa6a383d8ce6b53fe825473a6f23cbd7f9bbf7c787a362fa1171",
+      "lock_id": "public_raw",
+      "scientific_lock_sha256": "d56ef8e1ff37276e258d516fa9ce26231403222e549296777ee27e5f38cfeedc"
+    },
+    {
+      "lock_file_sha256": "d3fa4e56b1d4c7c93b424960e0440217f2c45252ceab85f0fc516eb26a3fd621",
+      "lock_id": "lomo_raw",
+      "scientific_lock_sha256": "572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0"
+    },
+    {
+      "lock_file_sha256": "ba2c5016cf31e9af43377cf14a72ab9f481f9715a17643c7ee8e486358f9b1ac",
+      "lock_id": "public_physical",
+      "scientific_lock_sha256": "2fa5bbb3f5e56f0b2e2256f8b53483480168b098ab569dc6509548a0dba4a3d5"
+    }
+  ]
+}
