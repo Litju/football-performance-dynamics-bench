@@ -14,7 +14,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
 )
 from fpdbench.benchmarks.registry import default_registry
 from fpdbench.benchmarks.transition_graph import validate_transition_graph
-from fpdbench.experiments import EvaluatorState, ResultPopulation, ScientificStateBinding
+from fpdbench.experiments import ScientificStateBinding, validate_result_scope
 from fpdbench.experiments.provenance import evidence_sha256
 from fpdbench.protocols import validate_canonical_protocols
 from fpdbench.provenance import EvidenceReference, validate_evidence_reference_shape
@@ -101,17 +101,10 @@ def validate_repository(root: Path) -> tuple[str, ...]:
         binding = ScientificStateBinding.from_verified_lock(lock)
         if binding.scientific_lock_hash != result.scientific_lock_hash:
             errors.append(f"result {result.run_id}: scientific state binding does not match lock")
-        expected_lock_hash = (
-            PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK["scientific_lock_hash"]
-            if result.evaluator_state is EvaluatorState.PHYSICAL_DIAGNOSTIC
-            else LOMO_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
-            if result.population is ResultPopulation.LOMO_CROSS_MATCH
-            else PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
-        )
-        if result.scientific_lock_hash != expected_lock_hash:
-            errors.append(
-                f"result {result.run_id}: scientific lock does not match its population/evaluator"
-            )
+        try:
+            validate_result_scope(binding, result.population, result.evaluator_state)
+        except ValueError as exc:
+            errors.append(f"result {result.run_id}: {exc}")
         for reference in result.evidence:
             errors.extend(
                 f"result {result.run_id}: {error}"

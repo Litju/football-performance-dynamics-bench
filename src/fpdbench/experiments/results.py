@@ -56,6 +56,51 @@ class EvaluatorState(StrEnum):
     RELEASE_ENGINEERING = "release_engineering"
 
 
+_EVALUATOR_STATES_BY_ID: dict[str, EvaluatorState] = {
+    "origin_relative_displacement_raw_population_sre": EvaluatorState.RAW_EVALUATION,
+    "physical_trajectory.ade_fde_xy_rmse": EvaluatorState.PHYSICAL_DIAGNOSTIC,
+    "absolute_position.population_sre_targets": EvaluatorState.RAW_EVALUATION,
+    "absolute_position.historical_continuous_pwl_v3": EvaluatorState.CALIBRATED_REWARD,
+}
+_POPULATIONS_BY_SPLIT_PROTOCOL: dict[str, frozenset[ResultPopulation]] = {
+    "match_grouped_cross_match_split": frozenset({ResultPopulation.LOMO_CROSS_MATCH}),
+    "match_grouped_displacement_public_split": frozenset({ResultPopulation.PUBLIC_VALIDATION}),
+    "conditional_motion.public_train_lomo": frozenset({ResultPopulation.LOMO_CROSS_MATCH}),
+    "conditional_motion.match_role_assignment": frozenset(
+        {ResultPopulation.PUBLIC_TRAIN, ResultPopulation.PUBLIC_VALIDATION}
+    ),
+}
+
+
+def validate_result_scope(
+    scientific_state: ScientificStateBinding,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> None:
+    """Reject result labels that contradict an explicitly registered scientific scope."""
+    expected_evaluator_state = _EVALUATOR_STATES_BY_ID.get(scientific_state.evaluator_id)
+    if expected_evaluator_state is None:
+        raise ValueError(
+            f"unsupported evaluator identity for result scope: {scientific_state.evaluator_id}"
+        )
+    if evaluator_state is not expected_evaluator_state:
+        raise ValueError(
+            f"evaluator state {evaluator_state.value} contradicts scientific evaluator "
+            f"{scientific_state.evaluator_id}"
+        )
+
+    allowed_populations = _POPULATIONS_BY_SPLIT_PROTOCOL.get(scientific_state.split_protocol_id)
+    if allowed_populations is None:
+        raise ValueError(
+            f"unsupported split protocol for result scope: {scientific_state.split_protocol_id}"
+        )
+    if population not in allowed_populations:
+        raise ValueError(
+            f"result population {population.value} is incompatible with scientific split "
+            f"protocol {scientific_state.split_protocol_id}"
+        )
+
+
 class ResultValidity(StrEnum):
     RECORDED = "recorded"
     RECOVERED = "recovered"
@@ -175,6 +220,15 @@ class ResultRecord:
             provenance_completeness=self.provenance_completeness,
             experiment_manifest=self.experiment_manifest,
         )
+        if (
+            self.provenance_completeness is ProvenanceCompleteness.EXECUTION_MANIFEST_BOUND
+            and self.experiment_manifest is not None
+        ):
+            validate_result_scope(
+                self.experiment_manifest.scientific_state,
+                self.population,
+                self.evaluator_state,
+            )
 
     @property
     def metric_records(self) -> tuple[ResultMetric, ...]:
@@ -278,6 +332,7 @@ class ResultManifest:
             provenance_completeness=self.provenance_completeness,
             experiment_manifest=self.experiment_manifest,
         )
+        validate_result_scope(self.scientific_state, self.population, self.evaluator_state)
 
     @classmethod
     def from_record(
@@ -374,4 +429,5 @@ __all__ = [
     "ResultPopulation",
     "ResultRecord",
     "ResultValidity",
+    "validate_result_scope",
 ]
