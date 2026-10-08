@@ -123,6 +123,24 @@ def test_artifact_guard_blocks_model_formats_but_allows_generic_bin(tmp_path: Pa
     assert not any("generic.pb" in error for error in errors)
 
 
+def test_artifact_guard_rejects_skillcorner_data_paths_and_lfs_pointers(tmp_path: Path) -> None:
+    restricted = tmp_path / "data" / "derived" / "window.json"
+    restricted.parent.mkdir(parents=True)
+    restricted.write_text('{"rows": []}')
+    pointer = tmp_path / "tracking.jsonl"
+    pointer.write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:" + "a" * 64 + "\nsize 100\n"
+    )
+    allowed_bodypose_sample = tmp_path / "data" / "bodypose" / "sample_1925299_phase406.jsonl.gz"
+    allowed_bodypose_sample.parent.mkdir(parents=True)
+    allowed_bodypose_sample.write_bytes(b"small licensed sample")
+
+    errors = validate_artifacts(tmp_path)
+    assert any("data/derived/window.json" in error for error in errors)
+    assert any("Git LFS dataset pointer" in error and "tracking.jsonl" in error for error in errors)
+    assert not any("sample_1925299_phase406.jsonl.gz" in error for error in errors)
+
+
 def test_repository_configuration_matches_python_registry() -> None:
     root = Path(__file__).resolve().parents[2]
     assert validate_repository(root) == ()
