@@ -21,7 +21,9 @@ from fpdbench.protocols import (
     AggregationRule,
     AnalysisUnit,
     DirectedScenePartition,
+    LomoFold,
     MatchRole,
+    MatchUncertaintyMethod,
     ModelSelectionUse,
     RoleAvailability,
     TruthAccess,
@@ -59,6 +61,22 @@ def test_two_benchmark_bindings_share_roles_but_keep_memberships_distinct() -> N
         item.public_validation_aggregation is AggregationRule.FULL_MATCH_POPULATION
         and item.lomo_aggregation is AggregationRule.EQUAL_MEAN_ACROSS_MATCHES
         for item in BENCHMARK_PROTOCOL_BINDINGS
+    )
+
+
+def test_canonical_protocol_ids_are_scientific_and_keep_versioned_identity() -> None:
+    assert CANONICAL_MATCH_ROLE_PROTOCOL.protocol_id == ("conditional_motion.match_role_assignment")
+    assert CANONICAL_LOMO_PROTOCOL.protocol_id == "conditional_motion.public_train_lomo"
+    assert CANONICAL_MATCH_ROLE_PROTOCOL.version == CANONICAL_LOMO_PROTOCOL.version == "1.0.0"
+    assert CANONICAL_MATCH_ROLE_PROTOCOL.assignment_sha256 == (
+        "4fe08dd448096f0f54c3c773dcbd672e2f2e47c0b7faca591c72ba9167c0d444"
+    )
+    assert CANONICAL_LOMO_PROTOCOL.split_sha256 == (
+        "17d8e3bbc388971f4b52266c706830f449e5a4fbec77e1be214c52f703d289ee"
+    )
+    assert all(
+        ".r3" not in protocol.protocol_id
+        for protocol in (CANONICAL_MATCH_ROLE_PROTOCOL, CANONICAL_LOMO_PROTOCOL)
     )
 
 
@@ -123,12 +141,54 @@ def test_canonical_lomo_is_five_deterministic_four_train_one_heldout_folds() -> 
         make_lomo_folds((*PUBLIC_TRAIN_MATCHES[:4], *PUBLIC_VALIDATION_MATCHES))
     with pytest.raises(ValueError, match="exactly the five PUBLIC_TRAIN matches"):
         make_lomo_folds((*PUBLIC_TRAIN_MATCHES[:4], *HISTORICAL_PRIVATE_MATCHES))
+    with pytest.raises(ValueError, match="other four PUBLIC_TRAIN"):
+        LomoFold(
+            "invalid-validation",
+            (*PUBLIC_TRAIN_MATCHES[1:4], PUBLIC_VALIDATION_MATCHES[0]),
+            PUBLIC_TRAIN_MATCHES[0],
+        )
+    with pytest.raises(ValueError, match="other four PUBLIC_TRAIN"):
+        LomoFold(
+            "invalid-private",
+            (*PUBLIC_TRAIN_MATCHES[1:4], HISTORICAL_PRIVATE_MATCHES[0]),
+            PUBLIC_TRAIN_MATCHES[0],
+        )
+    with pytest.raises(ValueError, match="held-out matches must belong to PUBLIC_TRAIN"):
+        LomoFold(
+            "invalid-heldout",
+            PUBLIC_TRAIN_MATCHES[:4],
+            PUBLIC_VALIDATION_MATCHES[0],
+        )
 
 
-def test_lomo_hash_uses_fold_assignment_only() -> None:
+def test_lomo_hash_binds_full_assignment_but_excludes_seed_and_evaluator() -> None:
     run_folds_by_seed = {seed: CANONICAL_LOMO_PROTOCOL.folds for seed in HISTORICAL_TRAINING_SEEDS}
     assert len({lomo_split_sha256(folds) for folds in run_folds_by_seed.values()}) == 1
     assert "seeds" not in CANONICAL_LOMO_PROTOCOL.__dataclass_fields__
+    assert "evaluator_ids" not in CANONICAL_LOMO_PROTOCOL.__dataclass_fields__
+    assert lomo_split_sha256(tuple(reversed(CANONICAL_LOMO_PROTOCOL.folds))) == (
+        CANONICAL_LOMO_PROTOCOL.split_sha256
+    )
+    reordered_training = tuple(
+        replace(fold, training_matches=tuple(reversed(fold.training_matches)))
+        for fold in CANONICAL_LOMO_PROTOCOL.folds
+    )
+    assert lomo_split_sha256(reordered_training) == CANONICAL_LOMO_PROTOCOL.split_sha256
+
+    first, *rest = CANONICAL_LOMO_PROTOCOL.folds
+    # Bypass construction to exercise hash sensitivity to an invalid changed assignment;
+    # LomoFold itself rejects this validation leak below.
+    invalid_assignment = object.__new__(LomoFold)
+    object.__setattr__(invalid_assignment, "fold_id", first.fold_id)
+    object.__setattr__(
+        invalid_assignment,
+        "training_matches",
+        (*PUBLIC_TRAIN_MATCHES[1:4], PUBLIC_VALIDATION_MATCHES[0]),
+    )
+    object.__setattr__(invalid_assignment, "held_out_match", first.held_out_match)
+    object.__setattr__(invalid_assignment, "evaluation_role", first.evaluation_role)
+    assert lomo_split_sha256((invalid_assignment, *rest)) != (CANONICAL_LOMO_PROTOCOL.split_sha256)
+
     first, second, *rest = CANONICAL_LOMO_PROTOCOL.folds
     swapped = (
         replace(
@@ -152,6 +212,17 @@ def test_role_hash_depends_on_match_to_role_not_declaration_order() -> None:
         replace(item, match_ids=tuple(reversed(item.match_ids))) for item in reversed(assignments)
     )
     assert match_role_assignment_sha256(permuted) == (
+        CANONICAL_MATCH_ROLE_PROTOCOL.assignment_sha256
+    )
+    metadata_only = tuple(
+        replace(
+            item,
+            availability=RoleAvailability.METADATA_ONLY,
+            truth_access=TruthAccess.PRIVATE_NOT_OPENED,
+        )
+        for item in assignments
+    )
+    assert match_role_assignment_sha256(metadata_only) == (
         CANONICAL_MATCH_ROLE_PROTOCOL.assignment_sha256
     )
 
@@ -196,6 +267,27 @@ def test_public_validation_has_one_match_and_no_between_match_uncertainty() -> N
         summarize_match_scores({"directed-row-1": 0.42})
 
 
+def test_match_standard_error_requires_explicit_independence_method() -> None:
+    scores = {PUBLIC_TRAIN_MATCHES[0]: 0.1, PUBLIC_TRAIN_MATCHES[1]: 0.2}
+    descriptive = summarize_match_scores(scores)
+    assert descriptive.between_match_standard_deviation is not None
+    assert descriptive.between_match_standard_error is None
+    assert descriptive.status is UncertaintyStatus.NOT_ESTIMABLE
+    assert descriptive.standard_error_method is None
+    assert descriptive.reason is not None
+    assert "method not declared" in descriptive.reason
+
+    independent = summarize_match_scores(
+        scores,
+        standard_error_method=MatchUncertaintyMethod.INDEPENDENT_MATCH_MEAN,
+    )
+    assert independent.between_match_standard_deviation == pytest.approx(0.07071067811865475)
+    assert independent.between_match_standard_error == pytest.approx(0.05)
+    assert independent.status is UncertaintyStatus.ESTIMABLE
+    assert independent.standard_error_method is MatchUncertaintyMethod.INDEPENDENT_MATCH_MEAN
+    assert independent.confidence_interval is None
+
+
 def test_multiseed_lomo_aggregates_by_match_then_reports_seed_sensitivity() -> None:
     scores = {
         seed: {
@@ -207,10 +299,13 @@ def test_multiseed_lomo_aggregates_by_match_then_reports_seed_sensitivity() -> N
     summary = summarize_lomo_scores(scores)
     assert len(summary.per_match_means) == 5
     assert summary.generalization.n_match == 5
-    assert summary.generalization.status is UncertaintyStatus.ESTIMABLE
+    assert summary.generalization.status is UncertaintyStatus.NOT_ESTIMABLE
     assert summary.generalization.between_match_standard_deviation is not None
-    assert summary.generalization.between_match_standard_error is not None
+    assert summary.generalization.between_match_standard_error is None
     assert summary.generalization.confidence_interval is None
+    assert summary.generalization.reason is not None
+    assert "overlapping cross-validation training sets" in summary.generalization.reason
+    assert "no dependence-aware uncertainty method declared" in summary.generalization.reason
     assert summary.seed_sensitivity.n_seeds == 3
     assert len(summary.seed_sensitivity.seed_level_means) == 3
     assert "not independent match uncertainty" in summary.seed_sensitivity.interpretation
@@ -222,6 +317,43 @@ def test_multiseed_lomo_aggregates_by_match_then_reports_seed_sensitivity() -> N
     assert summary.generalization.n_match != 15
     with pytest.raises(ValueError, match="exactly the five held-out matches"):
         summarize_lomo_scores({1: {PUBLIC_TRAIN_MATCHES[0]: 0.5}})
+
+
+def test_historical_fifteen_cell_lomo_parity_uses_match_first_summary() -> None:
+    assert len(displacement_reconstruction.LOMO_FOLD_RESULTS) == 15
+    scores_by_seed: dict[int, dict[str, float]] = {}
+    for fold in displacement_reconstruction.LOMO_FOLD_RESULTS:
+        scores_by_seed.setdefault(fold.seed, {})[fold.held_out_match] = dict(fold.result.metrics)[
+            "raw_sre"
+        ]
+
+    summary = summarize_lomo_scores(scores_by_seed)
+    assert summary.generalization.point_estimate == pytest.approx(0.27000500438140806)
+    assert summary.generalization.n_match == 5
+    assert summary.generalization.status is UncertaintyStatus.NOT_ESTIMABLE
+    assert summary.generalization.between_match_standard_deviation == pytest.approx(
+        0.0100268272269836
+    )
+    assert summary.generalization.between_match_standard_error is None
+    assert summary.generalization.confidence_interval is None
+    assert summary.generalization.standard_error_method is None
+    assert summary.generalization.reason is not None
+    assert "overlapping cross-validation training sets" in summary.generalization.reason
+    assert "no dependence-aware uncertainty method declared" in summary.generalization.reason
+    assert summary.balanced_grand_mean == pytest.approx(0.27000500438140806)
+    assert summary.balanced_grand_mean == pytest.approx(summary.generalization.point_estimate)
+    assert dict(summary.seed_sensitivity.seed_level_means)[20260911] == pytest.approx(
+        0.2720811027147715
+    )
+    assert dict(summary.per_match_means) == pytest.approx(
+        {
+            "J03WOH": 0.2596900876259432,
+            "J03WOY": 0.2710873008888566,
+            "J03WPY": 0.2607890395763198,
+            "J03WQQ": 0.2747868296296641,
+            "J03WR9": 0.2836717641862567,
+        }
+    )
 
 
 def test_evaluators_and_historical_locks_stay_outside_new_split_hashes() -> None:
@@ -242,6 +374,9 @@ def test_evaluators_and_historical_locks_stay_outside_new_split_hashes() -> None
     )
     assert (
         binding_with_other_evaluator.evaluator_ids != BENCHMARK_PROTOCOL_BINDINGS[0].evaluator_ids
+    )
+    assert lomo_split_sha256(CANONICAL_LOMO_PROTOCOL.folds) == (
+        CANONICAL_LOMO_PROTOCOL.split_sha256
     )
     assert match_role_assignment_sha256(CANONICAL_MATCH_ROLE_PROTOCOL.assignments) == role_hash
     assert lomo_split_sha256(CANONICAL_LOMO_PROTOCOL.folds) == CANONICAL_LOMO_PROTOCOL.split_sha256
