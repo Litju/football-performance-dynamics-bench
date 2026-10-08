@@ -27,7 +27,7 @@ Origin-relative displacement raw results use separate public-validation and LOMO
 
 ## Canonical conditional-motion split protocols
 
-`fpdbench.protocols` defines the R3 role and LOMO protocols for absolute position and origin-relative displacement. Both benchmarks share the same match-role assignment:
+The canonical R3-era implementation in `fpdbench.protocols` defines role and LOMO protocols for absolute position and origin-relative displacement. Both benchmarks share the same match-role assignment:
 
 | Role | Matches | Availability |
 | --- | --- | --- |
@@ -40,14 +40,14 @@ J03WMX is not a public test set and is unavailable to public CI. The protocol ex
 
 Role semantics are shared, while concrete fixture membership is benchmark-specific. The repaired absolute-position public membership has 17,386 training windows/34,772 directed rows and 215 validation windows/430 directed rows. Its original and repaired-state population snapshots have an unresolved row-level crosswalk, so they remain distinct. The displacement fixture has its own target representation, fixture manifest, and split manifest even though its public role counts match. Equal match roles do not imply byte-identical fixture membership.
 
-The R3 protocol IDs are `conditional_motion.match_role_assignment.r3` and `conditional_motion.public_train_lomo.r3`, both version `1.0.0`. They describe future canonical semantics. They do not replace the historical recovered R2 split descriptors or rebind historical ResultRecords.
+The canonical protocol IDs are `conditional_motion.match_role_assignment` and `conditional_motion.public_train_lomo`, both version `1.0.0`. Version is the protocol evolution mechanism. These protocols describe prospective canonical semantics; they do not replace historical recovered split descriptors or rebind historical ResultRecords.
 
-LOMO uses the five `PUBLIC_TRAIN` matches only and produces five deterministic folds. Each fold trains on the other four matches and evaluates the held-out match. J03WN1 and J03WMX are excluded from every fold. The LOMO split hash covers only fold IDs and held-out match IDs; training seeds and evaluator bindings are separate run/evaluation configuration.
+LOMO uses the five `PUBLIC_TRAIN` matches only and produces five deterministic folds. Each fold trains on the other four matches and evaluates the held-out match. J03WN1 and J03WMX are excluded from every fold. Each fold enforces that exact training membership. The LOMO split hash covers each fold ID, its sorted training-match assignment, and held-out match; fold ordering and training tuple ordering are canonicalized. Training seeds and evaluator bindings are separate run/evaluation configuration and do not enter the split hash.
 
 The inferential experimental unit and cross-match aggregation unit are both the physical match. Overlapping windows and the two directed scenes from one physical window stay in the same match role or fold. Evaluators score the full declared match population; population-defined metrics are not recomputed by averaging arbitrary row scores.
 
 Public validation contains one match, J03WN1. Its point estimate is available with `n_match=1`; between-match standard deviation, standard error, and confidence interval are unavailable. The 430 directed rows are measurement rows, not 430 independent matches. Confidence intervals remain absent until a method and population are explicitly declared.
 
-For the historical three-seed by five-held-out-match LOMO table, first average repeated seed results within each held-out match. The primary generalization mean is the equal mean of those five match summaries, and between-match uncertainty uses `n_match=5`. Report seed sensitivity separately across the seed-level means. A balanced grand mean may equal the historical 15-cell arithmetic mean while the inferential match count remains five.
+For the historical three-seed by five-held-out-match LOMO table, first average repeated seed results within each held-out match. The primary generalization mean is the equal mean of those five match summaries, and descriptive between-match dispersion uses `n_match=5`. The sample SD across the five held-out-match summaries describes their dispersion; it is not an iid estimate of uncertainty across independent experiments. The five fitted models use strongly overlapping cross-validation training sets, so the standard error and confidence interval are not estimable under the current method contract. Inferential uncertainty requires a future declared dependence-aware method. Report seed sensitivity separately across the seed-level means. A balanced grand mean may equal the historical 15-cell arithmetic mean while the inferential match count remains five.
 
 Absolute-position evaluation binds `absolute_position.population_sre_targets`, `absolute_position.per_target_progress`, `absolute_position.historical_continuous_pwl_v3`, and `physical_trajectory.ade_fde_xy_rmse`. Displacement binds `origin_relative_displacement_raw_population_sre` and `physical_trajectory.ade_fde_xy_rmse`; its calibrated scorer remains unavailable. Evaluator identities do not enter either split hash. The historical displacement scientific locks remain `d56ef8e1ff37276e258d516fa9ce26231403222e549296777ee27e5f38cfeedc` and `572e28bb5b4675a1fac91eb7c2c2c9cd4f00b28119aa447dd563c080a704cfd0`.

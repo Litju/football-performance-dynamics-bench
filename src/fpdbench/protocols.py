@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from fpdbench.data import SplitProtocolDescriptor
@@ -65,6 +65,10 @@ class AggregationRule(StrEnum):
 class UncertaintyStatus(StrEnum):
     ESTIMABLE = "estimable"
     NOT_ESTIMABLE = "not_estimable"
+
+
+class MatchUncertaintyMethod(StrEnum):
+    INDEPENDENT_MATCH_MEAN = "independent_match_mean"
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,7 +207,7 @@ _BASE_ROLE_ASSIGNMENTS = (
 )
 CANONICAL_MATCH_ROLE_PROTOCOL = MatchRoleProtocol(
     descriptor=SplitProtocolDescriptor(
-        protocol_id="conditional_motion.match_role_assignment.r3",
+        protocol_id="conditional_motion.match_role_assignment",
         version="1.0.0",
         assignment_sha256=match_role_assignment_sha256(_BASE_ROLE_ASSIGNMENTS),
         grouping="match",
@@ -234,10 +238,12 @@ class LomoFold:
         object.__setattr__(self, "training_matches", tuple(self.training_matches))
         if not self.fold_id or not self.held_out_match:
             raise ValueError("LOMO fold and held-out match identities are required")
+        if self.held_out_match not in PUBLIC_TRAIN_MATCHES:
+            raise ValueError("LOMO held-out matches must belong to PUBLIC_TRAIN")
+        if set(self.training_matches) != set(PUBLIC_TRAIN_MATCHES) - {self.held_out_match}:
+            raise ValueError("LOMO training matches must be the other four PUBLIC_TRAIN matches")
         if len(self.training_matches) != 4 or len(set(self.training_matches)) != 4:
-            raise ValueError("each canonical LOMO fold trains on four unique matches")
-        if self.held_out_match in self.training_matches:
-            raise ValueError("the held-out match cannot appear in its training fold")
+            raise ValueError("LOMO training matches must be four unique PUBLIC_TRAIN matches")
         if self.evaluation_role is not MatchRole.LOMO_HELDOUT:
             raise ValueError("LOMO held-out matches use the LOMO_HELDOUT evaluation role")
 
@@ -258,11 +264,13 @@ def make_lomo_folds(training_matches: Sequence[str]) -> tuple[LomoFold, ...]:
 
 
 def lomo_split_sha256(folds: Sequence[LomoFold]) -> str:
-    """Hash fold IDs and held-out matches only; seeds and evaluators are not inputs."""
+    """Hash complete fold assignments; seeds and evaluators are not inputs."""
     fold_ids = [fold.fold_id for fold in folds]
     if len(fold_ids) != len(set(fold_ids)):
         raise ValueError("LOMO fold IDs must be unique")
-    assignment = sorted((fold.fold_id, fold.held_out_match) for fold in folds)
+    assignment = sorted(
+        (fold.fold_id, tuple(sorted(fold.training_matches)), fold.held_out_match) for fold in folds
+    )
     payload = json.dumps(assignment, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
@@ -305,7 +313,7 @@ class LomoProtocol:
 
 CANONICAL_LOMO_PROTOCOL = LomoProtocol(
     descriptor=SplitProtocolDescriptor(
-        protocol_id="conditional_motion.public_train_lomo.r3",
+        protocol_id="conditional_motion.public_train_lomo",
         version="1.0.0",
         assignment_sha256=lomo_split_sha256(make_lomo_folds(PUBLIC_TRAIN_MATCHES)),
         grouping="match",
@@ -543,6 +551,7 @@ class MatchUncertaintySummary:
     between_match_standard_error: float | None
     status: UncertaintyStatus
     reason: str | None
+    standard_error_method: MatchUncertaintyMethod | None = None
     confidence_interval: tuple[float, float] | None = None
     confidence_interval_status: str = "method not declared"
 
@@ -551,8 +560,12 @@ class MatchUncertaintySummary:
         return AnalysisUnit.MATCH
 
 
-def summarize_match_scores(match_scores: Mapping[str, float]) -> MatchUncertaintySummary:
-    """Summarize one score per match; rows and directed scenes are never units here."""
+def summarize_match_scores(
+    match_scores: Mapping[str, float],
+    *,
+    standard_error_method: MatchUncertaintyMethod | None = None,
+) -> MatchUncertaintySummary:
+    """Summarize match scores; inferential SE requires an explicit independence method."""
     if not match_scores:
         raise ValueError("match uncertainty requires finite scores for at least one match")
     known_matches = set((*PUBLIC_TRAIN_MATCHES, *PUBLIC_VALIDATION_MATCHES))
@@ -570,16 +583,31 @@ def summarize_match_scores(match_scores: Mapping[str, float]) -> MatchUncertaint
             between_match_standard_error=None,
             status=UncertaintyStatus.NOT_ESTIMABLE,
             reason="between-match uncertainty requires at least two matches",
+            standard_error_method=standard_error_method,
         )
     mean_square_deviation = math.fsum((value - point) ** 2 for value in values) / (len(values) - 1)
     standard_deviation = math.sqrt(mean_square_deviation)
+    standard_error = (
+        standard_deviation / math.sqrt(len(values))
+        if standard_error_method is MatchUncertaintyMethod.INDEPENDENT_MATCH_MEAN
+        else None
+    )
     return MatchUncertaintySummary(
         n_match=len(values),
         point_estimate=point,
         between_match_standard_deviation=standard_deviation,
-        between_match_standard_error=standard_deviation / math.sqrt(len(values)),
-        status=UncertaintyStatus.ESTIMABLE,
-        reason=None,
+        between_match_standard_error=standard_error,
+        status=(
+            UncertaintyStatus.ESTIMABLE
+            if standard_error is not None
+            else UncertaintyStatus.NOT_ESTIMABLE
+        ),
+        reason=(
+            None
+            if standard_error is not None
+            else "independent-match standard-error method not declared"
+        ),
+        standard_error_method=standard_error_method,
     )
 
 
@@ -604,7 +632,7 @@ class LomoResultSummary:
 def summarize_lomo_scores(
     scores_by_seed: Mapping[int, Mapping[str, float]],
 ) -> LomoResultSummary:
-    """Average repeated seeds within match, then infer across the five match summaries."""
+    """Average seeds within match and report descriptive dispersion across five folds."""
     expected_matches = set(PUBLIC_TRAIN_MATCHES)
     if not scores_by_seed:
         raise ValueError("LOMO summary requires at least one seed")
@@ -638,9 +666,17 @@ def summarize_lomo_scores(
             math.fsum((value - seed_mean) ** 2 for value in seed_values) / (len(seed_values) - 1)
         )
     cells = tuple(scores_by_seed[seed][match] for seed in seeds for match in PUBLIC_TRAIN_MATCHES)
+    generalization = summarize_match_scores(dict(per_match))
+    generalization = replace(
+        generalization,
+        reason=(
+            "overlapping cross-validation training sets; no dependence-aware uncertainty "
+            "method declared"
+        ),
+    )
     return LomoResultSummary(
         per_match_means=per_match,
-        generalization=summarize_match_scores(dict(per_match)),
+        generalization=generalization,
         seed_sensitivity=SeedSensitivitySummary(
             n_seeds=len(seeds),
             seed_level_means=seed_means,
@@ -747,6 +783,7 @@ __all__ = [
     "LomoResultSummary",
     "MatchRole",
     "MatchRoleProtocol",
+    "MatchUncertaintyMethod",
     "MatchUncertaintySummary",
     "ModelSelectionUse",
     "PUBLIC_TRAIN_MATCHES",
