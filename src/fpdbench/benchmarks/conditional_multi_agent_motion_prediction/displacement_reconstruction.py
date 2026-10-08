@@ -20,8 +20,10 @@ from fpdbench.benchmarks.transitions import (
     TransitionStatus,
 )
 from fpdbench.data import SplitProtocolDescriptor
+from fpdbench.evaluation.metrics.trajectory import PHYSICAL_TRAJECTORY_EVALUATOR
 from fpdbench.experiments import (
     EvaluatorState,
+    ProvenanceCompleteness,
     ResultPopulation,
     ResultRecord,
     ResultValidity,
@@ -628,6 +630,13 @@ _PUBLIC_VALIDATION_RAW_PROVENANCE = _provenance_snapshot(
     "displacement_public_validation_raw_execution_sources",
     _PUBLIC_VALIDATION_RAW_PROVENANCE_CITATIONS,
 )
+_PUBLIC_VALIDATION_PHYSICAL_PROVENANCE_CITATIONS = tuple(
+    sorted(set(_PUBLIC_VALIDATION_RAW_PROVENANCE_CITATIONS) - {_RAW_EVALUATOR_SOURCE})
+)
+_PUBLIC_VALIDATION_PHYSICAL_PROVENANCE = _provenance_snapshot(
+    "displacement_public_validation_physical_diagnostic_sources",
+    _PUBLIC_VALIDATION_PHYSICAL_PROVENANCE_CITATIONS,
+)
 _LOMO_RAW_PROVENANCE = _provenance_snapshot(
     "displacement_lomo_raw_execution_sources",
     _LOMO_RAW_PROVENANCE_CITATIONS,
@@ -700,6 +709,40 @@ def build_lomo_raw_scientific_lock(
 PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK = build_public_validation_raw_scientific_lock()
 PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH = cast(
     str, PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
+)
+
+
+def build_public_validation_physical_scientific_lock(
+    evaluator_hash: str = PHYSICAL_TRAJECTORY_EVALUATOR.scientific_config_sha256,
+) -> dict[str, object]:
+    """Build a separate historical R2 lock for public physical diagnostics."""
+    raw_lock = PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK
+    return build_scientific_lock(
+        {
+            "lock_schema_version": "fpdbench-scientific-lock.v1",
+            "benchmark_id": raw_lock["benchmark_id"],
+            "benchmark_definition_hash": raw_lock["benchmark_definition_hash"],
+            "data_release_id": raw_lock["data_release_id"],
+            "data_release_version": raw_lock["data_release_version"],
+            "data_manifest_hash": raw_lock["data_manifest_hash"],
+            "data_state_id": raw_lock["data_state_id"],
+            "split_protocol_id": DISPLACEMENT_SPLIT.protocol_id,
+            "split_protocol_version": DISPLACEMENT_SPLIT.version,
+            "split_protocol_hash": DISPLACEMENT_SPLIT.assignment_sha256,
+            "evaluator_id": "physical_trajectory.ade_fde_xy_rmse",
+            "evaluator_version": "1.0.0",
+            "evaluator_hash": evaluator_hash,
+            "schema_version": raw_lock["schema_version"],
+            "schema_hash": raw_lock["schema_hash"],
+            "fixture_manifest_hash": raw_lock["fixture_manifest_hash"],
+            "scientific_provenance_snapshot": _PUBLIC_VALIDATION_PHYSICAL_PROVENANCE,
+        }
+    )
+
+
+PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK = build_public_validation_physical_scientific_lock()
+PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH = cast(
+    str, PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK["scientific_lock_hash"]
 )
 LOMO_RAW_SCIENTIFIC_LOCK = build_lomo_raw_scientific_lock()
 LOMO_RAW_SCIENTIFIC_LOCK_HASH = cast(str, LOMO_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"])
@@ -844,6 +887,7 @@ def _fold_record(row: tuple[int, str, float, str, str]) -> LomoFoldResult:
         validity=(ResultValidity.RECORDED if seed == 20260911 else ResultValidity.RECOVERED),
         output_sha256=fold_sha256,
         evidence=tuple(evidence),
+        provenance_completeness=ProvenanceCompleteness.HISTORICAL_EVIDENCE_BOUND,
     )
     return LomoFoldResult(campaign, seed, match, checkpoint_sha256, result)
 
@@ -860,6 +904,7 @@ CORRECTED_LOMO_AGGREGATE = ResultRecord(
     validity=ResultValidity.RECOMPUTED,
     output_sha256=_RECOVERY_RESULT_SHA256,
     evidence=(_evidence(_RECOVERY_RESULT_SHA256, "corrected aggregation result"),),
+    provenance_completeness=ProvenanceCompleteness.HISTORICAL_EVIDENCE_BOUND,
 )
 FIRST_LOMO_MEAN_RAW_SRE = 0.2720811027147715
 FIRST_LOMO_AGGREGATE = ResultRecord(
@@ -872,6 +917,7 @@ FIRST_LOMO_AGGREGATE = ResultRecord(
     validity=ResultValidity.RECORDED,
     output_sha256=_PHASE_A_RESULT_SHA256,
     evidence=(_evidence(_PHASE_A_RESULT_SHA256, "five-fold aggregation result"),),
+    provenance_completeness=ProvenanceCompleteness.HISTORICAL_EVIDENCE_BOUND,
 )
 
 
@@ -977,10 +1023,11 @@ PUBLIC_VALIDATION_RAW_RESULT = ResultRecord(
             "checkpoint frozen before validation",
         ),
     ),
+    provenance_completeness=ProvenanceCompleteness.HISTORICAL_EVIDENCE_BOUND,
 )
 PUBLIC_VALIDATION_PHYSICAL_RESULT = ResultRecord(
     run_id="selected_model_public_validation_physical_diagnostics",
-    scientific_lock_hash=None,
+    scientific_lock_hash=PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH,
     model_checkpoint_sha256=FINAL_PUBLIC_MODEL.checkpoint_sha256,
     metrics=(
         ("ade_m", 0.7728278283223137),
@@ -997,6 +1044,7 @@ PUBLIC_VALIDATION_PHYSICAL_RESULT = ResultRecord(
             "public validation physical metrics",
         ),
     ),
+    provenance_completeness=ProvenanceCompleteness.HISTORICAL_EVIDENCE_BOUND,
 )
 
 
