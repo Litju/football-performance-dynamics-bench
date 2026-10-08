@@ -1,5 +1,6 @@
 """Repository config, registry, naming, and artifact validation."""
 
+import json
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -7,12 +8,20 @@ from typing import cast
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     HISTORICAL_RESULTS,
     LOMO_RAW_SCIENTIFIC_LOCK,
+    PRIVATE_RESULT_RECORDS,
+    PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
 )
 from fpdbench.benchmarks.registry import default_registry
 from fpdbench.benchmarks.transition_graph import validate_transition_graph
+from fpdbench.experiments import EvaluatorState, ResultPopulation, ScientificStateBinding
+from fpdbench.experiments.provenance import evidence_sha256
 from fpdbench.protocols import validate_canonical_protocols
-from fpdbench.provenance.scientific_lock import validate_scientific_lock_provenance
+from fpdbench.provenance import EvidenceReference, validate_evidence_reference_shape
+from fpdbench.provenance.scientific_lock import (
+    validate_scientific_lock_provenance,
+    verify_scientific_lock,
+)
 from fpdbench.validation.artifacts import validate_artifacts
 from fpdbench.validation.naming import validate_naming
 
@@ -23,16 +32,94 @@ def validate_repository(root: Path) -> tuple[str, ...]:
     errors.extend(validate_transition_graph())
     errors.extend(validate_canonical_protocols())
     result_output_hashes = tuple(
-        result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
+        digest for result in HISTORICAL_RESULTS for digest in result.output_sha256s
     )
-    for name, lock in (
-        ("public-validation raw lock", PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK),
-        ("LOMO raw lock", LOMO_RAW_SCIENTIFIC_LOCK),
-    ):
+    lock_files = (
+        (
+            "public-validation raw lock",
+            PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+            "benchmarks/conditional_multi_agent_motion_prediction/public_validation_raw_displacement_scientific_lock.json",
+        ),
+        (
+            "LOMO raw lock",
+            LOMO_RAW_SCIENTIFIC_LOCK,
+            "benchmarks/conditional_multi_agent_motion_prediction/lomo_raw_displacement_scientific_lock.json",
+        ),
+        (
+            "public-validation physical diagnostic lock",
+            PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+            "benchmarks/conditional_multi_agent_motion_prediction/public_validation_physical_diagnostic_scientific_lock.json",
+        ),
+    )
+    locks_by_hash: dict[str, dict[str, object]] = {}
+    for name, lock, relative_path in lock_files:
+        lock_hash = lock.get("scientific_lock_hash")
+        if not verify_scientific_lock(lock) or not isinstance(lock_hash, str):
+            errors.append(f"{name}: scientific lock does not verify")
+        else:
+            locks_by_hash[lock_hash] = lock
+            try:
+                serialized = json.loads((root / relative_path).read_text())
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append(f"{name}: cannot read lock file {relative_path}: {exc}")
+            else:
+                if serialized != lock:
+                    errors.append(f"{name}: lock file disagrees with the source manifest")
+        try:
+            ScientificStateBinding.from_verified_lock(lock)
+        except ValueError as exc:
+            errors.append(f"{name}: invalid scientific state binding: {exc}")
+        snapshot_value = lock.get("scientific_provenance_snapshot")
+        if isinstance(snapshot_value, dict):
+            snapshot = cast(dict[str, object], snapshot_value)
+            citations_value = snapshot.get("citations")
+        else:
+            citations_value = None
+        if isinstance(citations_value, list):
+            citations = cast(list[object], citations_value)
+            for citation in citations:
+                if isinstance(citation, str):
+                    try:
+                        evidence_sha256(EvidenceReference(citation))
+                    except ValueError as exc:
+                        errors.append(f"{name}: invalid immutable provenance citation: {exc}")
+                else:
+                    errors.append(f"{name}: scientific provenance citation must be a string")
         errors.extend(
             f"{name}: {error}"
             for error in validate_scientific_lock_provenance(lock, result_output_hashes)
         )
+    if len(HISTORICAL_RESULTS) != 19:
+        errors.append("historical scientific result count must remain 19")
+    if PRIVATE_RESULT_RECORDS:
+        errors.append("private result records must remain empty")
+    for result in HISTORICAL_RESULTS:
+        lock = locks_by_hash.get(result.scientific_lock_hash)
+        if lock is None:
+            errors.append(f"result {result.run_id}: scientific lock is missing or unverified")
+            continue
+        binding = ScientificStateBinding.from_verified_lock(lock)
+        if binding.scientific_lock_hash != result.scientific_lock_hash:
+            errors.append(f"result {result.run_id}: scientific state binding does not match lock")
+        expected_lock_hash = (
+            PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK["scientific_lock_hash"]
+            if result.evaluator_state is EvaluatorState.PHYSICAL_DIAGNOSTIC
+            else LOMO_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
+            if result.population is ResultPopulation.LOMO_CROSS_MATCH
+            else PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["scientific_lock_hash"]
+        )
+        if result.scientific_lock_hash != expected_lock_hash:
+            errors.append(
+                f"result {result.run_id}: scientific lock does not match its population/evaluator"
+            )
+        for reference in result.evidence:
+            errors.extend(
+                f"result {result.run_id}: {error}"
+                for error in validate_evidence_reference_shape(reference)
+            )
+        for digest in result.output_sha256s:
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+                errors.append(f"result {result.run_id}: malformed output SHA-256")
     registry = default_registry()
     expected_families = set(registry.family_ids())
     config_families: set[str] = set()

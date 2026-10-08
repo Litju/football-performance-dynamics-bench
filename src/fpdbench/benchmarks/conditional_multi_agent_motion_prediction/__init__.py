@@ -41,6 +41,8 @@ from .displacement_reconstruction import (
     PUBLIC_TRAIN,
     PUBLIC_VALIDATION,
     PUBLIC_VALIDATION_PHYSICAL_RESULT,
+    PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+    PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH,
     PUBLIC_VALIDATION_RAW_RESULT,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH,
@@ -50,6 +52,7 @@ from .displacement_reconstruction import (
     TARGET_TEAM_ORIENTATION_SEMANTICS,
     TRAINING_REEXECUTED_DURING_RECONSTRUCTION,
     build_lomo_raw_scientific_lock,
+    build_public_validation_physical_scientific_lock,
     build_public_validation_raw_scientific_lock,
 )
 from .forecast_origin import (
@@ -122,6 +125,8 @@ __all__ = [
     "PUBLIC_TRAIN",
     "PUBLIC_VALIDATION",
     "PUBLIC_VALIDATION_PHYSICAL_RESULT",
+    "PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK",
+    "PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH",
     "PUBLIC_VALIDATION_RAW_RESULT",
     "PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK",
     "PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH",
@@ -135,6 +140,7 @@ __all__ = [
     "TRAINING_REEXECUTED_DURING_RECONSTRUCTION",
     "absolute_position_to_physical",
     "build_lomo_raw_scientific_lock",
+    "build_public_validation_physical_scientific_lock",
     "build_public_validation_raw_scientific_lock",
     "evaluate_absolute_position_trajectories",
     "evaluate_displacement",

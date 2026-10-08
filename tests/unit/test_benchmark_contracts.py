@@ -52,6 +52,8 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     PUBLIC_TRAIN,
     PUBLIC_VALIDATION,
     PUBLIC_VALIDATION_PHYSICAL_RESULT,
+    PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+    PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH,
     PUBLIC_VALIDATION_RAW_RESULT,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH,
@@ -889,7 +891,10 @@ def test_selected_model_and_validation_results_keep_evidence_populations() -> No
         PUBLIC_VALIDATION_RAW_RESULT.scientific_lock_hash
         == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
     )
-    assert PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash is None
+    assert (
+        PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash
+        == PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH
+    )
     assert PUBLIC_VALIDATION_RAW_RESULT.metrics == (("raw_sre", 0.25698394782524847),)
     assert PUBLIC_VALIDATION_PHYSICAL_RESULT.metrics == (
         ("ade_m", 0.7728278283223137),
@@ -918,6 +923,7 @@ def test_selected_model_and_validation_results_keep_evidence_populations() -> No
 def test_displacement_raw_scientific_locks_bind_exact_result_groups() -> None:
     assert verify_scientific_lock(PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK)
     assert verify_scientific_lock(LOMO_RAW_SCIENTIFIC_LOCK)
+    assert verify_scientific_lock(PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK)
     assert (
         PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK["evaluator_id"]
         == "origin_relative_displacement_raw_population_sre"
@@ -954,13 +960,20 @@ def test_displacement_raw_scientific_locks_bind_exact_result_groups() -> None:
     assert len(raw_public_results) == 1
     assert raw_public_results[0] is PUBLIC_VALIDATION_RAW_RESULT
     assert raw_public_results[0].scientific_lock_hash == PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK_HASH
-    assert PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash is None
+    assert (
+        PUBLIC_VALIDATION_PHYSICAL_RESULT.scientific_lock_hash
+        == PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK_HASH
+    )
     assert PRIVATE_RESULT_RECORDS == ()
 
     result_output_hashes = tuple(
         result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
     )
-    for lock in (PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK, LOMO_RAW_SCIENTIFIC_LOCK):
+    for lock in (
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+        LOMO_RAW_SCIENTIFIC_LOCK,
+        PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+    ):
         assert validate_scientific_lock_provenance(lock, result_output_hashes) == ()
         citations = lock["scientific_provenance_snapshot"]["citations"]
         assert (
