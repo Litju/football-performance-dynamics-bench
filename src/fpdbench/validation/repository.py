@@ -11,6 +11,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
 )
 from fpdbench.benchmarks.registry import default_registry
 from fpdbench.benchmarks.transition_graph import validate_transition_graph
+from fpdbench.protocols import validate_canonical_protocols
 from fpdbench.provenance.scientific_lock import validate_scientific_lock_provenance
 from fpdbench.validation.artifacts import validate_artifacts
 from fpdbench.validation.naming import validate_naming
@@ -20,6 +21,7 @@ def validate_repository(root: Path) -> tuple[str, ...]:
     errors = list(validate_naming(root))
     errors.extend(validate_artifacts(root))
     errors.extend(validate_transition_graph())
+    errors.extend(validate_canonical_protocols())
     result_output_hashes = tuple(
         result.output_sha256 for result in HISTORICAL_RESULTS if result.output_sha256 is not None
     )
