@@ -41,6 +41,8 @@ The capability matrix is checked by `fpdbench reproducibility check` and disting
 uv run fpdbench evidence validate --registry-root /home/litju/Research-Benchmarks-Registry
 ```
 
+Strict resolution supports two explicit local-source catalogues under `registry/<benchmark-slug>/`: `forensic_freeze/preflight/data_assets.preflight.jsonl` (`recorded_sha256` plus `original_path` for data assets) and `r2/conditional_team_response_absolute_position/EVALUATOR_STATES.json` (`states[*].evidence[*].sha256` plus `path` for scientific code/tools, dataset schemas/manifests, and scientific configuration/results). It rehashes each pointed-to regular file, reports the registry-relative catalogue record and a sanitized `local-source://` identifier, and never fetches URI sources.
+
 Run the public regeneration and package checks with:
 
 ```bash
