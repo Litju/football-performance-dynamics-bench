@@ -1,5 +1,6 @@
 """Guard against private datasets, credentials, checkpoints, and oversized files."""
 
+import re
 from pathlib import Path
 
 MAX_ARTIFACT_BYTES = 10 * 1024 * 1024
@@ -12,10 +13,15 @@ _FORBIDDEN_SUFFIXES = frozenset(
         ".joblib",
         ".npy",
         ".npz",
+        ".safetensors",
+        ".onnx",
         ".parquet",
         ".pkl",
         ".pt",
         ".pth",
+        ".h5",
+        ".hdf5",
+        ".keras",
         ".sqlite",
         ".tsv",
     }
@@ -25,6 +31,17 @@ _IGNORED_PARTS = frozenset(
     {".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", ".pyright"}
 )
 _SECRET_NAMES = frozenset({".env", "id_rsa", "credentials.json", "secrets.json"})
+_MODEL_PATH_PARTS = frozenset(
+    {"model", "models", "checkpoint", "checkpoints", "weights", "saved_model"}
+)
+_MODEL_NAME = re.compile(r"(?:^|[._-])(?:model|checkpoint|weights|saved_model)(?:$|[._-])", re.I)
+
+
+def _model_binary_path(relative: Path) -> bool:
+    return any(
+        part.casefold() in _MODEL_PATH_PARTS or _MODEL_NAME.search(part) is not None
+        for part in relative.parts
+    )
 
 
 def validate_artifacts(root: Path, *, max_file_bytes: int = MAX_ARTIFACT_BYTES) -> tuple[str, ...]:
@@ -41,6 +58,10 @@ def validate_artifacts(root: Path, *, max_file_bytes: int = MAX_ARTIFACT_BYTES) 
         name = path.name.casefold()
         if path.suffix.casefold() in _FORBIDDEN_SUFFIXES:
             errors.append(f"data or checkpoint artifact is not allowed: {relative}")
+        if path.suffix.casefold() == ".pb" and _model_binary_path(relative):
+            errors.append(f"model protobuf artifact is not allowed: {relative}")
+        if path.suffix.casefold() == ".bin" and _model_binary_path(relative):
+            errors.append(f"model or checkpoint binary is not allowed: {relative}")
         if name in _SECRET_NAMES or path.suffix.casefold() in {".key", ".pem"}:
             errors.append(f"secret-like file is not allowed: {relative}")
         if any(part.casefold() in _FORBIDDEN_NAME_PARTS for part in relative.parts):

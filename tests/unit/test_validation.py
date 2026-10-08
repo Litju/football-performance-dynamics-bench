@@ -98,6 +98,31 @@ def test_artifact_guard_rejects_private_data_secrets_and_large_files(tmp_path: P
     assert any("private or challenge" in error for error in errors)
 
 
+def test_artifact_guard_blocks_model_formats_but_allows_generic_bin(tmp_path: Path) -> None:
+    blocked = (
+        "model.safetensors",
+        "model.onnx",
+        "weights.h5",
+        "weights.hdf5",
+        "model.keras",
+        "saved_model.pb",
+        "weights.bin",
+        "checkpoint/state.bin",
+    )
+    for name in blocked:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x")
+    (tmp_path / "metadata.bin").write_bytes(b"x")
+    (tmp_path / "generic.pb").write_bytes(b"x")
+
+    errors = validate_artifacts(tmp_path)
+    for name in blocked:
+        assert any(name in error for error in errors)
+    assert not any("metadata.bin" in error for error in errors)
+    assert not any("generic.pb" in error for error in errors)
+
+
 def test_repository_configuration_matches_python_registry() -> None:
     root = Path(__file__).resolve().parents[2]
     assert validate_repository(root) == ()

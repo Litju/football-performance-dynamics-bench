@@ -9,12 +9,14 @@ from pathlib import Path
 from typing import cast
 
 from fpdbench.benchmarks.registry import default_registry
-from fpdbench.benchmarks.transition_graph import (
-    transition_evidence_references,
-    validate_transition_graph,
-)
-from fpdbench.provenance.evidence_resolution import resolve_evidence_references
+from fpdbench.provenance.evidence_inventory import validate_evidence_inventory
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
+from fpdbench.reproducibility import (
+    CAPABILITY_MATRIX,
+    check_reproducibility,
+    render_reproducibility_snapshot,
+    snapshot_sha256,
+)
 from fpdbench.validation import validate_naming, validate_repository
 
 
@@ -47,6 +49,13 @@ def _parser() -> argparse.ArgumentParser:
     evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)
     evidence_validation = evidence_commands.add_parser("validate")
     evidence_validation.add_argument("--registry-root", type=Path)
+    reproducibility = commands.add_parser("reproducibility")
+    reproducibility_commands = reproducibility.add_subparsers(
+        dest="reproducibility_command", required=True
+    )
+    reproducibility_commands.add_parser("check")
+    snapshot = reproducibility_commands.add_parser("snapshot")
+    snapshot.add_argument("--output", type=Path)
     naming = commands.add_parser("validate-naming")
     naming.add_argument("--root", type=Path, default=Path.cwd())
 
@@ -123,23 +132,43 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "validate":
         return _print_errors(validate_repository(args.root))
     if args.command == "evidence" and args.evidence_command == "validate":
-        references = transition_evidence_references()
-        errors = list(validate_transition_graph())
+        report = validate_evidence_inventory(args.registry_root)
         if args.registry_root is None:
-            if errors:
-                return _print_errors(errors)
-            print(f"evidence reference shape passed ({len(references)} references)")
+            if report.errors:
+                return _print_errors(report.errors)
+            print(
+                "evidence reference shape passed "
+                f"({report.reference_count} references / {report.unique_digests} digests; "
+                f"{report.legacy_alias_count} legacy aliases retained)"
+            )
             return 0
-        report = resolve_evidence_references(references, args.registry_root)
-        errors.extend(report.errors)
+        print(json.dumps(asdict(report), indent=2, sort_keys=True))
+        return 1 if report.errors else 0
+    if args.command == "reproducibility" and args.reproducibility_command == "check":
+        root = Path.cwd()
+        errors = check_reproducibility(root)
+        if errors:
+            return _print_errors(errors)
         print(
             json.dumps(
-                {"resolution": asdict(report), "validation_errors": sorted(set(errors))},
+                {
+                    "status": "passed",
+                    "snapshot_sha256": snapshot_sha256(root),
+                    "capabilities": dict(CAPABILITY_MATRIX),
+                },
                 indent=2,
                 sort_keys=True,
             )
         )
-        return 1 if errors else 0
+        return 0
+    if args.command == "reproducibility" and args.reproducibility_command == "snapshot":
+        snapshot_bytes = render_reproducibility_snapshot(Path.cwd())
+        if args.output is None:
+            sys.stdout.buffer.write(snapshot_bytes)
+        else:
+            args.output.write_bytes(snapshot_bytes)
+            print(snapshot_sha256(Path.cwd()))
+        return 0
     if args.command == "validate-naming":
         return _print_errors(validate_naming(args.root))
     if args.command == "lock" and args.lock_command == "compute":
