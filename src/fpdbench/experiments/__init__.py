@@ -26,6 +26,7 @@ from fpdbench.experiments.results import (
     ResultPopulation,
     ResultRecord,
     ResultValidity,
+    validate_result_scope,
 )
 from fpdbench.experiments.uncertainty import (
     AlgorithmicSensitivity,
@@ -66,4 +67,5 @@ __all__ = [
     "UncertaintyReport",
     "from_lomo_summary",
     "from_match_summary",
+    "validate_result_scope",
 ]

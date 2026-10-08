@@ -33,7 +33,9 @@ from fpdbench.experiments import (
     InferentialStatus,
     ModelSelectionUse,
     ProvenanceCompleteness,
+    ResultManifest,
     ResultMetric,
+    ResultPopulation,
     ResultRecord,
     ResultValidity,
     RunConfiguration,
@@ -58,8 +60,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _OUTPUT_SHA256 = "b29250984c897c1184cb1208a390c6fdeb2a4764cfe5ee530c73c0a1c9269528"
 
 
-def _execution_manifest(*, metadata: tuple[tuple[str, str], ...] = ()) -> ExperimentManifest:
-    binding = ScientificStateBinding.from_verified_lock(PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK)
+def _execution_manifest(
+    *,
+    scientific_lock: object = PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+    metadata: tuple[tuple[str, str], ...] = (),
+) -> ExperimentManifest:
+    binding = ScientificStateBinding.from_verified_lock(scientific_lock)
     evidence = EvidenceReference("registry://sha256/" + "c" * 64, "c" * 64, "source")
     input_artifacts = (
         ArtifactDeclaration(
@@ -107,6 +113,65 @@ def _execution_manifest(*, metadata: tuple[tuple[str, str], ...] = ()) -> Experi
             metadata=metadata,
         ),
         metadata=metadata,
+    )
+
+
+def _synthetic_scope_lock(
+    *,
+    split_protocol_id: str | None = None,
+    split_protocol_hash: str | None = None,
+    evaluator_id: str | None = None,
+) -> dict[str, object]:
+    state = {
+        key: value
+        for key, value in PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK.items()
+        if key != "scientific_lock_hash"
+    }
+    if split_protocol_id is not None:
+        state["split_protocol_id"] = split_protocol_id
+    if split_protocol_hash is not None:
+        state["split_protocol_hash"] = split_protocol_hash
+    if evaluator_id is not None:
+        state["evaluator_id"] = evaluator_id
+        state["evaluator_hash"] = "a" * 64
+    return build_scientific_lock(state)
+
+
+def _execution_result_record(
+    execution: ExperimentManifest,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> ResultRecord:
+    return ResultRecord(
+        run_id=execution.run_id,
+        scientific_lock_hash=execution.scientific_state.scientific_lock_hash,
+        model_checkpoint_sha256=None,
+        metrics=(),
+        population=population,
+        evaluator_state=evaluator_state,
+        validity=ResultValidity.RECORDED,
+        provenance_completeness=ProvenanceCompleteness.EXECUTION_MANIFEST_BOUND,
+        experiment_manifest=execution,
+    )
+
+
+def _direct_execution_result_manifest(
+    execution: ExperimentManifest,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> ResultManifest:
+    return ResultManifest(
+        run_id=execution.run_id,
+        scientific_state=execution.scientific_state,
+        metrics=(),
+        population=population,
+        evaluator_state=evaluator_state,
+        validity=ResultValidity.RECORDED,
+        model_checkpoint_sha256=None,
+        output_artifacts=(),
+        evidence=(),
+        provenance_completeness=ProvenanceCompleteness.EXECUTION_MANIFEST_BOUND,
+        experiment_manifest=execution,
     )
 
 
@@ -356,6 +421,188 @@ def test_provenance_completeness_keeps_historical_and_future_records_distinct() 
         experiment_manifest=execution,
     )
     assert future.experiment_manifest.manifest_hash == execution.manifest_hash
+
+
+_INCOMPATIBLE_RESULT_SCOPES = (
+    pytest.param(
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+        ResultPopulation.PUBLIC_VALIDATION,
+        EvaluatorState.PHYSICAL_DIAGNOSTIC,
+        id="raw-lock-physical-label",
+    ),
+    pytest.param(
+        PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+        ResultPopulation.PUBLIC_VALIDATION,
+        EvaluatorState.RAW_EVALUATION,
+        id="physical-lock-raw-label",
+    ),
+    pytest.param(
+        LOMO_RAW_SCIENTIFIC_LOCK,
+        ResultPopulation.PUBLIC_VALIDATION,
+        EvaluatorState.RAW_EVALUATION,
+        id="lomo-lock-public-validation-label",
+    ),
+    pytest.param(
+        PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+        ResultPopulation.LOMO_CROSS_MATCH,
+        EvaluatorState.RAW_EVALUATION,
+        id="raw-public-lock-lomo-label",
+    ),
+    pytest.param(
+        PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+        ResultPopulation.LOMO_CROSS_MATCH,
+        EvaluatorState.PHYSICAL_DIAGNOSTIC,
+        id="physical-public-lock-lomo-label",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("scientific_lock", "population", "evaluator_state"), _INCOMPATIBLE_RESULT_SCOPES
+)
+def test_execution_result_record_rejects_incompatible_scientific_scope(
+    scientific_lock: object,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> None:
+    execution = _execution_manifest(scientific_lock=scientific_lock)
+    with pytest.raises(ValueError, match="contradicts|incompatible"):
+        _execution_result_record(execution, population, evaluator_state)
+
+
+@pytest.mark.parametrize(
+    ("scientific_lock", "population", "evaluator_state"), _INCOMPATIBLE_RESULT_SCOPES
+)
+def test_direct_result_manifest_rejects_incompatible_scientific_scope(
+    scientific_lock: object,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> None:
+    execution = _execution_manifest(scientific_lock=scientific_lock)
+    with pytest.raises(ValueError, match="contradicts|incompatible"):
+        _direct_execution_result_manifest(execution, population, evaluator_state)
+
+
+@pytest.mark.parametrize(
+    ("scientific_lock", "population", "evaluator_state"),
+    (
+        pytest.param(
+            PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+            ResultPopulation.PUBLIC_VALIDATION,
+            EvaluatorState.RAW_EVALUATION,
+            id="public-raw",
+        ),
+        pytest.param(
+            PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
+            ResultPopulation.PUBLIC_VALIDATION,
+            EvaluatorState.PHYSICAL_DIAGNOSTIC,
+            id="public-physical",
+        ),
+        pytest.param(
+            LOMO_RAW_SCIENTIFIC_LOCK,
+            ResultPopulation.LOMO_CROSS_MATCH,
+            EvaluatorState.RAW_EVALUATION,
+            id="historical-lomo",
+        ),
+    ),
+)
+def test_execution_records_and_manifests_accept_compatible_historical_scopes(
+    scientific_lock: object,
+    population: ResultPopulation,
+    evaluator_state: EvaluatorState,
+) -> None:
+    execution = _execution_manifest(scientific_lock=scientific_lock)
+    record = _execution_result_record(execution, population, evaluator_state)
+    manifest = _direct_execution_result_manifest(execution, population, evaluator_state)
+    assert record.population is population
+    assert manifest.evaluator_state is evaluator_state
+
+
+def test_relabeling_execution_result_cannot_preserve_validity() -> None:
+    execution = _execution_manifest()
+    record = _execution_result_record(
+        execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+    )
+    manifest = _direct_execution_result_manifest(
+        execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+    )
+    with pytest.raises(ValueError, match="incompatible"):
+        replace(record, population=ResultPopulation.LOMO_CROSS_MATCH)
+    with pytest.raises(ValueError, match="contradicts"):
+        replace(record, evaluator_state=EvaluatorState.PHYSICAL_DIAGNOSTIC)
+    with pytest.raises(ValueError, match="incompatible"):
+        replace(manifest, population=ResultPopulation.LOMO_CROSS_MATCH)
+    with pytest.raises(ValueError, match="contradicts"):
+        replace(manifest, evaluator_state=EvaluatorState.PHYSICAL_DIAGNOSTIC)
+
+
+@pytest.mark.parametrize(
+    ("evaluator_id", "evaluator_state"),
+    (
+        ("origin_relative_displacement_raw_population_sre", EvaluatorState.RAW_EVALUATION),
+        ("physical_trajectory.ade_fde_xy_rmse", EvaluatorState.PHYSICAL_DIAGNOSTIC),
+        ("absolute_position.population_sre_targets", EvaluatorState.RAW_EVALUATION),
+        (
+            "absolute_position.historical_continuous_pwl_v3",
+            EvaluatorState.CALIBRATED_REWARD,
+        ),
+    ),
+)
+def test_registered_evaluators_accept_only_their_result_state(
+    evaluator_id: str, evaluator_state: EvaluatorState
+) -> None:
+    lock = _synthetic_scope_lock(evaluator_id=evaluator_id)
+    execution = _execution_manifest(scientific_lock=lock)
+    _execution_result_record(execution, ResultPopulation.PUBLIC_VALIDATION, evaluator_state)
+
+
+@pytest.mark.parametrize(
+    "evaluator_id", ("example.future_evaluator", "absolute_position.per_target_progress")
+)
+def test_execution_results_fail_closed_for_unregistered_or_intermediate_evaluators(
+    evaluator_id: str,
+) -> None:
+    lock = _synthetic_scope_lock(evaluator_id=evaluator_id)
+    execution = _execution_manifest(scientific_lock=lock)
+    with pytest.raises(ValueError, match="unsupported evaluator identity"):
+        _execution_result_record(
+            execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+        )
+    with pytest.raises(ValueError, match="unsupported evaluator identity"):
+        _direct_execution_result_manifest(
+            execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+        )
+
+
+def test_canonical_protocol_scopes_use_only_declared_public_populations() -> None:
+    role_lock = _synthetic_scope_lock(
+        split_protocol_id=CANONICAL_MATCH_ROLE_PROTOCOL.protocol_id,
+        split_protocol_hash=CANONICAL_MATCH_ROLE_PROTOCOL.descriptor.assignment_sha256,
+    )
+    role_execution = _execution_manifest(scientific_lock=role_lock)
+    _execution_result_record(
+        role_execution, ResultPopulation.PUBLIC_TRAIN, EvaluatorState.RAW_EVALUATION
+    )
+    _direct_execution_result_manifest(
+        role_execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+    )
+
+    lomo_lock = _synthetic_scope_lock(
+        split_protocol_id=CANONICAL_LOMO_PROTOCOL.protocol_id,
+        split_protocol_hash=CANONICAL_LOMO_PROTOCOL.split_sha256,
+    )
+    lomo_execution = _execution_manifest(scientific_lock=lomo_lock)
+    _execution_result_record(
+        lomo_execution, ResultPopulation.LOMO_CROSS_MATCH, EvaluatorState.RAW_EVALUATION
+    )
+    with pytest.raises(ValueError, match="incompatible"):
+        _direct_execution_result_manifest(
+            role_execution, ResultPopulation.HISTORICAL_PRIVATE, EvaluatorState.RAW_EVALUATION
+        )
+    with pytest.raises(ValueError, match="incompatible"):
+        _direct_execution_result_manifest(
+            lomo_execution, ResultPopulation.PUBLIC_VALIDATION, EvaluatorState.RAW_EVALUATION
+        )
 
 
 def test_res329_uncertainty_adapters_keep_three_axes_separate() -> None:
