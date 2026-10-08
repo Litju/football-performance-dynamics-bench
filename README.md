@@ -30,3 +30,7 @@ uv run fpdbench validate
 Python 3.12 or newer is required. No private datasets or checkpoints are included.
 
 This public research-software repository is under active release preparation, and licensing is not finalized. Public visibility does not grant redistribution rights for referenced datasets, models, or artifacts; restricted artifact bytes are not distributed.
+
+## Data source and rights
+
+SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The current source revision, rights boundary, attribution, and FPD Bench release policy are recorded in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision, explicit match list, and source-byte hashes rather than identify the source as “whatever is currently published.”
