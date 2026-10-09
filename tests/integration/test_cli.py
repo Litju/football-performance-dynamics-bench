@@ -83,3 +83,19 @@ def test_cli_computes_and_verifies_scientific_lock(tmp_path: Path, capsys: objec
     assert lock["scientific_lock_hash"] != "a" * 64
     assert main(["lock", "verify", str(result)]) == 0
     assert "scientific lock valid" in capsys.readouterr().out  # type: ignore[attr-defined]
+
+
+def test_cli_verifies_and_describes_pinned_sources(capsys: object) -> None:
+    assert main(["sources", "list"]) == 0
+    assert capsys.readouterr().out.strip() == "skillcorner_open_data_v1"  # type: ignore[attr-defined]
+
+    assert main(["sources", "verify"]) == 0
+    report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert report["status"] == "passed"
+    assert report["source_id"] == "skillcorner_open_data_v1"
+    assert report["live"] is None
+
+    assert main(["sources", "describe", "skillcorner_open_data_v1"]) == 0
+    manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert manifest["upstream"]["pinned_commit"] == "4340d274572876239c154c90bc507a9b3250a656"
+    assert main(["sources", "describe", "unknown"]) == 2
