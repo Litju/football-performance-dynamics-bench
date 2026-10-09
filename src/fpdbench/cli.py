@@ -15,6 +15,12 @@ from fpdbench.data_sources.skillcorner import (
     verify_live,
     verify_local_checkout,
 )
+from fpdbench.data_states.skillcorner import (
+    load_manifest as load_data_state_manifest,
+)
+from fpdbench.data_states.skillcorner import (
+    validate_manifest as validate_data_state_manifest,
+)
 from fpdbench.provenance.evidence_inventory import validate_evidence_inventory
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
 from fpdbench.reproducibility import (
@@ -73,6 +79,13 @@ def _parser() -> argparse.ArgumentParser:
     source_verification = source_commands.add_parser("verify")
     source_verification.add_argument("--live", action="store_true")
     source_verification.add_argument("--local-root", type=Path)
+
+    data_states = commands.add_parser("data-states")
+    data_state_commands = data_states.add_subparsers(dest="data_state_command", required=True)
+    data_state_commands.add_parser("list")
+    data_state_description = data_state_commands.add_parser("describe")
+    data_state_description.add_argument("data_state_id")
+    data_state_commands.add_parser("verify")
 
     lock = commands.add_parser("lock")
     lock_commands = lock.add_subparsers(dest="lock_command", required=True)
@@ -224,6 +237,37 @@ def main(argv: Sequence[str] | None = None) -> int:
             "local_checkout": str(args.local_root) if args.local_root is not None else None,
         }
         print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+    if args.command == "data-states" and args.data_state_command == "list":
+        print("skillcorner_5hz_v1")
+        return 0
+    if args.command == "data-states" and args.data_state_command == "describe":
+        if args.data_state_id != "skillcorner_5hz_v1":
+            print(f"unknown data state: {args.data_state_id}", file=sys.stderr)
+            return 2
+        print(json.dumps(load_data_state_manifest(), indent=2, sort_keys=True))
+        return 0
+    if args.command == "data-states" and args.data_state_command == "verify":
+        try:
+            manifest = load_data_state_manifest()
+            errors = validate_data_state_manifest(manifest)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            return _print_errors((f"data-state verification failed: {exc}",))
+        if errors:
+            return _print_errors(errors)
+        print(
+            json.dumps(
+                {
+                    "status": "passed",
+                    "data_state_id": manifest["data_state_id"],
+                    "data_state_version": manifest["data_state_version"],
+                    "data_state_hash": manifest["data_state_hash"],
+                    "source_release_id": manifest["source_release_id"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0
     if args.command == "lock" and args.lock_command == "compute":
         lock = build_scientific_lock(_load_object(args.input))

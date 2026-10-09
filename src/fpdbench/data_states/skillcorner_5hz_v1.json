@@ -1,0 +1,119 @@
+{
+  "data_state_hash": "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3",
+  "data_state_id": "skillcorner_5hz_v1",
+  "data_state_version": "1.0.0",
+  "description": "Prospective, observed-position SkillCorner measurement state sampled at 5 Hz.",
+  "schema_id": "fpdbench.skillcorner-data-state",
+  "schema_version": "1.0.0",
+  "scientific_state": {
+    "entity_schema": {
+      "ball": "Null when source ball_data is null; otherwise x_m, y_m and source is_detected are preserved. No inferred ball position.",
+      "match": "match_id is the pinned provider match ID; home_team_id and away_team_id are pinned provider team IDs.",
+      "period": "Source period 1 or 2, or null when the source has no period label.",
+      "player": "Only players listed in this source frame are emitted, sorted by player_id. player_id is match-scoped; team_id and home/away group come from this match's roster id/team_id mapping.",
+      "possession": "Null remains null; otherwise preserve source group and player_id, including a null player_id.",
+      "sample": "source_frame is the provider video frame; canonical_sample_index is source_frame // 2; timestamp_deciseconds is the source match clock converted exactly to integer deciseconds or null.",
+      "team_orientation": "Keep provider home/away group and physical coordinates; do not rotate or attack-direction-normalize."
+    },
+    "field_contract": {
+      "canonical_measurement_values": [
+        "tracking.frame -> source_frame",
+        "tracking.period -> period",
+        "tracking.timestamp -> timestamp_deciseconds",
+        "tracking.player_data[].player_id -> players[].player_id",
+        "tracking.player_data[].x/y -> players[].x_m/y_m",
+        "tracking.player_data[].is_detected -> players[].is_detected",
+        "tracking.ball_data.x/y -> ball.x_m/y_m",
+        "tracking.ball_data.is_detected -> ball.is_detected",
+        "match.id -> match_id",
+        "match.pitch_length/pitch_width -> pitch_length_m/pitch_width_m",
+        "match.home_team.id/match.away_team.id -> home_team_id/away_team_id"
+      ],
+      "excluded": [
+        "tracking.ball_data.z (the pinned source documentation does not establish its unit/reference)",
+        "tracking.image_corners_projection payload",
+        "dynamic_events.csv and phases_of_play.csv, including all event/phase labels",
+        "all source fields not listed as canonical, auxiliary, or provenance-only"
+      ],
+      "provenance_only": [
+        "pinned source release ID/hash",
+        "match.match_periods boundary metadata (not used to sample or select benchmark windows)",
+        "source file paths and immutable byte identities bound by the source release"
+      ],
+      "retained_auxiliary_context": [
+        "tracking.possession.group/player_id",
+        "match.players[].id/team_id roster crosswalk used to assign canonical team/group"
+      ]
+    },
+    "identity": {
+      "data_state_id": "skillcorner_5hz_v1",
+      "data_state_version": "1.0.0",
+      "schema_id": "fpdbench.skillcorner-data-state",
+      "schema_version": "1.0.0"
+    },
+    "missing_values": {
+      "absent_player": "Remain absent from that sample; do not pad from the roster or forward-fill.",
+      "ball": "Source null remains JSON null; an object with null coordinates remains an object with null coordinates.",
+      "coordinates": "Explicit source null is preserved component-wise; NaN and infinity are rejected.",
+      "possession": "Source null remains JSON null; null player_id remains null.",
+      "source_extrapolation": "Preserve is_detected=false with the provider x/y values; do not filter or relabel it."
+    },
+    "no_future_leakage": {
+      "current_sample_only": "Every emitted positional, detection, ball, and possession value comes from that same retained source frame; static match metadata supplies only IDs and pitch dimensions.",
+      "forbidden": [
+        "future interpolation or smoothing",
+        "FPD forward-fill or imputation",
+        "event/phase labels attached to tracking samples",
+        "future targets, opponent positions, or ball context"
+      ],
+      "scope": "Future conditional context and benchmark information boundaries are downstream decisions."
+    },
+    "numeric_representation": {
+      "coordinates_and_pitch_dimensions": "Python binary64 floats in meters, converted from source JSON numbers without rounding or normalization; finite values only, explicit null allowed where the source is null.",
+      "identifiers_and_indices": "Nonnegative/positive provider identifiers and frame indices remain JSON integers; booleans are not accepted as integers.",
+      "timestamp": "Parse HH:MM:SS.cc source strings to integer deciseconds; accept only source 100 ms ticks; preserve null as null.",
+      "z_coordinate": "Excluded because the pinned source documentation does not define its unit/reference."
+    },
+    "serialization": {
+      "encoding": "UTF-8 without BOM or trailing newline.",
+      "hash": "SHA-256 over UTF-8 canonical JSON of scientific_state with sorted keys and compact separators; descriptive manifest fields are excluded.",
+      "json": "Python JSON serialization with recursively sorted object keys, compact separators, ensure_ascii=false, allow_nan=false; players sorted by player_id; binary64 floats use Python's shortest round-trip decimal representation."
+    },
+    "source": {
+      "source_id": "skillcorner_open_data_v1",
+      "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+      "source_release_id": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+    },
+    "spatial_semantics": {
+      "attack_direction_normalization": "none; provider orientation is preserved",
+      "coordinate_units": "meters (SI)",
+      "origin": "pitch center",
+      "pitch_dimensions": "preserve match-specific pitch_length and pitch_width as metadata in meters",
+      "positive_axis_signs": "not specified by the pinned source documentation; preserve provider values unchanged",
+      "x_axis": "pitch length axis",
+      "y_axis": "pitch width axis"
+    },
+    "temporal_sampling": {
+      "canonical_frequency_hz": 5,
+      "canonical_sample_index": "source_frame // 2, on the global provider video-frame index",
+      "duplicate_or_non_monotonic_frames": "fail; source frame numbers must increase strictly across the match",
+      "frame_timestamp_consistency": "Within consecutive source rows with the same non-null period and non-null timestamps, timestamp_deciseconds delta must equal source_frame delta (one decisecond per 10 Hz source frame).",
+      "missing_source_frames": "Emit no synthetic sample; retain only observed even-numbered frames, leaving canonical_sample_index gaps where frames are absent.",
+      "parity_anchor": "absolute source frame number; retain source_frame % 2 == 0. Parity does not restart at a period boundary.",
+      "period_boundary": "Copy the source period. The global source frame and canonical index do not reset; timestamp continuity validation restarts at a period change.",
+      "sampling_frame_modulus": 2,
+      "sampling_frame_remainder": 0,
+      "source_frame_resets_by_period": false,
+      "source_frequency_hz": 10,
+      "timestamp": "Copy the corresponding source row's match-clock time exactly as integer deciseconds; do not derive time from a neighboring sample.",
+      "transform": "Direct selection of the source observation on even frames; no interpolation, smoothing, or averaging."
+    },
+    "transform": {
+      "transform_id": "skillcorner_source_frame_even_10hz_to_5hz",
+      "transform_version": "1.0.0"
+    }
+  },
+  "source_id": "skillcorner_open_data_v1",
+  "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+  "source_release_id": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+}

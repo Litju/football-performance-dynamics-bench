@@ -28,7 +28,7 @@ Selected match IDs, sorted for display:
 The machine-readable authority is [`src/fpdbench/data_sources/skillcorner_open_data_v1.json`](../src/fpdbench/data_sources/skillcorner_open_data_v1.json), schema `fpdbench.skillcorner-source-authority` version `1.0.0`.
 
 - Ordinary Git files record the repository path, pinned raw URL, Git blob SHA-1, and byte size. The index and match-metadata files also record raw-byte SHA-256 values because those bytes were inspected. Dynamic-event and phases-of-play CSVs are identified by their Git blobs; their row bytes were not fetched for this audit.
-- Tracking files are Git LFS pointers. Their Git blob SHA-1 identifies the pointer only; the pointer's `oid sha256` and declared size identify the tracking payload. No tracking payload was downloaded.
+- Tracking files are Git LFS pointers. Their Git blob SHA-1 identifies the pointer only; the pointer's `oid sha256` and declared size identify the tracking payload. No complete tracking payload was downloaded during the source-authority audit.
 - The index lists 20 IDs and the recursive tree has exactly the 20 corresponding directories and 80 expected per-match files. The three season-aggregate CSVs are recorded as observed repository artifacts but are outside this motion-source population.
 - The core source release hash covers the repository, pinned commit, selected match IDs, and each selected per-match file identity. The source-population hash covers selected IDs. The acquisition-manifest SHA-256 covers the deterministic complete manifest, including descriptive and optional-source metadata. No local paths, hostnames, or runtime timestamps enter source-release identity.
 
@@ -59,7 +59,7 @@ The pinned Hugging Face dataset card explicitly states MIT and requests SkillCor
 
 ## Boundaries and handoff
 
-The source release identity is upstream provenance only. It is not a canonical 5 Hz `data_state_id`, benchmark scientific lock, target schema, fixture manifest, split, evaluator binding, or training identity. Those decisions are deferred to downstream transform and quality work. Neither downstream issue is executed here. The historical R0–R3 reproducibility snapshot is unchanged.
+The source release identity is upstream provenance only. The separate canonical prospective measurement transform and `skillcorner_5hz_v1` data-state identity are now defined in the [SkillCorner data-state contract](skillcorner-data-state.md). That data state is not a benchmark scientific lock, target schema, fixture manifest, split, evaluator binding, or training identity. Benchmark eligibility and task definitions remain downstream. The historical R0–R3 reproducibility snapshot is unchanged.
 
 Manifest identities:
 

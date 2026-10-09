@@ -50,6 +50,7 @@ from fpdbench.evaluation import (
     RAW_DISPLACEMENT_EVALUATOR_CONFIGURATION,
 )
 from fpdbench.evaluation.metrics.trajectory import PHYSICAL_TRAJECTORY_EVALUATOR
+from fpdbench.data_states.skillcorner import load_manifest, validate_manifest
 
 assert pathlib.Path(fpdbench.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix))
 calibration = importlib.resources.files("fpdbench").joinpath(
@@ -65,6 +66,8 @@ assert (
     == "origin_relative_displacement_raw_population_sre"
 )
 assert PHYSICAL_TRAJECTORY_EVALUATOR.evaluator_id == "physical_trajectory.ade_fde_xy_rmse"
+assert load_manifest()["data_state_id"] == "skillcorner_5hz_v1"
+assert validate_manifest(load_manifest()) == ()
 assert not importlib.metadata.distribution("football-performance-dynamics-bench").requires
 """
         subprocess.run([str(python), "-I", "-c", smoke], cwd=empty_working_directory, check=True)
@@ -83,6 +86,12 @@ assert not importlib.metadata.distribution("football-performance-dynamics-bench"
         )
         if len(discovered.stdout.splitlines()) != 2:
             raise RuntimeError("installed CLI did not discover both public benchmarks")
+        subprocess.run(
+            [str(cli), "data-states", "verify"],
+            cwd=empty_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
     print("isolated wheel smoke passed")
     return 0
 

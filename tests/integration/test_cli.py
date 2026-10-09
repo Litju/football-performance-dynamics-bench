@@ -99,3 +99,21 @@ def test_cli_verifies_and_describes_pinned_sources(capsys: object) -> None:
     manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert manifest["upstream"]["pinned_commit"] == "4340d274572876239c154c90bc507a9b3250a656"
     assert main(["sources", "describe", "unknown"]) == 2
+
+
+def test_cli_lists_describes_and_verifies_data_states(capsys: object) -> None:
+    assert main(["data-states", "list"]) == 0
+    assert capsys.readouterr().out.strip() == "skillcorner_5hz_v1"  # type: ignore[attr-defined]
+
+    assert main(["data-states", "verify"]) == 0
+    report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert report["status"] == "passed"
+    assert report["data_state_id"] == "skillcorner_5hz_v1"
+    assert report["source_release_id"].endswith(
+        "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+    )
+
+    assert main(["data-states", "describe", "skillcorner_5hz_v1"]) == 0
+    manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert manifest["scientific_state"]["temporal_sampling"]["sampling_frame_remainder"] == 0
+    assert main(["data-states", "describe", "unknown"]) == 2
