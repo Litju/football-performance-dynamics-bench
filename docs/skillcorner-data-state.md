@@ -31,7 +31,7 @@ Each emitted record contains the data-state/source identities, match ID, source 
 - A player appears only if present in that source frame. Player IDs remain match-scoped provider IDs; there is no cross-match athlete identity. Team ID and `home`/`away` group come from that match's provider roster mapping. Player records are sorted by player ID for deterministic serialization.
 - Preserve x/y values and `is_detected`, including extrapolated source observations with `is_detected=false`. No detection filtering is applied.
 - A null source ball remains JSON null. For a ball object, x/y and `is_detected` are kept; the undocumented z coordinate is excluded. Explicit null x/y values stay null.
-- A null possession object remains null; otherwise its source group and player ID are retained as auxiliary context, including a null player ID. Possession is not interpreted as an eligibility rule or future information boundary.
+- A null possession object remains null; otherwise its source group (`home team` or `away team`) and player ID are retained exactly as auxiliary context, including a null player ID. Other group values are rejected. Possession is not interpreted as an eligibility rule or future information boundary.
 - NaN and infinity fail. No absent player, ball, coordinate, or possession value is imputed or forward-filled.
 
 ## Source field contract

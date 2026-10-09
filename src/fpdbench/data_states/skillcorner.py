@@ -212,8 +212,10 @@ def _canonical_possession(value: object) -> dict[str, object] | None:
     _exact_keys(possession, {"group", "player_id"}, "possession")
     group = possession.get("group")
     player_id = possession.get("player_id")
-    if group is not None and (not isinstance(group, str) or group not in {"home", "away"}):
-        raise ValueError("possession group must be home, away, or null")
+    if group is not None and (
+        not isinstance(group, str) or group not in {"home team", "away team"}
+    ):
+        raise ValueError("possession group must be 'home team', 'away team', or null")
     if player_id is not None:
         player_id = _positive_int(player_id, "possession player_id")
     return {"group": group, "player_id": player_id}

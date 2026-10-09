@@ -135,6 +135,34 @@ def test_exact_even_frame_sampling_period_boundary_and_metric_entities() -> None
     assert samples[1]["players"] == []
 
 
+@pytest.mark.parametrize("group", ["home team", "away team"])
+def test_possession_group_is_preserved_from_source(group: str) -> None:
+    sample = _samples(
+        [_frame(100, "00:00:10.00", possession={"group": group, "player_id": 1001})]
+    )[0]
+    assert sample["possession"] == {"group": group, "player_id": 1001}
+
+
+@pytest.mark.parametrize("group", ["home", "away", "unknown", 1])
+def test_unsupported_possession_group_fails(group: object) -> None:
+    with pytest.raises(ValueError, match="possession group"):
+        _samples([_frame(100, "00:00:10.00", possession={"group": group, "player_id": None})])
+
+
+@pytest.mark.parametrize("player_id", [0, -1, True])
+def test_possession_player_id_remains_a_positive_integer(player_id: object) -> None:
+    with pytest.raises(ValueError, match="possession player_id"):
+        _samples(
+            [
+                _frame(
+                    100,
+                    "00:00:10.00",
+                    possession={"group": "home team", "player_id": player_id},
+                )
+            ]
+        )
+
+
 def test_missing_frames_leave_index_gaps_without_synthesis() -> None:
     samples = _samples(
         [
