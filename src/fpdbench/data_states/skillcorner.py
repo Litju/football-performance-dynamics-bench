@@ -129,6 +129,36 @@ _SUPPORTED_FIELD_ITEMS: dict[str, frozenset[str]] = {
     ),
 }
 _SUPPORTED_STATE_VALUES: dict[str, dict[str, object]] = {
+    "entity_schema": {
+        "ball": (
+            "Null when source ball_data is null; otherwise x_m, y_m and source is_detected "
+            "are preserved. No inferred ball position."
+        ),
+        "match": (
+            "match_id is the pinned provider match ID; home_team_id and away_team_id are pinned "
+            "provider team IDs."
+        ),
+        "period": "Source period 1 or 2, or null when the source has no period label.",
+        "player": (
+            "Only players listed in this source frame are emitted, sorted by player_id. "
+            "player_id is match-scoped; team_id and home/away group come from this match's "
+            "roster id/team_id mapping."
+        ),
+        "possession": (
+            "Null remains null; otherwise preserve source group and player_id, including a "
+            "null player_id."
+        ),
+        "sample": (
+            "source_frame is the provider video frame; canonical_sample_index is "
+            "source_frame // 2; "
+            "timestamp_deciseconds is the source match clock converted exactly to integer "
+            "deciseconds or null."
+        ),
+        "team_orientation": (
+            "Keep provider home/away group and physical coordinates; do not rotate or "
+            "attack-direction-normalize."
+        ),
+    },
     "missing_values": {
         "absent_player": (
             "Remain absent from that sample; do not pad from the roster or forward-fill."

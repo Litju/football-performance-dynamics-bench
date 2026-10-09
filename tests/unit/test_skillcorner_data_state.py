@@ -131,6 +131,24 @@ def test_rehashed_manifest_with_wrong_section_type_fails() -> None:
 @pytest.mark.parametrize(
     ("section_name", "field", "value", "error"),
     [
+        (
+            "entity_schema",
+            "player",
+            "player_id is global across matches",
+            "entity_schema.player",
+        ),
+        (
+            "entity_schema",
+            "possession",
+            "discard possession",
+            "entity_schema.possession",
+        ),
+        (
+            "entity_schema",
+            "team_orientation",
+            "rotate each team to attack in +x",
+            "entity_schema.team_orientation",
+        ),
         ("spatial_semantics", "coordinate_units", "feet", "spatial_semantics.coordinate_units"),
         ("spatial_semantics", "origin", "southwest corner", "spatial_semantics.origin"),
         (
