@@ -19,6 +19,235 @@ from fpdbench.data_sources.skillcorner import (
 
 MANIFEST_PATH = Path(__file__).with_name("skillcorner_5hz_v1.json")
 _TIMESTAMP = re.compile(r"([0-9]+):([0-5][0-9]):([0-5][0-9])\.([0-9]{2})\Z")
+_STATE_SECTION_TYPES: dict[str, dict[str, type[object]]] = {
+    "entity_schema": dict.fromkeys(
+        {"match", "period", "sample", "player", "ball", "possession", "team_orientation"},
+        str,
+    ),
+    "field_contract": dict.fromkeys(
+        {
+            "canonical_measurement_values",
+            "provenance_only",
+            "retained_auxiliary_context",
+            "excluded",
+        },
+        list,
+    ),
+    "identity": dict.fromkeys(
+        {"schema_id", "schema_version", "data_state_id", "data_state_version"}, str
+    ),
+    "missing_values": dict.fromkeys(
+        {"absent_player", "ball", "coordinates", "possession", "source_extrapolation"}, str
+    ),
+    "no_future_leakage": {
+        "current_sample_only": str,
+        "forbidden": list,
+        "scope": str,
+    },
+    "numeric_representation": dict.fromkeys(
+        {
+            "coordinates_and_pitch_dimensions",
+            "identifiers_and_indices",
+            "timestamp",
+            "z_coordinate",
+        },
+        str,
+    ),
+    "serialization": dict.fromkeys({"encoding", "hash", "json"}, str),
+    "source": dict.fromkeys({"source_id", "source_release_id", "source_release_hash"}, str),
+    "spatial_semantics": dict.fromkeys(
+        {
+            "attack_direction_normalization",
+            "coordinate_units",
+            "origin",
+            "pitch_dimensions",
+            "positive_axis_signs",
+            "x_axis",
+            "y_axis",
+        },
+        str,
+    ),
+    "temporal_sampling": {
+        "canonical_frequency_hz": int,
+        "canonical_sample_index": str,
+        "duplicate_or_non_monotonic_frames": str,
+        "frame_timestamp_consistency": str,
+        "missing_source_frames": str,
+        "parity_anchor": str,
+        "period_boundary": str,
+        "sampling_frame_modulus": int,
+        "sampling_frame_remainder": int,
+        "source_frame_resets_by_period": bool,
+        "source_frequency_hz": int,
+        "timestamp": str,
+        "transform": str,
+    },
+    "transform": dict.fromkeys({"transform_id", "transform_version"}, str),
+}
+_SUPPORTED_FIELD_ITEMS: dict[str, frozenset[str]] = {
+    "canonical_measurement_values": frozenset(
+        {
+            "tracking.frame -> source_frame",
+            "tracking.period -> period",
+            "tracking.timestamp -> timestamp_deciseconds",
+            "tracking.player_data[].player_id -> players[].player_id",
+            "tracking.player_data[].x/y -> players[].x_m/y_m",
+            "tracking.player_data[].is_detected -> players[].is_detected",
+            "tracking.ball_data.x/y -> ball.x_m/y_m",
+            "tracking.ball_data.is_detected -> ball.is_detected",
+            "match.id -> match_id",
+            "match.pitch_length/pitch_width -> pitch_length_m/pitch_width_m",
+            "match.home_team.id/match.away_team.id -> home_team_id/away_team_id",
+        }
+    ),
+    "excluded": frozenset(
+        {
+            (
+                "tracking.ball_data.z (the pinned source documentation does not establish "
+                "its unit/reference)"
+            ),
+            "tracking.image_corners_projection payload",
+            "dynamic_events.csv and phases_of_play.csv, including all event/phase labels",
+            "all source fields not listed as canonical, auxiliary, or provenance-only",
+        }
+    ),
+    "provenance_only": frozenset(
+        {
+            "pinned source release ID/hash",
+            (
+                "match.match_periods boundary metadata (not used to sample or select "
+                "benchmark windows)"
+            ),
+            "source file paths and immutable byte identities bound by the source release",
+        }
+    ),
+    "retained_auxiliary_context": frozenset(
+        {
+            "tracking.possession.group/player_id",
+            "match.players[].id/team_id roster crosswalk used to assign canonical team/group",
+        }
+    ),
+}
+_SUPPORTED_STATE_VALUES: dict[str, dict[str, object]] = {
+    "missing_values": {
+        "absent_player": (
+            "Remain absent from that sample; do not pad from the roster or forward-fill."
+        ),
+        "ball": (
+            "Source null remains JSON null; an object with null coordinates remains an object "
+            "with null coordinates."
+        ),
+        "coordinates": (
+            "Explicit source null is preserved component-wise; NaN and infinity are rejected."
+        ),
+        "possession": "Source null remains JSON null; null player_id remains null.",
+        "source_extrapolation": (
+            "Preserve is_detected=false with the provider x/y values; do not filter or relabel it."
+        ),
+    },
+    "no_future_leakage": {
+        "current_sample_only": (
+            "Every emitted positional, detection, ball, and possession value comes from that "
+            "same retained source frame; static match metadata supplies only IDs and pitch "
+            "dimensions."
+        ),
+        "forbidden": frozenset(
+            {
+                "future interpolation or smoothing",
+                "FPD forward-fill or imputation",
+                "event/phase labels attached to tracking samples",
+                "future targets, opponent positions, or ball context",
+            }
+        ),
+        "scope": (
+            "Future conditional context and benchmark information boundaries are downstream "
+            "decisions."
+        ),
+    },
+    "numeric_representation": {
+        "coordinates_and_pitch_dimensions": (
+            "Python binary64 floats in meters, converted from source JSON numbers without "
+            "rounding or normalization; finite values only, explicit null allowed where the "
+            "source is null."
+        ),
+        "identifiers_and_indices": (
+            "Nonnegative/positive provider identifiers and frame indices remain JSON "
+            "integers; booleans are not accepted as integers."
+        ),
+        "timestamp": (
+            "Parse HH:MM:SS.cc source strings to integer deciseconds; accept only source "
+            "100 ms ticks; preserve null as null."
+        ),
+        "z_coordinate": (
+            "Excluded because the pinned source documentation does not define its unit/reference."
+        ),
+    },
+    "serialization": {
+        "encoding": "UTF-8 without BOM or trailing newline.",
+        "hash": (
+            "SHA-256 over UTF-8 canonical JSON of scientific_state with sorted keys and "
+            "compact separators; descriptive manifest fields are excluded."
+        ),
+        "json": (
+            "Python JSON serialization with recursively sorted object keys, compact "
+            "separators, ensure_ascii=false, allow_nan=false; players sorted by player_id; "
+            "binary64 floats use Python's shortest round-trip decimal representation."
+        ),
+    },
+    "spatial_semantics": {
+        "attack_direction_normalization": "none; provider orientation is preserved",
+        "coordinate_units": "meters (SI)",
+        "origin": "pitch center",
+        "pitch_dimensions": (
+            "preserve match-specific pitch_length and pitch_width as metadata in meters"
+        ),
+        "positive_axis_signs": (
+            "not specified by the pinned source documentation; preserve provider values unchanged"
+        ),
+        "x_axis": "pitch length axis",
+        "y_axis": "pitch width axis",
+    },
+    "temporal_sampling": {
+        "canonical_frequency_hz": 5,
+        "canonical_sample_index": "source_frame // 2, on the global provider video-frame index",
+        "duplicate_or_non_monotonic_frames": (
+            "fail; source frame numbers must increase strictly across the match"
+        ),
+        "frame_timestamp_consistency": (
+            "Within consecutive source rows with the same non-null period and non-null "
+            "timestamps, timestamp_deciseconds delta must equal source_frame delta "
+            "(one decisecond per 10 Hz source frame)."
+        ),
+        "missing_source_frames": (
+            "Emit no synthetic sample; retain only observed even-numbered frames, leaving "
+            "canonical_sample_index gaps where frames are absent."
+        ),
+        "parity_anchor": (
+            "absolute source frame number; retain source_frame % 2 == 0. Parity does not "
+            "restart at a period boundary."
+        ),
+        "period_boundary": (
+            "Copy the source period. The global source frame and canonical index do not "
+            "reset; timestamp continuity validation restarts at a period change."
+        ),
+        "sampling_frame_modulus": 2,
+        "sampling_frame_remainder": 0,
+        "source_frame_resets_by_period": False,
+        "source_frequency_hz": 10,
+        "timestamp": (
+            "Copy the corresponding source row's match-clock time exactly as integer "
+            "deciseconds; do not derive time from a neighboring sample."
+        ),
+        "transform": (
+            "Direct selection of the source observation on even frames; no interpolation, "
+            "smoothing, or averaging."
+        ),
+    },
+    "transform": {
+        "transform_id": "skillcorner_source_frame_even_10hz_to_5hz",
+        "transform_version": "1.0.0",
+    },
+}
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
@@ -35,6 +264,65 @@ def _exact_keys(value: Mapping[str, object], expected: set[str], label: str) -> 
         missing = sorted(expected - set(value))
         unexpected = sorted(set(value) - expected)
         raise ValueError(f"{label} fields differ from the pinned schema: {missing=}, {unexpected=}")
+
+
+def _state_section(
+    state: Mapping[str, object], name: str, errors: list[str]
+) -> Mapping[str, object] | None:
+    label = f"scientific_state.{name}"
+    try:
+        section = _mapping(state.get(name), label)
+        _exact_keys(section, set(_STATE_SECTION_TYPES[name]), label)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return None
+    for key, expected_type in _STATE_SECTION_TYPES[name].items():
+        value = section.get(key)
+        valid_type = type(value) is expected_type
+        if valid_type and expected_type is list:
+            valid_type = all(isinstance(item, str) for item in cast(list[object], value))
+        if not valid_type:
+            errors.append(f"{label}.{key} has an unsupported type")
+        elif expected_type is str and not value:
+            errors.append(f"{label}.{key} must not be empty")
+    return section
+
+
+def _validate_supported_values(
+    sections: Mapping[str, Mapping[str, object]], errors: list[str]
+) -> None:
+    for key, expected_items in _SUPPORTED_FIELD_ITEMS.items():
+        values = sections.get("field_contract", {}).get(key)
+        valid = isinstance(values, list) and all(
+            isinstance(value, str) for value in cast(list[object], values)
+        )
+        if valid:
+            string_values = cast(list[str], values)
+            valid = (
+                len(string_values) == len(expected_items)
+                and frozenset(string_values) == expected_items
+            )
+        if not valid:
+            errors.append(f"unsupported scientific_state.field_contract.{key}")
+    for section_name, expected_values in _SUPPORTED_STATE_VALUES.items():
+        section = sections.get(section_name, {})
+        for key, expected in expected_values.items():
+            actual = section.get(key)
+            if isinstance(expected, frozenset):
+                valid = isinstance(actual, list) and all(
+                    isinstance(value, str) for value in cast(list[object], actual)
+                )
+                if valid:
+                    string_values = cast(list[str], actual)
+                    expected_strings = cast(frozenset[str], expected)
+                    valid = (
+                        len(string_values) == len(expected_strings)
+                        and frozenset(string_values) == expected_strings
+                    )
+            else:
+                valid = actual == expected
+            if not valid:
+                errors.append(f"unsupported scientific_state.{section_name}.{key}")
 
 
 def _positive_int(value: object, label: str) -> int:
@@ -94,39 +382,50 @@ def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
     if manifest.get("data_state_version") != "1.0.0":
         errors.append("unsupported data_state_version")
 
+    source: Mapping[str, object] | None = None
     try:
-        source = load_source_manifest()
-        if manifest.get("source_id") != source.get("source_id"):
-            errors.append("data-state source_id does not match the pinned source authority")
-        if manifest.get("source_release_id") != source.get("source_release_id"):
-            errors.append("data-state source_release_id does not match the pinned source authority")
-        if manifest.get("source_release_hash") != source.get("source_release_hash"):
-            errors.append(
-                "data-state source_release_hash does not match the pinned source authority"
-            )
+        source = _mapping(load_source_manifest(), "pinned source authority")
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         errors.append(f"could not verify pinned source authority: {exc}")
+    if source is not None:
+        for field in ("source_id", "source_release_id", "source_release_hash"):
+            if manifest.get(field) != source.get(field):
+                errors.append(f"data-state {field} does not match the pinned source authority")
 
+    sections: dict[str, Mapping[str, object]] = {}
     try:
         state = _mapping(manifest.get("scientific_state"), "scientific_state")
-        identity = _mapping(state.get("identity"), "scientific_state.identity")
-        source_state = _mapping(state.get("source"), "scientific_state.source")
-        if identity.get("schema_id") != manifest.get("schema_id"):
-            errors.append("scientific_state schema_id does not match manifest")
-        if identity.get("schema_version") != manifest.get("schema_version"):
-            errors.append("scientific_state schema_version does not match manifest")
-        if identity.get("data_state_id") != manifest.get("data_state_id"):
-            errors.append("scientific_state data_state_id does not match manifest")
-        if identity.get("data_state_version") != manifest.get("data_state_version"):
-            errors.append("scientific_state data_state_version does not match manifest")
+    except (ValueError, TypeError):
+        errors.append("scientific_state must be an object with string keys")
+        return tuple(errors)
+
+    try:
+        _exact_keys(state, set(_STATE_SECTION_TYPES), "scientific_state")
+    except ValueError as exc:
+        errors.append(str(exc))
+    for section_name in _STATE_SECTION_TYPES:
+        section = _state_section(state, section_name, errors)
+        if section is not None:
+            sections[section_name] = section
+
+    _validate_supported_values(sections, errors)
+    identity = sections.get("identity")
+    if identity is not None:
+        for field in ("schema_id", "schema_version", "data_state_id", "data_state_version"):
+            if identity.get(field) != manifest.get(field):
+                errors.append(f"scientific_state {field} does not match manifest")
+    source_state = sections.get("source")
+    if source_state is not None:
         for field in ("source_id", "source_release_id", "source_release_hash"):
             if source_state.get(field) != manifest.get(field):
                 errors.append(f"scientific_state {field} does not match manifest")
+    try:
         expected_hash = compute_data_state_hash(state)
+    except (TypeError, ValueError):
+        errors.append("scientific_state cannot be canonically serialized")
+    else:
         if manifest.get("data_state_hash") != expected_hash:
             errors.append("data_state_hash does not match scientific_state")
-    except (ValueError, TypeError):
-        errors.append("scientific_state cannot be canonically serialized")
     return tuple(errors)
 
 

@@ -1,12 +1,10 @@
 import copy
-import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 
 import pytest
 
-import fpdbench.data_states.skillcorner as skillcorner
 from fpdbench.data_states.skillcorner import (
     compute_data_state_hash,
     iter_skillcorner_5hz,
@@ -77,13 +75,112 @@ def _samples(
     )
 
 
+def _rehash(manifest: dict[str, object]) -> None:
+    state = cast(dict[str, object], manifest["scientific_state"])
+    manifest["data_state_hash"] = compute_data_state_hash(state)
+
+
 def test_pinned_manifest_hash_and_source_release_are_valid() -> None:
     manifest = load_manifest()
     assert validate_manifest(manifest) == ()
+    original_hash = manifest["data_state_hash"]
+
+    described_change = copy.deepcopy(manifest)
+    described_change["description"] = "documentation-only wording change"
+    described_change["local_path"] = "/tmp/skillcorner"
+    described_change["retrieved_at"] = "2099-01-01T00:00:00Z"
+    described_change["hostname"] = "synthetic-local-host"
+    assert described_change["data_state_hash"] == original_hash
+    assert validate_manifest(described_change) == ()
 
     wrong_source = copy.deepcopy(manifest)
     wrong_source["source_release_id"] = "skillcorner_open_data_v1:sha256:" + "0" * 64
     assert any("source_release_id" in error for error in validate_manifest(wrong_source))
+
+
+@pytest.mark.parametrize("missing", ["section", "field_contract", "field_entry"])
+def test_rehashed_manifest_with_missing_contract_fails(missing: str) -> None:
+    changed = copy.deepcopy(load_manifest())
+    state = cast(dict[str, object], changed["scientific_state"])
+    if missing == "section":
+        del state["no_future_leakage"]
+    elif missing == "field_contract":
+        del state["field_contract"]
+    else:
+        field_contract = cast(dict[str, object], state["field_contract"])
+        canonical_values = cast(list[str], field_contract["canonical_measurement_values"])
+        canonical_values.remove("tracking.player_data[].is_detected -> players[].is_detected")
+    _rehash(changed)
+
+    assert validate_manifest(changed)
+
+
+def test_rehashed_manifest_with_wrong_section_type_fails() -> None:
+    changed = copy.deepcopy(load_manifest())
+    state = cast(dict[str, object], changed["scientific_state"])
+    entity_schema = cast(dict[str, object], state["entity_schema"])
+    entity_schema["player"] = ["unsupported shape"]
+    _rehash(changed)
+
+    assert any(
+        "entity_schema.player has an unsupported type" in error
+        for error in validate_manifest(changed)
+    )
+
+
+@pytest.mark.parametrize(
+    ("section_name", "field", "value", "error"),
+    [
+        ("spatial_semantics", "coordinate_units", "feet", "spatial_semantics.coordinate_units"),
+        ("spatial_semantics", "origin", "southwest corner", "spatial_semantics.origin"),
+        (
+            "spatial_semantics",
+            "attack_direction_normalization",
+            "normalize each team to attack in +x",
+            "spatial_semantics.attack_direction_normalization",
+        ),
+        ("temporal_sampling", "source_frequency_hz", 25, "temporal_sampling.source_frequency_hz"),
+        (
+            "temporal_sampling",
+            "sampling_frame_remainder",
+            1,
+            "temporal_sampling.sampling_frame_remainder",
+        ),
+        ("transform", "transform_id", "unsupported_transform", "transform.transform_id"),
+        (
+            "transform",
+            "transform_version",
+            "2.0.0",
+            "transform.transform_version",
+        ),
+        ("serialization", "json", "unordered noncanonical JSON", "serialization.json"),
+    ],
+)
+def test_rehashed_manifest_with_unsupported_scientific_semantics_fails(
+    section_name: str, field: str, value: object, error: str
+) -> None:
+    changed = copy.deepcopy(load_manifest())
+    state = cast(dict[str, object], changed["scientific_state"])
+    section = cast(dict[str, object], state[section_name])
+    section[field] = value
+    _rehash(changed)
+
+    assert any(error in item for item in validate_manifest(changed))
+
+
+def test_rehashed_source_release_mismatch_fails() -> None:
+    changed = copy.deepcopy(load_manifest())
+    wrong_hash = "0" * 64
+    wrong_release_id = f"skillcorner_open_data_v1:sha256:{wrong_hash}"
+    changed["source_release_id"] = wrong_release_id
+    changed["source_release_hash"] = wrong_hash
+    state = cast(dict[str, object], changed["scientific_state"])
+    source = cast(dict[str, object], state["source"])
+    source["source_release_id"] = wrong_release_id
+    source["source_release_hash"] = wrong_hash
+    _rehash(changed)
+
+    assert any("pinned source authority" in error for error in validate_manifest(changed))
 
 
 def test_exact_even_frame_sampling_period_boundary_and_metric_entities() -> None:
@@ -137,9 +234,9 @@ def test_exact_even_frame_sampling_period_boundary_and_metric_entities() -> None
 
 @pytest.mark.parametrize("group", ["home team", "away team"])
 def test_possession_group_is_preserved_from_source(group: str) -> None:
-    sample = _samples(
-        [_frame(100, "00:00:10.00", possession={"group": group, "player_id": 1001})]
-    )[0]
+    sample = _samples([_frame(100, "00:00:10.00", possession={"group": group, "player_id": 1001})])[
+        0
+    ]
     assert sample["possession"] == {"group": group, "player_id": 1001}
 
 
@@ -226,35 +323,16 @@ def test_serialization_is_deterministic_and_ignores_excluded_projection() -> Non
     assert serialize_sample(_samples([first])[0]) == serialize_sample(_samples([second])[0])
 
 
-def test_semantic_rule_changes_hash_and_drives_sample_parity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_unsupported_sampling_change_also_changes_the_identity_hash() -> None:
     manifest = load_manifest()
     baseline = cast(str, manifest["data_state_hash"])
     changed = copy.deepcopy(manifest)
     state = cast(dict[str, object], changed["scientific_state"])
     temporal = cast(dict[str, object], state["temporal_sampling"])
     temporal["sampling_frame_remainder"] = 1
-    temporal["parity_anchor"] = "absolute source frame number; retain source_frame % 2 == 1."
-    changed_hash = compute_data_state_hash(state)
-    assert changed_hash != baseline
-    changed["data_state_hash"] = changed_hash
-
-    changed_path = tmp_path / "changed.json"
-    changed_path.write_text(json.dumps(changed, sort_keys=True), encoding="utf-8")
-    monkeypatch.setattr(skillcorner, "MANIFEST_PATH", changed_path)
-    samples = _samples([_frame(100, "00:00:10.00"), _frame(101, "00:00:10.10")])
-    assert [sample["source_frame"] for sample in samples] == [101]
-    assert samples[0]["data_state_hash"] == changed_hash
-
-    described_change = copy.deepcopy(changed)
-    described_change["description"] = "documentation-only wording change"
-    described_change["local_path"] = "/tmp/skillcorner"
-    described_change["retrieved_at"] = "2099-01-01T00:00:00Z"
-    described_change["hostname"] = "synthetic-local-host"
-    assert compute_data_state_hash(
-        cast(dict[str, object], described_change["scientific_state"])
-    ) == (changed_hash)
+    _rehash(changed)
+    assert changed["data_state_hash"] != baseline
+    assert validate_manifest(changed)
 
 
 def test_artifact_guard_rejects_canonical_row_payloads(tmp_path: Path) -> None:
