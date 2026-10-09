@@ -1,0 +1,171 @@
+{
+  "schema_id": "fpdbench.skillcorner-window-eligibility",
+  "schema_version": "1.0.0",
+  "policy_id": "skillcorner_window_v1",
+  "policy_version": "1.0.0",
+  "policy_hash": "9d293a272f764c4fe40d12c3da16b0cbd4d1d547b80259bd470c52c70039efe5",
+  "source_release_id": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+  "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+  "data_state_id": "skillcorner_5hz_v1",
+  "data_state_version": "1.0.0",
+  "data_state_hash": "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3",
+  "description": "Deterministic eligibility and composable quality strata for candidate windows over the pinned SkillCorner 5 Hz state.",
+  "scientific_policy": {
+    "identity": {
+      "policy_id": "skillcorner_window_v1",
+      "policy_version": "1.0.0",
+      "source_release_id": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+      "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+      "data_state_id": "skillcorner_5hz_v1",
+      "data_state_version": "1.0.0",
+      "data_state_hash": "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
+    },
+    "support": {
+      "sample_frequency_hz": 5,
+      "sample_interval_deciseconds": 2,
+      "history_unit": "sample_intervals",
+      "future_unit": "sample_intervals",
+      "history_includes_origin": true,
+      "sample_count_rule": "history_plus_future_plus_origin",
+      "origin_offset": "history_intervals"
+    },
+    "play_context": {
+      "phase_file": "phases_of_play.csv",
+      "phase_intervals_bound_to_source_release": true,
+      "phase_interval_fields": [
+        "match_id",
+        "period",
+        "frame_start",
+        "frame_end"
+      ],
+      "phase_interval_end_inclusive": true,
+      "require_full_support_phase_coverage": true,
+      "uncovered_reason_code": "PHASE_NOT_IN_PLAY_OR_UNKNOWN",
+      "all_phase_types_in_play": true,
+      "possession_is_hard_gate": false,
+      "null_possession_stratum": "unknown"
+    },
+    "player_observations": {
+      "minimum_valid_per_team_per_sample": 7,
+      "valid_position_requires_finite_xy": true,
+      "null_xy_is_missing": true,
+      "absent_player_counts_missing_against_active_roster": true,
+      "active_roster_fields": [
+        "players[].id",
+        "players[].team_id",
+        "players[].playing_time.by_period[].name",
+        "players[].playing_time.by_period[].start_frame",
+        "players[].playing_time.by_period[].end_frame"
+      ],
+      "active_interval_end_inclusive": true,
+      "extrapolated_positions_count_toward_minimum": true,
+      "incomplete_active_metadata_stratum": "unknown",
+      "identity_transition_action": "retain_warning_no_id_stitch"
+    },
+    "ball_observations": {
+      "minimum_valid_fraction": 0.95,
+      "origin_must_be_valid": true,
+      "valid_position_requires_finite_xy": true,
+      "extrapolated_positions_count_toward_minimum": true,
+      "null_xy_is_missing": true
+    },
+    "coordinate_checks": {
+      "player_gross_limit_pitch_dimension_multiple": 1.0,
+      "ball_gross_limit_pitch_dimension_multiple": 2.0,
+      "gross_limit_action": "exclude",
+      "outside_pitch_action": "retain_warning",
+      "player_displacement_warning_mps": 12.0,
+      "ball_displacement_warning_mps": 50.0,
+      "outlier_action": "retain_warning_no_repair"
+    },
+    "temporal_continuity": {
+      "source_frame_parity": 0,
+      "source_frame_step": 2,
+      "canonical_sample_step": 1,
+      "timestamp_step_deciseconds": 2,
+      "period_bounds_inclusive": true,
+      "period_rule": "one_nonnull_period_within_metadata_bounds",
+      "gap_or_duplicate_action": "exclude_with_specific_reason",
+      "cross_period_timestamp_action": "skip_comparison_and_exclude_window"
+    },
+    "quality_strata": {
+      "dimensions": [
+        "player_detection_exposure",
+        "ball_detection_exposure",
+        "player_completeness",
+        "ball_completeness",
+        "temporal_continuity",
+        "identity_transition_exposure",
+        "source_quality_uncertainty",
+        "play_context"
+      ],
+      "player_detection_denominator": "finite_player_positions",
+      "ball_detection_denominator": "finite_ball_positions",
+      "player_completeness_numerator": "active_player_frames_with_finite_xy",
+      "player_completeness_denominator": "active_player_frames_from_metadata",
+      "ball_completeness_denominator": "all_support_samples",
+      "temporal_continuity_numerator": "consecutive_same_period_frame_index_and_timestamp_intervals",
+      "temporal_continuity_denominator": "expected_history_and_future_intervals",
+      "identity_transition_denominator": "adjacent_active_roster_id_sets",
+      "outside_pitch_numerator": "finite_positions_outside_pitch_rectangle",
+      "outside_pitch_denominator": "finite_positions_for_entity",
+      "displacement_outlier_numerator": "same_entity_positions_over_advisory_speed_threshold",
+      "displacement_outlier_denominator": "continuous_adjacent_valid_entity_position_pairs",
+      "null_player_coordinate_denominator": "observed_player_records",
+      "missing_active_record_denominator": "active_player_frames_from_metadata",
+      "phase_coverage_denominator": "all_support_samples",
+      "possession_context_denominator": "all_support_samples",
+      "source_quality_stratum": "unknown_per_observation",
+      "unknown_is_distinct_from_poor": true,
+      "dimensions_are_composable": true
+    },
+    "future_information": {
+      "future_observations_membership_only": true,
+      "future_phase_and_quality_membership_only": true,
+      "eligibility_outputs_allowed_as_model_inputs": false
+    },
+    "exclusion_reason_codes": [
+      "BALL_COVERAGE_BELOW_MINIMUM",
+      "BALL_MISSING_AT_ORIGIN",
+      "CANONICAL_FRAME_MISMATCH",
+      "COORDINATE_IMPLAUSIBLE",
+      "DUPLICATE_PLAYER_ID",
+      "DUPLICATE_SAMPLE",
+      "INSUFFICIENT_FUTURE_SUPPORT",
+      "INSUFFICIENT_HISTORY_SUPPORT",
+      "INVALID_DETECTION_FLAG",
+      "INVALID_MATCH_METADATA",
+      "INVALID_SAMPLE_SCHEMA",
+      "NONFINITE_COORDINATE",
+      "NONMONOTONIC_SAMPLE_ORDER",
+      "OUTSIDE_PERIOD_BOUNDS",
+      "PERIOD_BOUNDARY_CROSSED",
+      "PHASE_INTERVAL_INVALID",
+      "PHASE_MATCH_ID_MISMATCH",
+      "PHASE_SOURCE_IDENTITY_MISMATCH",
+      "PHASE_NOT_IN_PLAY_OR_UNKNOWN",
+      "PLAYER_COUNT_BELOW_TEAM_MINIMUM",
+      "PLAYER_TEAM_IDENTITY_CONFLICT",
+      "TEMPORAL_GAP",
+      "TIMESTAMP_DISCONTINUITY",
+      "TIMESTAMP_MISSING",
+      "WINDOW_SUPPORT_LENGTH_MISMATCH"
+    ],
+    "warning_codes": [
+      "BALL_COORDINATES_MISSING",
+      "BALL_DISPLACEMENT_OUTLIER",
+      "BALL_OUTSIDE_PITCH",
+      "IDENTITY_TRANSITION_EXPOSURE",
+      "PLAYER_APPEARANCE_METADATA_UNKNOWN",
+      "PLAYER_COORDINATES_MISSING",
+      "PLAYER_DISPLACEMENT_OUTLIER",
+      "PLAYER_OBSERVATION_MISSING",
+      "PLAYER_OUTSIDE_APPEARANCE",
+      "PLAYER_POSITION_OUTSIDE_PITCH",
+      "PERIOD_BOUND_METADATA_UNKNOWN",
+      "POSSESSION_CONTEXT_UNKNOWN",
+      "POSSESSION_PLAYER_UNOBSERVED",
+      "SOURCE_QUALITY_UNKNOWN"
+    ]
+  }
+}

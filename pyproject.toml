@@ -25,6 +25,7 @@ packages = ["src/fpdbench"]
 "src/fpdbench/evaluation/absolute_xy_calibration_lock.json" = "fpdbench/evaluation/absolute_xy_calibration_lock.json"
 "src/fpdbench/data_sources/skillcorner_open_data_v1.json" = "fpdbench/data_sources/skillcorner_open_data_v1.json"
 "src/fpdbench/data_states/skillcorner_5hz_v1.json" = "fpdbench/data_states/skillcorner_5hz_v1.json"
+"src/fpdbench/eligibility/skillcorner_window_v1.json" = "fpdbench/eligibility/skillcorner_window_v1.json"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

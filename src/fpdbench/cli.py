@@ -21,6 +21,12 @@ from fpdbench.data_states.skillcorner import (
 from fpdbench.data_states.skillcorner import (
     validate_manifest as validate_data_state_manifest,
 )
+from fpdbench.eligibility.skillcorner import (
+    load_manifest as load_eligibility_manifest,
+)
+from fpdbench.eligibility.skillcorner import (
+    validate_manifest as validate_eligibility_manifest,
+)
 from fpdbench.provenance.evidence_inventory import validate_evidence_inventory
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
 from fpdbench.reproducibility import (
@@ -86,6 +92,10 @@ def _parser() -> argparse.ArgumentParser:
     data_state_description = data_state_commands.add_parser("describe")
     data_state_description.add_argument("data_state_id")
     data_state_commands.add_parser("verify")
+
+    eligibility = commands.add_parser("eligibility")
+    eligibility_commands = eligibility.add_subparsers(dest="eligibility_command", required=True)
+    eligibility_commands.add_parser("verify")
 
     lock = commands.add_parser("lock")
     lock_commands = lock.add_subparsers(dest="lock_command", required=True)
@@ -263,6 +273,30 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "data_state_version": manifest["data_state_version"],
                     "data_state_hash": manifest["data_state_hash"],
                     "source_release_id": manifest["source_release_id"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.command == "eligibility" and args.eligibility_command == "verify":
+        try:
+            manifest = load_eligibility_manifest()
+            errors = validate_eligibility_manifest(manifest)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            return _print_errors((f"window eligibility verification failed: {exc}",))
+        if errors:
+            return _print_errors(errors)
+        print(
+            json.dumps(
+                {
+                    "status": "passed",
+                    "policy_id": manifest["policy_id"],
+                    "policy_version": manifest["policy_version"],
+                    "policy_hash": manifest["policy_hash"],
+                    "source_release_id": manifest["source_release_id"],
+                    "data_state_id": manifest["data_state_id"],
+                    "data_state_hash": manifest["data_state_hash"],
                 },
                 indent=2,
                 sort_keys=True,

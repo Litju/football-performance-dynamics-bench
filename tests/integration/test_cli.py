@@ -117,3 +117,17 @@ def test_cli_lists_describes_and_verifies_data_states(capsys: object) -> None:
     manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert manifest["scientific_state"]["temporal_sampling"]["sampling_frame_remainder"] == 0
     assert main(["data-states", "describe", "unknown"]) == 2
+
+
+def test_cli_verifies_skillcorner_window_eligibility(capsys: object) -> None:
+    assert main(["eligibility", "verify"]) == 0
+    report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert report["status"] == "passed"
+    assert report["policy_id"] == "skillcorner_window_v1"
+    assert report["source_release_id"].endswith(
+        "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+    )
+    assert (
+        report["data_state_hash"]
+        == "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
+    )
