@@ -34,3 +34,5 @@ This public research-software repository is under active release preparation, an
 ## Data source and rights
 
 SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The immutable upstream commit, selected source matches, file identities, acquisition contract, and drift checks are recorded in the [SkillCorner source authority](docs/skillcorner-source-authority.md). The rights boundary and attribution rules are in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision and explicit match list rather than identify the source as “whatever is currently published.”
+
+The prospective 10 Hz to 5 Hz measurement transform, entity/missingness rules, and data-state identity are defined in the [SkillCorner 5 Hz measurement data state](docs/skillcorner-data-state.md) and can be verified offline with `fpdbench data-states verify`.
