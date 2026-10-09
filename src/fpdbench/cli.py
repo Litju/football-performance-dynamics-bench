@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import cast
 
 from fpdbench.benchmarks.registry import default_registry
+from fpdbench.data_sources.skillcorner import (
+    load_manifest,
+    validate_manifest,
+    verify_live,
+    verify_local_checkout,
+)
 from fpdbench.provenance.evidence_inventory import validate_evidence_inventory
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
 from fpdbench.reproducibility import (
@@ -58,6 +64,15 @@ def _parser() -> argparse.ArgumentParser:
     snapshot.add_argument("--output", type=Path)
     naming = commands.add_parser("validate-naming")
     naming.add_argument("--root", type=Path, default=Path.cwd())
+
+    sources = commands.add_parser("sources")
+    source_commands = sources.add_subparsers(dest="source_command", required=True)
+    source_commands.add_parser("list")
+    source_description = source_commands.add_parser("describe")
+    source_description.add_argument("source_id")
+    source_verification = source_commands.add_parser("verify")
+    source_verification.add_argument("--live", action="store_true")
+    source_verification.add_argument("--local-root", type=Path)
 
     lock = commands.add_parser("lock")
     lock_commands = lock.add_subparsers(dest="lock_command", required=True)
@@ -171,6 +186,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "validate-naming":
         return _print_errors(validate_naming(args.root))
+    if args.command == "sources" and args.source_command == "list":
+        print("skillcorner_open_data_v1")
+        return 0
+    if args.command == "sources" and args.source_command == "describe":
+        if args.source_id != "skillcorner_open_data_v1":
+            print(f"unknown source: {args.source_id}", file=sys.stderr)
+            return 2
+        print(json.dumps(load_manifest(), indent=2, sort_keys=True))
+        return 0
+    if args.command == "sources" and args.source_command == "verify":
+        try:
+            manifest = load_manifest()
+            errors = list(validate_manifest(manifest))
+            live_report = verify_live(manifest) if args.live and not errors else None
+            if live_report is not None:
+                errors.extend(cast(list[str], live_report["errors"]))
+            local_errors = (
+                verify_local_checkout(manifest, args.local_root)
+                if args.local_root is not None and not errors
+                else ()
+            )
+            errors.extend(local_errors)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            return _print_errors((f"source authority verification failed: {exc}",))
+        if errors:
+            if live_report is not None:
+                print(json.dumps(live_report, indent=2, sort_keys=True))
+            return _print_errors(errors)
+        report = {
+            "status": "passed",
+            "source_id": manifest["source_id"],
+            "source_release_id": manifest["source_release_id"],
+            "source_population_hash": manifest["source_population_hash"],
+            "manifest_sha256": manifest["manifest_sha256"],
+            "live": live_report,
+            "local_checkout": str(args.local_root) if args.local_root is not None else None,
+        }
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
     if args.command == "lock" and args.lock_command == "compute":
         lock = build_scientific_lock(_load_object(args.input))
         rendered = json.dumps(lock, indent=2, sort_keys=True) + "\n"

@@ -33,4 +33,4 @@ This public research-software repository is under active release preparation, an
 
 ## Data source and rights
 
-SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The current source revision, rights boundary, attribution, and FPD Bench release policy are recorded in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision, explicit match list, and source-byte hashes rather than identify the source as “whatever is currently published.”
+SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The immutable upstream commit, selected source matches, file identities, acquisition contract, and drift checks are recorded in the [SkillCorner source authority](docs/skillcorner-source-authority.md). The rights boundary and attribution rules are in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision and explicit match list rather than identify the source as “whatever is currently published.”
