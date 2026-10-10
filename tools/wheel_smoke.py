@@ -41,6 +41,7 @@ def main() -> int:
 import hashlib
 import importlib.metadata
 import importlib.resources
+import json
 import pathlib
 import sys
 
@@ -68,6 +69,15 @@ assert (
 assert PHYSICAL_TRAJECTORY_EVALUATOR.evaluator_id == "physical_trajectory.ade_fde_xy_rmse"
 assert load_manifest()["data_state_id"] == "skillcorner_5hz_v1"
 assert validate_manifest(load_manifest()) == ()
+croissant = json.loads(
+    importlib.resources.files("fpdbench")
+    .joinpath("data_sources/skillcorner_croissant_rai_draft.json")
+    .read_text()
+)
+assert croissant["version"] == "0.1.0-draft"
+assert "http://mlcommons.org/croissant/1.1" in croissant["conformsTo"]
+assert "http://mlcommons.org/croissant/RAI/1.0" in croissant["conformsTo"]
+assert "distribution" not in croissant
 assert not importlib.metadata.distribution("football-performance-dynamics-bench").requires
 """
         subprocess.run([str(python), "-I", "-c", smoke], cwd=empty_working_directory, check=True)

@@ -1,0 +1,617 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "annotation": "cr:annotation",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "excludes": "cr:excludes",
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileObject": "cr:fileObject",
+    "fileProperty": "cr:fileProperty",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "readLines": "cr:readLines",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "sc": "https://schema.org/",
+    "sdVersion": "cr:sdVersion",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "unArchive": "cr:unArchive",
+    "value": "cr:value"
+  },
+  "@id": "urn:fpdbench:dataset:skillcorner-open-data-5hz:draft",
+  "@type": "sc:Dataset",
+  "conformsTo": [
+    "http://mlcommons.org/croissant/1.1",
+    "http://mlcommons.org/croissant/RAI/1.0"
+  ],
+  "creator": {
+    "@type": "sc:Organization",
+    "description": "The project package metadata names this contributor group as authors. Final dataset authorship and publication roles remain subject to R8.",
+    "name": "Football Performance Dynamics Bench contributors"
+  },
+  "description": "R4 metadata draft for a prospective FPD Bench measurement derived from the pinned SkillCorner Open Data release. The RecordSets below describe source-population metadata, a canonical measurement schema, and an eligibility contract; they do not assert that tracking rows, eligible windows, or a downloadable FPD dataset have been published. Croissant 1.1 license and distribution requirements cannot currently be populated truthfully: core data redistribution rights are unresolved, and no row-level FPD artifact is distributable under the current project policy. See docs/skillcorner-data-card.md for explicit publication blockers.",
+  "inLanguage": "en",
+  "keywords": [
+    "association football",
+    "player tracking",
+    "ball tracking",
+    "sports analytics",
+    "responsible AI",
+    "prospective draft"
+  ],
+  "name": "SkillCorner Open Data FPD Bench 5 Hz measurement draft",
+  "prov:wasDerivedFrom": [
+    {
+      "@id": "https://github.com/SkillCorner/opendata/commit/4340d274572876239c154c90bc507a9b3250a656"
+    },
+    {
+      "@id": "https://github.com/Litju/football-performance-dynamics-bench/blob/main/src/fpdbench/data_sources/skillcorner_open_data_v1.json"
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@type": "prov:Activity",
+    "prov:label": "Prospective FPD metadata draft; the 5 Hz measurement contract selects provider source frames with frame % 2 == 0 and applies no interpolation, smoothing, averaging, or imputation.",
+    "prov:used": [
+      {
+        "@id": "https://github.com/Litju/football-performance-dynamics-bench/blob/main/src/fpdbench/data_sources/skillcorner_open_data_v1.json"
+      },
+      {
+        "@id": "https://github.com/Litju/football-performance-dynamics-bench/blob/main/src/fpdbench/data_states/skillcorner_5hz_v1.json"
+      }
+    ],
+    "prov:wasAssociatedWith": {
+      "@type": "prov:SoftwareAgent",
+      "name": "Football Performance Dynamics Bench deterministic source and measurement authorities"
+    }
+  },
+  "rai:dataBiases": [
+    "The source authority contains 20 selected matches from one 2024/2025 Australian A-League competition edition and season. This narrow competition, season, team, and provider sample may not represent other competitions, regions, levels, genders, age groups, styles, or playing conditions.",
+    "Availability is determined by the provider's public source release; the selection process for the available matches is not established. Match and tracking coverage may therefore be selective.",
+    "Video-based tracking quality may vary with camera view, occlusion, motion, and source conditions. The provider documents erroneous points and imperfect identities; FPD has no observation-level confidence values or independent accuracy estimate.",
+    "Demographic coverage and representation are unknown. No demographic counts or fairness estimates have been calculated."
+  ],
+  "rai:dataCollection": "SkillCorner describes this public source as broadcast football tracking produced with computer vision and machine learning, released in a joint initiative with PySport. FPD did not collect the video or tracking. The exact camera/feed selection, tracking model and version, operator workflow, consent basis, and collection quality-control process are not established by the pinned public materials.",
+  "rai:dataCollectionMissingData": "In source tracking, a player absent from player_data is an absent record; explicit null x/y is missing coordinate data; null ball_data is a missing ball object; null timestamp, period, possession, or possession player_id remains unknown. is_detected=false is a provider-marked extrapolated position, not a missing value. FPD preserves these distinctions.",
+  "rai:dataCollectionRawData": "Upstream source records are the pinned matches.json index, per-match JSON metadata, 10 Hz tracking JSONL, dynamic-events CSV, and phases-of-play CSV at SkillCorner/opendata commit 4340d274572876239c154c90bc507a9b3250a656. Dynamic-event and phase rows are not attached to canonical tracking samples. FPD publishes source identity metadata and rebuild instructions; it does not mirror the core source payloads.",
+  "rai:dataCollectionType": [
+    "Secondary Data analysis"
+  ],
+  "rai:dataImputationProtocol": "None. FPD does not fill, forward-carry, interpolate, smooth, average, or infer missing positions, timestamps, or possession. Source extrapolations remain marked is_detected=false.",
+  "rai:dataLimitations": [
+    "This is a metadata and schema draft. The canonical-observation and candidate-window RecordSets are conceptual descriptions; no tracking rows, reconstructed samples, eligible-window population, metrics, or downloadable FPD data artifact are embedded or published.",
+    "Core SkillCorner tracking and its row-level derivatives remain blocked from FPD redistribution because the repository MIT license is not explicit about the core data files. The current policy is CONDITIONAL GO for local public-research acquisition and processing, with no raw or derived row-level hosting.",
+    "Croissant 1.1 requires a license and a distribution, a dataset-level datePublished, and a source for operational fields. The dataset license, distributable row-level artifacts, publication date, and final release authorship are not established, so license and distribution are omitted; conceptual observation fields have no row-level source resource; and datePublished is omitted. No upstream URL is used as an FPD download or field source because it would not express the canonical transform. This draft is not full Croissant 1.1 conformance.",
+    "The provider's approximate identity-accuracy statement is not an observation-level confidence measure. FPD has not measured tracking accuracy, missingness rates, eligible-window counts, or empirical quality statistics.",
+    "The source contains no per-observation identity probability, covariance, or calibrated uncertainty. Player IDs are match-scoped and do not form an FPD cross-match athlete identity.",
+    "No DOI, final citation, archive record, consent statement, ethics approval, or demographic coverage statement is assigned by this R4 draft."
+  ],
+  "rai:dataManipulationProtocol": "The canonical measurement keeps provider frames whose global frame index is even, yielding 5 Hz from the documented 10 Hz source grid. It preserves the source frame and period, converts HH:MM:SS.cc timestamps exactly to integer deciseconds, copies player and ball x/y in meters, maps match-scoped player IDs to team IDs from match metadata, and sorts players by ID. Coordinates are not rounded, rotated, or attack-direction normalized. Source ball z is excluded because its unit and reference are undocumented. Eligibility is a separate candidate-window assessment and does not repair measurements.",
+  "rai:dataPreprocessingProtocol": [
+    "The source authority pins the upstream commit and selected match population; source verification detects missing, unexpected, or changed files and validates ordinary Git blobs and Git LFS payload identities.",
+    "The measurement contract is skillcorner_5hz_v1 version 1.0.0 and hash 4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3.",
+    "The window policy is skillcorner_window_v1 version 1.1.0 and hash f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b; it evaluates candidate support only and does not define a fixed window population."
+  ],
+  "rai:dataReleaseMaintenancePlan": "Treat the pinned source release, measurement state, and eligibility policy IDs and hashes as separate versioned authorities. Rebuilds must use the pinned upstream commit and verify local bytes against recorded identities; live drift checks report changes and never replace the pin. Changes to source population or file identities require a new source release identity. Changes to measurement semantics require a new data-state version/hash. Changes to window rules require a new eligibility policy version/hash. Reassess rights and public artifacts before any row-level publication. The separate R8 publication task owns final release metadata, approved authorship, formal citation, DOI, and archive metadata.",
+  "rai:dataSocialImpact": "Movement data can support research and performance analysis, but can also affect identifiable players if used for evaluation, recruitment, selection, medical, betting, or employment decisions. The narrow sample, uncertain identity quality, and lack of individual confidence make those high-impact uses unsupported by this draft.",
+  "rai:dataUseCases": [
+    "Recommended: offline research on football movement representation, tracking-aware forecasting or estimation methodology, and reproducibility of the pinned public-source transformation.",
+    "FPD non-uses: individual hiring, selection, compensation, contract, medical, betting, surveillance, law-enforcement, or live tactical decisions; demographic or sensitive-trait inference; and claims of individual player ability from these tracking records. These are FPD governance recommendations, not a representation of additional SkillCorner license terms."
+  ],
+  "rai:personalSensitiveInformation": [
+    "The data describes real professional football players and includes persistent trajectories within a match plus match, team, and roster context. Even where canonical records use match-scoped provider IDs, trajectories can potentially be re-identified by linking them with public match video, team sheets, or other context.",
+    "The public materials do not establish a consent basis, data-protection assessment, anonymization guarantee, or demographic attributes; these remain unknown. FPD does not infer age, gender, health, ethnicity, or other sensitive traits."
+  ],
+  "recordSet": [
+    {
+      "@id": "source_population",
+      "@type": "cr:RecordSet",
+      "data": [
+        {
+          "source_population/match_id": 1874553
+        },
+        {
+          "source_population/match_id": 1886347
+        },
+        {
+          "source_population/match_id": 1899585
+        },
+        {
+          "source_population/match_id": 1925299
+        },
+        {
+          "source_population/match_id": 1927964
+        },
+        {
+          "source_population/match_id": 1953632
+        },
+        {
+          "source_population/match_id": 1959846
+        },
+        {
+          "source_population/match_id": 1986691
+        },
+        {
+          "source_population/match_id": 1996435
+        },
+        {
+          "source_population/match_id": 1996436
+        },
+        {
+          "source_population/match_id": 2006229
+        },
+        {
+          "source_population/match_id": 2006363
+        },
+        {
+          "source_population/match_id": 2007448
+        },
+        {
+          "source_population/match_id": 2007721
+        },
+        {
+          "source_population/match_id": 2010085
+        },
+        {
+          "source_population/match_id": 2011166
+        },
+        {
+          "source_population/match_id": 2013725
+        },
+        {
+          "source_population/match_id": 2015213
+        },
+        {
+          "source_population/match_id": 2016236
+        },
+        {
+          "source_population/match_id": 2017461
+        }
+      ],
+      "description": "A metadata inventory of the 20 match IDs selected by the source authority. This inline identity inventory contains no tracking, event, phase, or derived observation rows.",
+      "field": [
+        {
+          "@id": "source_population/match_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "SkillCorner provider match identifier selected in the pinned source authority.",
+          "name": "match_id"
+        }
+      ],
+      "key": {
+        "@id": "source_population/match_id"
+      },
+      "name": "Pinned source-population match IDs"
+    },
+    {
+      "@id": "canonical_observations",
+      "@type": "cr:RecordSet",
+      "description": "Conceptual schema only. No sample values or observation files are included. Each record represents one retained even-numbered source frame for one match.",
+      "field": [
+        {
+          "@id": "canonical_observations/data_state_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Stable FPD measurement-state identity.",
+          "name": "data_state_id",
+          "value": "skillcorner_5hz_v1"
+        },
+        {
+          "@id": "canonical_observations/data_state_hash",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "SHA-256 identity of the canonical scientific-state contract.",
+          "name": "data_state_hash",
+          "value": "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
+        },
+        {
+          "@id": "canonical_observations/source_release_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Pinned provider source release identity.",
+          "name": "source_release_id",
+          "value": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+        },
+        {
+          "@id": "canonical_observations/source_release_hash",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "SHA-256 identity of the selected upstream files and population.",
+          "name": "source_release_hash",
+          "value": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+        },
+        {
+          "@id": "canonical_observations/match_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Pinned SkillCorner provider match ID; match-scoped, not a cross-match player identity.",
+          "name": "match_id"
+        },
+        {
+          "@id": "canonical_observations/period",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Provider period 1 or 2; null is preserved when unlabeled.",
+          "name": "period"
+        },
+        {
+          "@id": "canonical_observations/source_frame",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Global provider video-frame number, retained unchanged.",
+          "name": "source_frame"
+        },
+        {
+          "@id": "canonical_observations/canonical_sample_index",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "source_frame // 2; global 5 Hz grid index and not reset at period boundaries.",
+          "name": "canonical_sample_index"
+        },
+        {
+          "@id": "canonical_observations/timestamp_deciseconds",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Provider match-clock timestamp exactly converted from HH:MM:SS.cc to integer deciseconds, or null.",
+          "name": "timestamp_deciseconds"
+        },
+        {
+          "@id": "canonical_observations/home_team_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Provider home-team ID from match metadata.",
+          "name": "home_team_id"
+        },
+        {
+          "@id": "canonical_observations/away_team_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Provider away-team ID from match metadata.",
+          "name": "away_team_id"
+        },
+        {
+          "@id": "canonical_observations/pitch_length_m",
+          "@type": "cr:Field",
+          "dataType": "sc:Float",
+          "description": "Match-specific pitch length in meters.",
+          "name": "pitch_length_m"
+        },
+        {
+          "@id": "canonical_observations/pitch_width_m",
+          "@type": "cr:Field",
+          "dataType": "sc:Float",
+          "description": "Match-specific pitch width in meters.",
+          "name": "pitch_width_m"
+        },
+        {
+          "@id": "canonical_observations/players",
+          "@type": "cr:Field",
+          "arrayShape": "(-1,)",
+          "dataType": "sc:StructuredValue",
+          "description": "Players listed in that source frame only, sorted by match-scoped player_id. Null coordinates are preserved; is_detected=false denotes provider extrapolation.",
+          "isArray": true,
+          "name": "players",
+          "subField": [
+            {
+              "@id": "canonical_observations/players/player_id",
+              "@type": "cr:Field",
+              "dataType": "sc:Integer",
+              "description": "Provider player ID scoped to this match.",
+              "name": "player_id"
+            },
+            {
+              "@id": "canonical_observations/players/team_id",
+              "@type": "cr:Field",
+              "dataType": "sc:Integer",
+              "description": "Team ID from the match roster crosswalk.",
+              "name": "team_id"
+            },
+            {
+              "@id": "canonical_observations/players/group",
+              "@type": "cr:Field",
+              "dataType": "sc:Text",
+              "description": "home or away according to match metadata.",
+              "name": "group"
+            },
+            {
+              "@id": "canonical_observations/players/x_m",
+              "@type": "cr:Field",
+              "dataType": "sc:Float",
+              "description": "Provider x coordinate in meters along the pitch-length axis; null remains null.",
+              "name": "x_m"
+            },
+            {
+              "@id": "canonical_observations/players/y_m",
+              "@type": "cr:Field",
+              "dataType": "sc:Float",
+              "description": "Provider y coordinate in meters along the pitch-width axis; null remains null.",
+              "name": "y_m"
+            },
+            {
+              "@id": "canonical_observations/players/is_detected",
+              "@type": "cr:Field",
+              "dataType": "sc:Boolean",
+              "description": "Provider detection flag; false marks an extrapolated observation.",
+              "name": "is_detected"
+            }
+          ]
+        },
+        {
+          "@id": "canonical_observations/ball",
+          "@type": "cr:Field",
+          "dataType": "sc:StructuredValue",
+          "description": "Null if source ball_data is null; otherwise source x/y and is_detected are kept. Source z is excluded because its unit/reference is undocumented.",
+          "name": "ball",
+          "subField": [
+            {
+              "@id": "canonical_observations/ball/x_m",
+              "@type": "cr:Field",
+              "dataType": "sc:Float",
+              "description": "Ball x coordinate in meters, nullable.",
+              "name": "x_m"
+            },
+            {
+              "@id": "canonical_observations/ball/y_m",
+              "@type": "cr:Field",
+              "dataType": "sc:Float",
+              "description": "Ball y coordinate in meters, nullable.",
+              "name": "y_m"
+            },
+            {
+              "@id": "canonical_observations/ball/is_detected",
+              "@type": "cr:Field",
+              "dataType": "sc:Boolean",
+              "description": "Provider detection flag; false marks an extrapolated observation.",
+              "name": "is_detected"
+            }
+          ]
+        },
+        {
+          "@id": "canonical_observations/possession",
+          "@type": "cr:Field",
+          "dataType": "sc:StructuredValue",
+          "description": "Null is preserved; otherwise contains source group and nullable player_id. It is context, not a hard eligibility gate.",
+          "name": "possession",
+          "subField": [
+            {
+              "@id": "canonical_observations/possession/group",
+              "@type": "cr:Field",
+              "dataType": "sc:Text",
+              "description": "home team, away team, or null.",
+              "name": "group"
+            },
+            {
+              "@id": "canonical_observations/possession/player_id",
+              "@type": "cr:Field",
+              "dataType": "sc:Integer",
+              "description": "Nullable match-scoped provider player ID.",
+              "name": "player_id"
+            }
+          ]
+        }
+      ],
+      "key": [
+        {
+          "@id": "canonical_observations/match_id"
+        },
+        {
+          "@id": "canonical_observations/source_frame"
+        }
+      ],
+      "name": "Conceptual canonical 5 Hz observation schema",
+      "prov:wasDerivedFrom": {
+        "@id": "https://github.com/SkillCorner/opendata/commit/4340d274572876239c154c90bc507a9b3250a656"
+      }
+    },
+    {
+      "@id": "eligibility_policy",
+      "@type": "cr:RecordSet",
+      "data": [
+        {
+          "eligibility_policy/data_state_hash": "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3",
+          "eligibility_policy/exclusion_reason_codes": [
+            "BALL_COVERAGE_BELOW_MINIMUM",
+            "BALL_MISSING_AT_ORIGIN",
+            "CANONICAL_FRAME_MISMATCH",
+            "COORDINATE_IMPLAUSIBLE",
+            "DUPLICATE_PLAYER_ID",
+            "DUPLICATE_SAMPLE",
+            "INSUFFICIENT_FUTURE_SUPPORT",
+            "INSUFFICIENT_HISTORY_SUPPORT",
+            "INVALID_DETECTION_FLAG",
+            "INVALID_MATCH_METADATA",
+            "INVALID_SAMPLE_SCHEMA",
+            "NONFINITE_COORDINATE",
+            "NONMONOTONIC_SAMPLE_ORDER",
+            "OUTSIDE_PERIOD_BOUNDS",
+            "PERIOD_BOUNDARY_CROSSED",
+            "PHASE_INTERVAL_INVALID",
+            "PHASE_MATCH_ID_MISMATCH",
+            "PHASE_SOURCE_IDENTITY_MISMATCH",
+            "PHASE_NOT_IN_PLAY_OR_UNKNOWN",
+            "PERIOD_BOUNDS_CONFLICT",
+            "PERIOD_BOUNDS_DUPLICATE",
+            "PERIOD_BOUNDS_INVALID",
+            "PERIOD_BOUNDS_MISSING",
+            "PLAYER_COUNT_BELOW_TEAM_MINIMUM",
+            "PLAYER_TEAM_IDENTITY_CONFLICT",
+            "TEMPORAL_GAP",
+            "TIMESTAMP_DISCONTINUITY",
+            "TIMESTAMP_MISSING",
+            "WINDOW_SUPPORT_LENGTH_MISMATCH"
+          ],
+          "eligibility_policy/minimum_ball_valid_fraction": 0.95,
+          "eligibility_policy/minimum_valid_per_team_per_sample": 7,
+          "eligibility_policy/policy_hash": "f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b",
+          "eligibility_policy/policy_id": "skillcorner_window_v1",
+          "eligibility_policy/policy_version": "1.1.0",
+          "eligibility_policy/quality_strata": [
+            "player_detection_exposure",
+            "ball_detection_exposure",
+            "player_completeness",
+            "ball_completeness",
+            "temporal_continuity",
+            "identity_transition_exposure",
+            "source_quality_uncertainty",
+            "play_context"
+          ],
+          "eligibility_policy/sample_frequency_hz": 5,
+          "eligibility_policy/source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+          "eligibility_policy/warning_codes": [
+            "BALL_COORDINATES_MISSING",
+            "BALL_DISPLACEMENT_OUTLIER",
+            "BALL_OUTSIDE_PITCH",
+            "IDENTITY_TRANSITION_EXPOSURE",
+            "PLAYER_APPEARANCE_METADATA_UNKNOWN",
+            "PLAYER_COORDINATES_MISSING",
+            "PLAYER_DISPLACEMENT_OUTLIER",
+            "PLAYER_OBSERVATION_MISSING",
+            "PLAYER_OUTSIDE_APPEARANCE",
+            "PLAYER_POSITION_OUTSIDE_PITCH",
+            "POSSESSION_CONTEXT_UNKNOWN",
+            "POSSESSION_PLAYER_UNOBSERVED",
+            "SOURCE_QUALITY_UNKNOWN"
+          ]
+        }
+      ],
+      "description": "One inline metadata record describing the frozen policy. This contract is not a materialized list of candidate windows or eligible examples.",
+      "field": [
+        {
+          "@id": "eligibility_policy/policy_id",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Stable FPD candidate-window policy ID.",
+          "name": "policy_id"
+        },
+        {
+          "@id": "eligibility_policy/policy_version",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Frozen policy version.",
+          "name": "policy_version"
+        },
+        {
+          "@id": "eligibility_policy/policy_hash",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "SHA-256 of the scientific eligibility policy.",
+          "name": "policy_hash"
+        },
+        {
+          "@id": "eligibility_policy/source_release_hash",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Source identity to which this eligibility policy is bound.",
+          "name": "source_release_hash"
+        },
+        {
+          "@id": "eligibility_policy/data_state_hash",
+          "@type": "cr:Field",
+          "dataType": "sc:Text",
+          "description": "Measurement identity to which this eligibility policy is bound.",
+          "name": "data_state_hash"
+        },
+        {
+          "@id": "eligibility_policy/sample_frequency_hz",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Canonical rate evaluated by the policy.",
+          "name": "sample_frequency_hz"
+        },
+        {
+          "@id": "eligibility_policy/minimum_valid_per_team_per_sample",
+          "@type": "cr:Field",
+          "dataType": "sc:Integer",
+          "description": "Minimum finite player x/y positions from each team at every support sample; extrapolated positions count.",
+          "name": "minimum_valid_per_team_per_sample"
+        },
+        {
+          "@id": "eligibility_policy/minimum_ball_valid_fraction",
+          "@type": "cr:Field",
+          "dataType": "sc:Float",
+          "description": "Minimum fraction of valid ball positions over support; the origin must also be valid.",
+          "name": "minimum_ball_valid_fraction"
+        },
+        {
+          "@id": "eligibility_policy/exclusion_reason_codes",
+          "@type": "cr:Field",
+          "arrayShape": "(-1,)",
+          "dataType": "sc:Text",
+          "description": "Policy hard-exclusion reasons; no candidate counts are asserted.",
+          "isArray": true,
+          "name": "exclusion_reason_codes"
+        },
+        {
+          "@id": "eligibility_policy/warning_codes",
+          "@type": "cr:Field",
+          "arrayShape": "(-1,)",
+          "dataType": "sc:Text",
+          "description": "Non-repairing warning and unknown-quality labels; no candidate counts are asserted.",
+          "isArray": true,
+          "name": "warning_codes"
+        },
+        {
+          "@id": "eligibility_policy/quality_strata",
+          "@type": "cr:Field",
+          "arrayShape": "(-1,)",
+          "dataType": "sc:Text",
+          "description": "Composable dimensions; unknown remains distinct from poor.",
+          "isArray": true,
+          "name": "quality_strata"
+        }
+      ],
+      "key": {
+        "@id": "eligibility_policy/policy_id"
+      },
+      "name": "SkillCorner candidate-window eligibility contract",
+      "prov:wasGeneratedBy": {
+        "@type": "prov:Activity",
+        "prov:label": "FPD candidate-window eligibility contract",
+        "prov:used": [
+          {
+            "@id": "https://github.com/Litju/football-performance-dynamics-bench/blob/main/src/fpdbench/data_states/skillcorner_5hz_v1.json"
+          },
+          {
+            "@id": "https://github.com/Litju/football-performance-dynamics-bench/blob/main/src/fpdbench/eligibility/skillcorner_window_v1.json"
+          }
+        ]
+      }
+    }
+  ],
+  "sdVersion": "0.1.0-draft",
+  "url": "https://github.com/Litju/football-performance-dynamics-bench",
+  "version": "0.1.0-draft"
+}
