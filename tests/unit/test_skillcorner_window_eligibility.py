@@ -134,11 +134,82 @@ def test_policy_manifest_binds_pinned_source_and_state_and_hashes_semantics() ->
     player_rules["minimum_valid_per_team_per_sample"] = 6
     changed["policy_hash"] = policy_hash(policy)
     assert changed["policy_hash"] != manifest["policy_hash"]
-    assert validate_manifest(changed) == ()
+    assert validate_manifest(changed)
 
     wrong_state = copy.deepcopy(manifest)
     wrong_state["data_state_hash"] = "0" * 64
     assert any("data_state_hash" in error for error in validate_manifest(wrong_state))
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "replacement"),
+    [
+        ("support", "sample_frequency_hz", 10),
+        ("play_context", "phase_interval_end_exclusive", False),
+        ("play_context", "all_phase_types_in_play", False),
+        ("player_observations", "minimum_valid_per_team_per_sample", 6),
+        ("player_observations", "valid_position_requires_finite_xy", False),
+        ("player_observations", "extrapolated_positions_count_toward_minimum", False),
+        ("player_observations", "active_interval_end_inclusive", False),
+        ("player_observations", "incomplete_active_metadata_stratum", "poor"),
+        ("ball_observations", "origin_must_be_valid", False),
+        ("ball_observations", "minimum_valid_fraction", 0.9),
+        ("coordinate_checks", "player_displacement_warning_mps", 11.0),
+        ("temporal_continuity", "source_frame_step", 1),
+        ("temporal_continuity", "period_bounds_end_exclusive", False),
+        ("quality_strata", "dimensions", ["ball_detection_exposure"]),
+        ("quality_strata", "phase_coverage_denominator", "all_support_samples"),
+        ("future_information", "future_observations_membership_only", False),
+        ("future_information", "eligibility_outputs_allowed_as_model_inputs", True),
+    ],
+)
+def test_rehashed_scientific_policy_mutations_are_rejected(
+    section: str, key: str, replacement: object
+) -> None:
+    manifest = copy.deepcopy(load_manifest())
+    policy = cast(dict[str, object], manifest["scientific_policy"])
+    section_value = cast(dict[str, object], policy[section])
+    section_value[key] = replacement
+    manifest["policy_hash"] = policy_hash(policy)
+
+    assert manifest["policy_hash"] != load_manifest()["policy_hash"]
+    assert validate_manifest(manifest)
+
+
+def test_rehashed_missing_required_policy_section_is_rejected() -> None:
+    manifest = copy.deepcopy(load_manifest())
+    policy = cast(dict[str, object], manifest["scientific_policy"])
+    del policy["future_information"]
+    manifest["policy_hash"] = policy_hash(policy)
+
+    assert validate_manifest(manifest)
+
+
+def test_rehashed_missing_required_key_and_wrong_type_are_rejected() -> None:
+    manifest = copy.deepcopy(load_manifest())
+    policy = cast(dict[str, object], manifest["scientific_policy"])
+    ball_rules = cast(dict[str, object], policy["ball_observations"])
+    del ball_rules["minimum_valid_fraction"]
+    manifest["policy_hash"] = policy_hash(policy)
+    assert validate_manifest(manifest)
+
+    manifest = copy.deepcopy(load_manifest())
+    policy = cast(dict[str, object], manifest["scientific_policy"])
+    ball_rules = cast(dict[str, object], policy["ball_observations"])
+    ball_rules["minimum_valid_fraction"] = "0.95"
+    manifest["policy_hash"] = policy_hash(policy)
+    assert validate_manifest(manifest)
+
+
+def test_rehashed_wrong_policy_version_is_rejected() -> None:
+    manifest = copy.deepcopy(load_manifest())
+    policy = cast(dict[str, object], manifest["scientific_policy"])
+    identity = cast(dict[str, object], policy["identity"])
+    identity["policy_version"] = "9.0.0"
+    manifest["policy_version"] = "9.0.0"
+    manifest["policy_hash"] = policy_hash(policy)
+
+    assert validate_manifest(manifest)
 
 
 def test_complete_window_is_deterministic_and_returns_composable_quality() -> None:
@@ -148,21 +219,27 @@ def test_complete_window_is_deterministic_and_returns_composable_quality() -> No
     assert first.eligible
     assert not first.exclusion_reasons
     assert first.quality["strata"] == {
-        "detection_exposure": "mixed",
+        "player_detection_exposure": "mixed",
         "ball_detection_exposure": "all_detected",
         "player_completeness": "complete",
         "ball_completeness": "complete",
         "temporal_continuity": "continuous",
         "identity_transition_exposure": "none_observed",
         "source_quality_uncertainty": "unknown_per_observation",
-        "phase_context": "all_in_play",
+        "play_context": "all_in_play",
     }
+    policy = cast(Mapping[str, object], load_manifest()["scientific_policy"])
+    quality_policy = cast(Mapping[str, object], policy["quality_strata"])
+    assert list(first.quality["strata"]) == quality_policy["dimensions"]  # type: ignore[arg-type]
     assert first.quality["player_observations"]["expected_active_player_frames"] == 80  # type: ignore[index]
     assert first.quality["player_observations"]["extrapolated_position_count"] == 4  # type: ignore[index]
     assert first.quality["player_observations"]["extrapolation_fraction"] == 0.05  # type: ignore[index]
     assert first.quality["player_observations"]["displacement_pair_denominator"] == 64  # type: ignore[index]
     assert first.quality["ball_observations"]["denominator_sample_count"] == 5  # type: ignore[index]
     assert first.quality["play_context"]["possession_unknown_fraction"] == 1.0  # type: ignore[index]
+    assert first.quality["play_context"]["phase_covered_source_frames"] == 9  # type: ignore[index]
+    assert first.quality["play_context"]["phase_coverage_denominator_source_frames"] == 9  # type: ignore[index]
+    assert first.quality["play_context"]["phase_coverage_fraction"] == 1.0  # type: ignore[index]
     assert first.quality["temporal"]["continuous_intervals"] == 4  # type: ignore[index]
     assert first.quality["temporal"]["continuity_fraction"] == 1.0  # type: ignore[index]
     assert "SOURCE_QUALITY_UNKNOWN" in _warning_codes(first)
@@ -286,6 +363,62 @@ def test_missing_phase_is_out_of_play_or_unknown_and_possession_is_not_a_gate() 
     assert not result.eligible
     assert "PHASE_NOT_IN_PLAY_OR_UNKNOWN" in _reason_codes(result)
     assert result.quality["play_context"]["possession_unknown_samples"] == 5  # type: ignore[index]
+    assert result.quality["play_context"]["phase_covered_source_frames"] == 4  # type: ignore[index]
+    assert result.quality["play_context"]["phase_coverage_denominator_source_frames"] == 9  # type: ignore[index]
+
+
+def test_one_uncovered_10hz_frame_between_retained_samples_excludes_window() -> None:
+    result = _window(phases=[_phase(1, 100, 103), _phase(1, 104, 200)])
+
+    assert not result.eligible
+    assert "PHASE_NOT_IN_PLAY_OR_UNKNOWN" in _reason_codes(result)
+    assert any("source frame 103" in issue.message for issue in result.exclusion_reasons)
+    assert result.quality["play_context"]["phase_covered_source_frames"] == 8  # type: ignore[index]
+    assert result.quality["play_context"]["uncovered_source_frames"] == 1  # type: ignore[index]
+    assert result.quality["strata"]["play_context"] == "uncovered_or_unknown"  # type: ignore[index]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "reason"),
+    [
+        ("missing", "PERIOD_BOUNDS_MISSING"),
+        ("malformed", "PERIOD_BOUNDS_INVALID"),
+        ("duplicate", "PERIOD_BOUNDS_DUPLICATE"),
+        ("conflict", "PERIOD_BOUNDS_CONFLICT"),
+        ("overlap", "PERIOD_BOUNDS_CONFLICT"),
+        ("sample_period_unlisted", "PERIOD_BOUNDS_MISSING"),
+    ],
+)
+def test_period_bounds_fail_closed_when_missing_or_ambiguous(mutation: str, reason: str) -> None:
+    metadata = _metadata()
+    bounds = cast(list[dict[str, object]], metadata["match_periods"])
+    if mutation == "missing":
+        metadata.pop("match_periods")
+    elif mutation == "malformed":
+        metadata["match_periods"] = [{"period": 1, "start_frame": 100, "end_frame": 100}]
+    elif mutation == "duplicate":
+        bounds.append(bounds[0].copy())
+    elif mutation == "conflict":
+        conflicting = bounds[0].copy()
+        conflicting["end_frame"] = 199
+        bounds.append(conflicting)
+    elif mutation == "overlap":
+        bounds[1]["start_frame"] = 199
+    else:
+        metadata["match_periods"] = [bounds[1]]
+
+    result = _window(metadata=metadata)
+
+    assert not result.eligible
+    assert reason in _reason_codes(result)
+
+
+def test_match_period_end_frame_is_exclusive() -> None:
+    samples = [_frame(offset) for offset in range(46, 51)]
+    result = _window(samples, phases=[_phase(1, 100, 300)])
+
+    assert not result.eligible
+    assert "OUTSIDE_PERIOD_BOUNDS" in _reason_codes(result)
 
 
 def test_phase_intervals_must_bind_to_the_pinned_source_release() -> None:

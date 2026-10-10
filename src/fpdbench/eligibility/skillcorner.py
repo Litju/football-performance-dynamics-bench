@@ -24,6 +24,9 @@ from fpdbench.data_states.skillcorner import (
 )
 
 MANIFEST_PATH = Path(__file__).with_name("skillcorner_window_v1.json")
+SUPPORTED_POLICY_ID = "skillcorner_window_v1"
+SUPPORTED_POLICY_VERSION = "1.1.0"
+SUPPORTED_POLICY_HASH = "f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b"
 _PERIOD_NAME = re.compile(r"period_([1-5])\Z")
 _SAMPLE_FIELDS = frozenset(
     {
@@ -52,7 +55,7 @@ _POSSESSION_FIELDS = frozenset({"group", "player_id"})
 
 @dataclass(frozen=True)
 class PhaseInterval:
-    """A pinned phases-of-play interval, using source period/frame values."""
+    """A pinned in-play interval with an inclusive start and exclusive end frame."""
 
     source_release_id: str
     match_id: int
@@ -139,10 +142,10 @@ def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
             errors.append("unexpected window eligibility schema_id")
         if manifest.get("schema_version") != "1.0.0":
             errors.append("unsupported window eligibility schema_version")
-        if manifest.get("policy_id") != "skillcorner_window_v1":
+        if manifest.get("policy_id") != SUPPORTED_POLICY_ID:
             errors.append("unexpected eligibility policy_id")
-        if not isinstance(manifest.get("policy_version"), str):
-            errors.append("policy_version must be a string")
+        if manifest.get("policy_version") != SUPPORTED_POLICY_VERSION:
+            errors.append("unsupported eligibility policy_version")
         bindings = {
             "source_release_id": source.get("source_release_id"),
             "source_release_hash": source.get("source_release_hash"),
@@ -162,8 +165,12 @@ def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
         }.items():
             if identity.get(field) != expected:
                 errors.append(f"scientific_policy.identity.{field} does not match manifest")
-        if manifest.get("policy_hash") != policy_hash(policy):
+        # A self-reported digest cannot authorize a different scientific policy.
+        calculated_policy_hash = policy_hash(policy)
+        if manifest.get("policy_hash") != calculated_policy_hash:
             errors.append("window eligibility policy_hash mismatch")
+        if calculated_policy_hash != SUPPORTED_POLICY_HASH:
+            errors.append("scientific_policy does not match the frozen supported policy")
 
         players = _section(policy, "player_observations")
         minimum_players = _integer(
@@ -271,22 +278,63 @@ def _active_roster(
     return teams, appearances, complete and len(teams) == len(player_values)
 
 
-def _period_ranges(metadata: Mapping[str, object]) -> dict[int, tuple[int, int]]:
+def _period_ranges(
+    metadata: Mapping[str, object],
+) -> tuple[dict[int, tuple[int, int]], tuple[EligibilityIssue, ...]]:
     result: dict[int, tuple[int, int]] = {}
+    issues: list[EligibilityIssue] = []
     values = metadata.get("match_periods")
+    if values is None:
+        return result, (
+            EligibilityIssue("PERIOD_BOUNDS_MISSING", "match period bounds are missing"),
+        )
     if not isinstance(values, list):
-        return result
-    for raw_period in cast(list[object], values):
+        return result, (
+            EligibilityIssue("PERIOD_BOUNDS_INVALID", "match_periods must be an array"),
+        )
+    if not values:
+        return result, (
+            EligibilityIssue("PERIOD_BOUNDS_MISSING", "match period bounds are missing"),
+        )
+    for offset, raw_period in enumerate(cast(list[object], values)):
         try:
             period_value = _mapping(raw_period, "match period")
             period = _integer(period_value.get("period"), "period", minimum=1)
             start = _integer(period_value.get("start_frame"), "period start_frame")
             end = _integer(period_value.get("end_frame"), "period end_frame")
-            if start <= end:
-                result[period] = (start, end)
+            if start >= end:
+                raise ValueError("period start_frame must be less than end_frame")
         except (ValueError, TypeError):
+            issues.append(
+                EligibilityIssue(
+                    "PERIOD_BOUNDS_INVALID",
+                    f"match period definition at index {offset} is malformed",
+                )
+            )
             continue
-    return result
+        previous = result.get(period)
+        if previous is not None:
+            code = (
+                "PERIOD_BOUNDS_DUPLICATE" if previous == (start, end) else "PERIOD_BOUNDS_CONFLICT"
+            )
+            issues.append(
+                EligibilityIssue(code, f"period {period} has multiple frame-bound definitions")
+            )
+            continue
+        result[period] = (start, end)
+
+    ordered_periods = sorted(result.items())
+    for (previous_period, (_, previous_end)), (period, (start, _)) in zip(
+        ordered_periods, ordered_periods[1:], strict=False
+    ):
+        if start < previous_end:
+            issues.append(
+                EligibilityIssue(
+                    "PERIOD_BOUNDS_CONFLICT",
+                    f"periods {previous_period} and {period} have overlapping frame bounds",
+                )
+            )
+    return result, tuple(issues)
 
 
 def evaluate_skillcorner_window(
@@ -367,10 +415,9 @@ def evaluate_skillcorner_window(
             "PLAYER_APPEARANCE_METADATA_UNKNOWN",
             "active-player denominator or transitions are incomplete",
         )
-    period_bounds = _period_ranges(match_metadata)
-    if not period_bounds:
-        warn("PERIOD_BOUND_METADATA_UNKNOWN", "match period frame bounds are unavailable")
-    phase_coverage: set[int] = set()
+    period_bounds, period_bound_issues = _period_ranges(match_metadata)
+    exclusions.extend(period_bound_issues)
+    phase_intervals_by_period: dict[int, list[tuple[int, int]]] = {}
     for interval in phase_intervals:
         try:
             if interval.source_release_id != source.get("source_release_id"):
@@ -383,21 +430,15 @@ def evaluate_skillcorner_window(
             period = _integer(interval.period, "phase period", minimum=1)
             start = _integer(interval.frame_start, "phase frame_start")
             end = _integer(interval.frame_end, "phase frame_end")
-            if start > end:
-                exclude("PHASE_INTERVAL_INVALID", "phase frame_start exceeds frame_end")
+            if start >= end:
+                exclude(
+                    "PHASE_INTERVAL_INVALID", "phase interval must have positive frame duration"
+                )
                 continue
             if interval_match != match_id:
                 exclude("PHASE_MATCH_ID_MISMATCH", "phase interval belongs to another match")
                 continue
-            for offset, sample in enumerate(candidate):
-                if sample.get("period") == period:
-                    frame = sample.get("source_frame")
-                    if (
-                        isinstance(frame, int)
-                        and not isinstance(frame, bool)
-                        and start <= frame <= end
-                    ):
-                        phase_coverage.add(offset)
+            phase_intervals_by_period.setdefault(period, []).append((start, end))
         except (AttributeError, ValueError, TypeError):
             exclude("PHASE_INTERVAL_INVALID", "phase interval fields are invalid")
             continue
@@ -538,23 +579,15 @@ def evaluate_skillcorner_window(
             if period is None:
                 exclude("INVALID_SAMPLE_SCHEMA", "period is null", sample_index)
             elif period not in period_bounds:
-                warn(
-                    "PERIOD_BOUND_METADATA_UNKNOWN",
-                    "period frame bounds are unavailable for this sample",
+                exclude(
+                    "PERIOD_BOUNDS_MISSING",
+                    "match metadata has no frame bounds for this sample period",
                     sample_index,
                 )
-            elif period in period_bounds and not (
-                period_bounds[period][0] <= source_frame <= period_bounds[period][1]
-            ):
+            elif not (period_bounds[period][0] <= source_frame < period_bounds[period][1]):
                 exclude(
                     "OUTSIDE_PERIOD_BOUNDS",
                     "sample falls outside match metadata period bounds",
-                    sample_index,
-                )
-            if offset not in phase_coverage:
-                exclude(
-                    "PHASE_NOT_IN_PLAY_OR_UNKNOWN",
-                    "sample has no covering in-play phase interval",
                     sample_index,
                 )
 
@@ -883,6 +916,55 @@ def evaluate_skillcorner_window(
                         issue_index,
                     )
 
+    phase_coverage_count: int | None = None
+    phase_coverage_denominator: int | None = None
+    first_uncovered_source_frame: int | None = None
+    if (
+        support_complete
+        and source_frames
+        and all(frame is not None for frame in source_frames)
+        and periods[0] is not None
+        and all(period == periods[0] for period in periods)
+        and cast(int, source_frames[-1]) >= cast(int, source_frames[0])
+    ):
+        span_start = cast(int, source_frames[0])
+        span_end = cast(int, source_frames[-1]) + 1
+        phase_coverage_denominator = span_end - span_start
+        cursor = span_start
+        covered_frames = 0
+        clipped_intervals = sorted(
+            (
+                max(start, span_start),
+                min(end, span_end),
+            )
+            for start, end in phase_intervals_by_period.get(periods[0], [])
+            if start < span_end and end > span_start
+        )
+        for start, end in clipped_intervals:
+            if end <= cursor:
+                continue
+            if start > cursor and first_uncovered_source_frame is None:
+                first_uncovered_source_frame = cursor
+            covered_frames += end - max(start, cursor)
+            cursor = max(cursor, end)
+        if cursor < span_end and first_uncovered_source_frame is None:
+            first_uncovered_source_frame = cursor
+        phase_coverage_count = covered_frames
+        if first_uncovered_source_frame is not None:
+            sample_offset = next(
+                (
+                    offset
+                    for offset, frame in enumerate(source_frames)
+                    if frame == first_uncovered_source_frame
+                ),
+                None,
+            )
+            exclude(
+                "PHASE_NOT_IN_PLAY_OR_UNKNOWN",
+                f"source frame {first_uncovered_source_frame} lacks positive in-play coverage",
+                sample_indexes[sample_offset] if sample_offset is not None else None,
+            )
+
     support_count = len(candidate)
     expected_intervals = max(0, expected_count - 1)
     observed_intervals = max(0, support_count - 1)
@@ -955,7 +1037,7 @@ def evaluate_skillcorner_window(
         else "partial"
     )
     strata = {
-        "detection_exposure": detection_stratum,
+        "player_detection_exposure": detection_stratum,
         "ball_detection_exposure": ball_detection_stratum,
         "player_completeness": player_completeness_stratum,
         "ball_completeness": ball_completeness_stratum,
@@ -974,15 +1056,14 @@ def evaluate_skillcorner_window(
             else "none_observed"
         ),
         "source_quality_uncertainty": "unknown_per_observation",
+        "play_context": (
+            "unknown"
+            if phase_coverage_count is None or phase_coverage_denominator is None
+            else "uncovered_or_unknown"
+            if phase_coverage_count != phase_coverage_denominator
+            else "all_in_play"
+        ),
     }
-    if not support_complete:
-        strata["phase_context"] = "unknown"
-    elif support_count and len(phase_coverage) != support_count:
-        strata["phase_context"] = "uncovered_or_unknown"
-    elif support_count:
-        strata["phase_context"] = "all_in_play"
-    else:
-        strata["phase_context"] = "unknown"
     warn(
         "SOURCE_QUALITY_UNKNOWN",
         "no per-observation player-identity confidence is supplied by SkillCorner",
@@ -1068,10 +1149,17 @@ def evaluate_skillcorner_window(
             "changed_active_player_ids": len(transition_player_ids) if roster_complete else None,
         },
         "play_context": {
-            "phase_covered_samples": len(phase_coverage),
-            "uncovered_samples": support_count - len(phase_coverage),
+            "phase_covered_source_frames": phase_coverage_count,
+            "phase_coverage_denominator_source_frames": phase_coverage_denominator,
+            "uncovered_source_frames": (
+                phase_coverage_denominator - phase_coverage_count
+                if phase_coverage_count is not None and phase_coverage_denominator is not None
+                else None
+            ),
             "phase_coverage_fraction": (
-                len(phase_coverage) / support_count if support_count == expected_count else None
+                phase_coverage_count / phase_coverage_denominator
+                if phase_coverage_count is not None and phase_coverage_denominator is not None
+                else None
             ),
             "possession_home_samples": possession_home,
             "possession_away_samples": possession_away,
