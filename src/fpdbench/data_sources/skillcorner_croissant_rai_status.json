@@ -1,0 +1,54 @@
+{
+  "achieved_conformance": false,
+  "conformance_assertion": "omitted",
+  "conformance_status": "draft_nonconformant",
+  "content_version": null,
+  "current_rights_decision": "CONDITIONAL_GO",
+  "deferred_release_metadata": [
+    "citeAs",
+    "formal citation",
+    "DOI",
+    "archive metadata"
+  ],
+  "metadata_id": "urn:fpdbench:dataset:skillcorner-open-data-5hz:draft",
+  "metadata_version": "0.1.0-draft",
+  "publication_blockers": [
+    {
+      "property": "license",
+      "reason": "The SkillCorner repository MIT license clearly covers code and documentation, but the license scope for core tracking data and row-level derivatives remains unresolved."
+    },
+    {
+      "property": "distribution",
+      "reason": "No FPD row-level artifact is currently distributable. No FileObject or FileSet can truthfully describe an FPD dataset download."
+    },
+    {
+      "property": "datePublished",
+      "reason": "No FPD content release has been published; no publication date is assigned."
+    },
+    {
+      "property": "creator",
+      "reason": "Final FPD dataset creator and authorship roles have not been approved; no creator identity is asserted."
+    },
+    {
+      "property": "canonical_observations.field.source",
+      "reason": "The observation RecordSet is a conceptual schema without row-level FPD files. An upstream URL alone would not express the canonical measurement transform as a supported Croissant extraction."
+    }
+  ],
+  "rights_reference": "docs/data-rights.md",
+  "schema_id": "fpdbench.croissant-metadata-draft-status",
+  "schema_version": "1.0.0",
+  "target_specifications": [
+    {
+      "documentation_url": "https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html",
+      "name": "Croissant Format Specification",
+      "specification_id": "http://mlcommons.org/croissant/1.1",
+      "version": "1.1"
+    },
+    {
+      "documentation_url": "https://docs.mlcommons.org/croissant/docs/croissant-rai-spec.html",
+      "name": "Croissant RAI Specification",
+      "specification_id": "http://mlcommons.org/croissant/RAI/1.0",
+      "version": "1.0"
+    }
+  ]
+}
