@@ -29,7 +29,7 @@ uv run fpdbench validate
 
 Python 3.12 or newer is required. No private datasets or checkpoints are included.
 
-This public research-software repository is under active release preparation, and licensing is not finalized. Public visibility does not grant redistribution rights for referenced datasets, models, or artifacts; restricted artifact bytes are not distributed.
+Original FPD Bench code and project-written documentation are licensed under [Apache-2.0](LICENSE). The license does not grant rights to upstream datasets, models, or artifacts; restricted artifact bytes are not distributed. See the [licensing, attribution, and citation policy](docs/licensing-and-governance.md).
 
 ## Data source and rights
 

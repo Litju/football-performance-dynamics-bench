@@ -8,8 +8,8 @@ version = "0.1.0.dev0"
 description = "Reproducible research benchmarks for football performance dynamics"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "UNLICENSED" }
-authors = [{ name = "Football Performance Dynamics Bench contributors" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = []
 
 [project.scripts]
