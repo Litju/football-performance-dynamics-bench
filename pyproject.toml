@@ -28,6 +28,7 @@ packages = ["src/fpdbench"]
 "src/fpdbench/data_sources/skillcorner_croissant_rai_status.json" = "fpdbench/data_sources/skillcorner_croissant_rai_status.json"
 "src/fpdbench/data_states/skillcorner_5hz_v1.json" = "fpdbench/data_states/skillcorner_5hz_v1.json"
 "src/fpdbench/eligibility/skillcorner_window_v1.json" = "fpdbench/eligibility/skillcorner_window_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
