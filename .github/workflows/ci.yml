@@ -46,4 +46,4 @@ jobs:
       - run: uv run fpdbench evidence validate
       - run: uv run fpdbench reproducibility check
       - run: uv build
-      - run: uv run python tools/wheel_smoke.py dist/*.whl
+      - run: uv run python tools/wheel_smoke.py dist/*.whl dist/*.tar.gz

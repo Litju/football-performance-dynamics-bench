@@ -1,9 +1,10 @@
-"""Install and smoke-test one built wheel outside the source tree."""
+"""Smoke-test a built wheel and verify wheel/sdist license metadata."""
 
 from __future__ import annotations
 
 import argparse
 import subprocess
+import tarfile
 import tempfile
 import venv
 from pathlib import Path
@@ -14,7 +15,10 @@ CALIBRATION_SHA256 = "f3b4155899c5d8e9632e9cab7a25e471411c62c4a9a7489c58c1edb161
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("wheel", type=Path)
-    wheel = parser.parse_args().wheel.resolve(strict=True)
+    parser.add_argument("sdist", type=Path)
+    args = parser.parse_args()
+    wheel = args.wheel.resolve(strict=True)
+    sdist = args.sdist.resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix="fpdbench-wheel-") as temporary:
         root = Path(temporary)
         environment = root / "venv"
@@ -86,6 +90,17 @@ assert status["achieved_conformance"] is False
 assert len(status["target_specifications"]) == 2
 assert "distribution" not in croissant
 assert not importlib.metadata.distribution("football-performance-dynamics-bench").requires
+distribution = importlib.metadata.distribution("football-performance-dynamics-bench")
+assert distribution.metadata["License-Expression"] == "Apache-2.0"
+assert distribution.metadata.get_all("License-File") == ["LICENSE"]
+license_path = next(
+    path
+    for path in distribution.files or ()
+    if path.as_posix().endswith(".dist-info/licenses/LICENSE")
+)
+license_text = distribution.locate_file(license_path).read_text()
+assert "Grant of Patent License" in license_text
+assert "limitations under the License." in license_text
 """
         subprocess.run([str(python), "-I", "-c", smoke], cwd=empty_working_directory, check=True)
         subprocess.run(
@@ -109,6 +124,17 @@ assert not importlib.metadata.distribution("football-performance-dynamics-bench"
             check=True,
             stdout=subprocess.DEVNULL,
         )
+    with tarfile.open(sdist, "r:gz") as archive:
+        license_member = next(name for name in archive.getnames() if name.endswith("/LICENSE"))
+        metadata_member = next(name for name in archive.getnames() if name.endswith("/PKG-INFO"))
+        license_file = archive.extractfile(license_member)
+        package_metadata = archive.extractfile(metadata_member)
+        assert license_file is not None
+        assert package_metadata is not None
+        assert b"Grant of Patent License" in license_file.read()
+        metadata_text = package_metadata.read().decode()
+        assert "License-Expression: Apache-2.0" in metadata_text
+        assert "License-File: LICENSE" in metadata_text
     print("isolated wheel smoke passed")
     return 0
 
