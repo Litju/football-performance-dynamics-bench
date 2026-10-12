@@ -14,7 +14,7 @@ The Python wheel packages the JSON-LD draft and machine-readable source, measure
 
 These are separate identities. The source hash binds upstream population and file identities. The data-state hash binds the 10 Hz to 5 Hz measurement semantics. The eligibility hash binds the candidate-window rules. They must be read from their repository authorities and are cross-checked by tests. Eligibility does not change the measured state.
 
-The Croissant JSON-LD draft is [skillcorner_croissant_rai_draft.json](../src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json). Its metadata version is 0.1.0-draft; it is not an FPD content-release version. The dataset page URL currently points to the project repository. No public data download URL is asserted.
+The Croissant JSON-LD draft is [skillcorner_croissant_rai_draft.json](../src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json), with a separate [machine-readable status record](../src/fpdbench/data_sources/skillcorner_croissant_rai_status.json). The status record identifies Croissant 1.1 and RAI 1.0 as target specifications and marks the draft nonconformant. The metadata version is 0.1.0-draft; no FPD content version is assigned. The dataset page URL currently points to the project repository. No public data download URL is asserted.
 
 ## Source-established facts
 
@@ -120,14 +120,15 @@ The current operational rights decision is **CONDITIONAL GO** for local acquisit
 
 The source citation/attribution is the pinned SkillCorner Open Data repository and commit, with SkillCorner credited as provider and PySport acknowledged as collaborating initiative. The underlying code license is not represented as a dataset license. The future FPD code-license decision is separate from data rights. A separate R8 publication task owns final publication, approved creator/authorship details, formal citation, DOI, publication date, and archive metadata; none is invented here.
 
-The JSON-LD declares Croissant 1.1 and Croissant RAI 1.0 and includes the source-population inventory, conceptual measurement schema, eligibility-contract metadata, PROV-O provenance, and supported RAI fields. It deliberately does not populate schema.org license, distribution, or datePublished:
+The status record lists Croissant 1.1 and Croissant RAI 1.0 as intended targets. The JSON-LD does not assert achieved conformance and omits dct:conformsTo. It includes the source-population inventory, conceptual measurement schema, eligibility-contract metadata, PROV-O provenance, and supported RAI fields. It deliberately does not populate schema.org license, distribution, datePublished, or creator:
 
 - No FPD row-level data artifact is currently distributable, so no truthful Croissant FileObject/FileSet distribution can be declared. Official SkillCorner URLs identify upstream source files and are acquisition pointers, not FPD distribution URLs.
 - The core source-data license scope is unresolved. The repository MIT code marker is not assigned as a dataset license.
 - No FPD content release has been published, so there is no truthful dataset publication date.
+- FPD creator and final release authorship have not been approved; no creator identity is asserted.
 - The variable conceptual observation fields have no field-level FileObject, FileSet, or DataSource. No distributable FPD file exists, and an upstream URL alone would not express the canonical downsampling and data-state rules as a supported Croissant extraction.
 
-Croissant 1.1 requires license and distribution, requires dataset-level datePublished, and requires a source on operational fields. Their omission is an explicit R4 publication blocker. The metadata URL is the FPD project repository, not a data download URL. No DOI, citeAs entry, or fabricated citation is included.
+Croissant 1.1 requires license, distribution, creator, and datePublished, and requires a source on operational fields. Their omission is an explicit R4 publication blocker. The metadata URL is the FPD project repository, not a data download URL. The companion status record separately notes deferred citeAs, formal citation, DOI, and archive metadata.
 
 ## Responsible AI coverage
 
@@ -135,13 +136,13 @@ The JSON-LD uses the Croissant RAI 1.0 vocabulary for collection process and sou
 
 ### Validation record
 
-The repository metadata test parses the JSON-LD document, checks the declared Croissant and RAI terms, field IDs, key/data references, types, and cross-bindings to the three repository authorities. The test passes. The official [mlcroissant 1.1.1 validator](https://github.com/mlcommons/croissant) was also run with:
+The repository metadata tests parse the JSON-LD document, check supported RAI terms, field IDs, key/data references, types, and cross-bindings to the three repository authorities. They also verify that the companion status record lists target specifications without asserting conformance, records exact publication blockers, and keeps metadata and content versions separate. The tests pass. The official [mlcroissant 1.1.1 validator](https://github.com/mlcommons/croissant) was run with:
 
     uvx --from mlcroissant mlcroissant validate --jsonld src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json
 
-It parsed and inspected the metadata but returned a nonzero result. It reported 13 conceptual observation fields without a supported source/value binding, including four fixed identity fields for which the JSON-LD provides cr:value declarations that this validator did not recognize. The remaining variable observation fields have no source because there is no row-level FPD file. It also reported four errors parsing the specification's array shape string (-1,). The validator's array-shape parser does not accept the Croissant 1.1 form. It warned that its built-in context differs by the keys path, replace, repeated, and samplingRate, and warned that license, datePublished, and citeAs are absent. The first two are deliberate publication blockers; citeAs is omitted because no final citation or DOI exists. The official Croissant 1.1 specification defines arrayShape (-1,) for a one-dimensional array, so the validator's array-shape errors are recorded as a validator limitation, not corrected by changing the metadata away from the specification.
+With dct:conformsTo omitted, the validator parsed the JSON-LD but returned a nonzero result: one error says the dataset name contains forbidden characters, and four property warnings report absent citation, datePublished, license, and version. It also emitted a context warning. This run does not establish conformance or report the publication blockers recorded in the companion status JSON. We do not add an achieved-conformance assertion to make the validator return a different result.
 
-The validator does not report distribution among its current findings, but Croissant 1.1 declares distribution required. It also treats datePublished as recommended, while the specification marks it required. The metadata is therefore not full Croissant 1.1 conformance and must not be presented as a downloadable release. The standards references are the [Croissant Format Specification 1.1](https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html) and [Croissant RAI Specification 1.0](https://docs.mlcommons.org/croissant/docs/croissant-rai-spec.html).
+An earlier validator diagnostic, run before the false conformance assertion was removed, failed to recognize four spec-declared cr:value bindings and rejected the spec-defined arrayShape value (-1,). Croissant 1.1 defines (-1,) for a one-dimensional array. These remain documented implementation limitations; the current draft follows the specification and does not claim conformance. The official specification requires conformsTo to assert conformance, so it is intentionally absent. The draft must not be presented as a conformant or downloadable release. The standards references are the [Croissant Format Specification 1.1](https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html) and [Croissant RAI Specification 1.0](https://docs.mlcommons.org/croissant/docs/croissant-rai-spec.html).
 
 ## Related authorities
 

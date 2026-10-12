@@ -6,7 +6,6 @@
     "arrayShape": "cr:arrayShape",
     "citeAs": "cr:citeAs",
     "column": "cr:column",
-    "conformsTo": "dct:conformsTo",
     "containedIn": "cr:containedIn",
     "cr": "http://mlcommons.org/croissant/",
     "data": {
@@ -17,7 +16,6 @@
       "@id": "cr:dataType",
       "@type": "@vocab"
     },
-    "dct": "http://purl.org/dc/terms/",
     "equivalentProperty": "cr:equivalentProperty",
     "examples": {
       "@id": "cr:examples",
@@ -54,16 +52,7 @@
   },
   "@id": "urn:fpdbench:dataset:skillcorner-open-data-5hz:draft",
   "@type": "sc:Dataset",
-  "conformsTo": [
-    "http://mlcommons.org/croissant/1.1",
-    "http://mlcommons.org/croissant/RAI/1.0"
-  ],
-  "creator": {
-    "@type": "sc:Organization",
-    "description": "The project package metadata names this contributor group as authors. Final dataset authorship and publication roles remain subject to R8.",
-    "name": "Football Performance Dynamics Bench contributors"
-  },
-  "description": "R4 metadata draft for a prospective FPD Bench measurement derived from the pinned SkillCorner Open Data release. The RecordSets below describe source-population metadata, a canonical measurement schema, and an eligibility contract; they do not assert that tracking rows, eligible windows, or a downloadable FPD dataset have been published. Croissant 1.1 license and distribution requirements cannot currently be populated truthfully: core data redistribution rights are unresolved, and no row-level FPD artifact is distributable under the current project policy. See docs/skillcorner-data-card.md for explicit publication blockers.",
+  "description": "R4 metadata draft for a prospective FPD Bench measurement derived from the pinned SkillCorner Open Data release. The RecordSets below describe source-population metadata, a canonical measurement schema, and an eligibility contract; they do not assert that tracking rows, eligible windows, or a downloadable FPD dataset have been published. This JSON-LD deliberately makes no conformance assertion. Its companion status record lists the target specifications and explicit publication blockers.",
   "inLanguage": "en",
   "keywords": [
     "association football",
@@ -612,6 +601,5 @@
     }
   ],
   "sdVersion": "0.1.0-draft",
-  "url": "https://github.com/Litju/football-performance-dynamics-bench",
-  "version": "0.1.0-draft"
+  "url": "https://github.com/Litju/football-performance-dynamics-bench"
 }

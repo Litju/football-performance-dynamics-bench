@@ -8,6 +8,7 @@ from fpdbench.eligibility.skillcorner import load_manifest as load_eligibility_m
 
 ROOT = Path(__file__).resolve().parents[2]
 METADATA_PATH = ROOT / "src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json"
+STATUS_PATH = ROOT / "src/fpdbench/data_sources/skillcorner_croissant_rai_status.json"
 SUPPORTED_DATA_TYPES = {
     "sc:Boolean",
     "sc:Float",
@@ -58,14 +59,35 @@ def test_croissant_jsonld_structure_vocabularies_and_references() -> None:
     assert context["cr"] == "http://mlcommons.org/croissant/"
     assert context["rai"] == "http://mlcommons.org/croissant/RAI/"
     assert context["prov"] == "http://www.w3.org/ns/prov#"
-    assert context["conformsTo"] == "dct:conformsTo"
+    assert "conformsTo" not in context
+    assert "conformsTo" not in metadata
     assert {key for key in metadata if key.startswith("rai:")} == SUPPORTED_RAI_PROPERTIES
-    assert metadata["conformsTo"] == [
-        "http://mlcommons.org/croissant/1.1",
-        "http://mlcommons.org/croissant/RAI/1.0",
-    ]
-    assert metadata["version"] == "0.1.0-draft"
     assert metadata["sdVersion"] == "0.1.0-draft"
+    assert "version" not in metadata
+    assert "creator" not in metadata
+
+    status = json.loads(STATUS_PATH.read_text())
+    assert status["schema_id"] == "fpdbench.croissant-metadata-draft-status"
+    assert status["metadata_id"] == metadata["@id"]
+    assert status["conformance_status"] == "draft_nonconformant"
+    assert status["conformance_assertion"] == "omitted"
+    assert status["achieved_conformance"] is False
+    assert status["target_specifications"] == [
+        {
+            "name": "Croissant Format Specification",
+            "version": "1.1",
+            "specification_id": "http://mlcommons.org/croissant/1.1",
+            "documentation_url": "https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html",
+        },
+        {
+            "name": "Croissant RAI Specification",
+            "version": "1.0",
+            "specification_id": "http://mlcommons.org/croissant/RAI/1.0",
+            "documentation_url": "https://docs.mlcommons.org/croissant/docs/croissant-rai-spec.html",
+        },
+    ]
+    assert status["content_version"] is None
+    assert status["metadata_version"] == metadata["sdVersion"]
 
     defined_ids = {cast(str, metadata["@id"])}
     for record_set in cast(list[dict[str, object]], metadata["recordSet"]):
@@ -172,6 +194,7 @@ def test_metadata_bindings_match_repository_authorities() -> None:
 
 def test_draft_rights_unknowns_and_no_public_distribution_claims() -> None:
     metadata = json.loads(METADATA_PATH.read_text())
+    status = json.loads(STATUS_PATH.read_text())
     assert "license" not in metadata
     assert "distribution" not in metadata
     assert "datePublished" not in metadata
@@ -180,22 +203,43 @@ def test_draft_rights_unknowns_and_no_public_distribution_claims() -> None:
     assert "CONDITIONAL GO" in metadata["rai:dataLimitations"][1]
     assert any("unknown" in value.lower() for value in metadata["rai:dataBiases"])
     assert any("unknown" in value.lower() for value in metadata["rai:personalSensitiveInformation"])
+    assert status["current_rights_decision"] == "CONDITIONAL_GO"
+    assert {blocker["property"] for blocker in status["publication_blockers"]} == {
+        "license",
+        "distribution",
+        "datePublished",
+        "creator",
+        "canonical_observations.field.source",
+    }
+    assert all(blocker["reason"] for blocker in status["publication_blockers"])
 
     rights = (ROOT / "docs/data-rights.md").read_text()
     card = (ROOT / "docs/skillcorner-data-card.md").read_text()
     assert "**CONDITIONAL GO**" in rights
     assert "must not host or redistribute" in rights
     assert "not represented as a dataset license" in card
-    assert "No DOI" in card
-    assert "not full Croissant 1.1 conformance" in card
+    assert "DOI" in status["deferred_release_metadata"]
+    assert "DOI" in card
+    assert "does not assert achieved conformance" in card
 
 
 def test_metadata_bytes_are_deterministic() -> None:
     metadata = json.loads(METADATA_PATH.read_text())
+    status = json.loads(STATUS_PATH.read_text())
     assert (
         METADATA_PATH.read_text()
         == json.dumps(
             metadata,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+    assert (
+        STATUS_PATH.read_text()
+        == json.dumps(
+            status,
             indent=2,
             sort_keys=True,
             ensure_ascii=False,

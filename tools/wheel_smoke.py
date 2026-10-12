@@ -74,9 +74,16 @@ croissant = json.loads(
     .joinpath("data_sources/skillcorner_croissant_rai_draft.json")
     .read_text()
 )
-assert croissant["version"] == "0.1.0-draft"
-assert "http://mlcommons.org/croissant/1.1" in croissant["conformsTo"]
-assert "http://mlcommons.org/croissant/RAI/1.0" in croissant["conformsTo"]
+status = json.loads(
+    importlib.resources.files("fpdbench")
+    .joinpath("data_sources/skillcorner_croissant_rai_status.json")
+    .read_text()
+)
+assert "conformsTo" not in croissant
+assert "version" not in croissant
+assert croissant["sdVersion"] == "0.1.0-draft"
+assert status["achieved_conformance"] is False
+assert len(status["target_specifications"]) == 2
 assert "distribution" not in croissant
 assert not importlib.metadata.distribution("football-performance-dynamics-bench").requires
 """

@@ -33,7 +33,7 @@ This public research-software repository is under active release preparation, an
 
 ## Data source and rights
 
-The prospective [SkillCorner source card](docs/skillcorner-source-card.md), [FPD data card](docs/skillcorner-data-card.md), and [Croissant/RAI JSON-LD draft](src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json) document the source, measurement and eligibility contracts, RAI considerations, and current publication blockers. These cards describe a prospective research dataset; they do not announce a downloadable row-level release.
+The prospective [SkillCorner source card](docs/skillcorner-source-card.md), [FPD data card](docs/skillcorner-data-card.md), [Croissant/RAI JSON-LD draft](src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json), and [machine-readable metadata status](src/fpdbench/data_sources/skillcorner_croissant_rai_status.json) document the source, measurement and eligibility contracts, RAI considerations, and current publication blockers. These cards describe a prospective research dataset; they do not announce a downloadable row-level release.
 
 SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The immutable upstream commit, selected source matches, file identities, acquisition contract, and drift checks are recorded in the [SkillCorner source authority](docs/skillcorner-source-authority.md). The rights boundary and attribution rules are in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision and explicit match list rather than identify the source as “whatever is currently published.”
 
