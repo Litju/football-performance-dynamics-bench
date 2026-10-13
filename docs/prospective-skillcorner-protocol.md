@@ -1,8 +1,8 @@
 # Prospective SkillCorner benchmark protocol
 
-**Protocol:** `skillcorner.prospective_conditional_motion` v1.0.0
+**Protocol:** `skillcorner.prospective_conditional_motion` v1.1.0
 
-**Protocol SHA-256:** `5a0f1e54df44cbbe893050f9d758aeeb48e3aeb82758c95a2cfa16283b7a9d8f`
+**Protocol SHA-256:** `865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c`
 
 **Machine authority:** [`prospective_skillcorner_protocol_v1.json`](../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json)
 
@@ -56,17 +56,17 @@ Digests: role assignment `923dc2721a05620716f23c3b4cb1814e73485f80052f00c5334ccc
 
 The primary metric is physical XY **ADE in metres**. Secondary metrics are physical XY **FDE in metres** and **XY-RMSE in metres**. The mask-aware metric kernel treats a null truth XY pair as the sole missing-target mask; predictions must be finite. Coordinates are already in metres, so both XY scale factors are 1.0. No calibrated reward or population SRE is produced for this protocol.
 
-A directed scene must have at least one valid target at future sample 15 to be scoreable; the same scene population is used for all metrics. A scene with no final target has null metrics and reason `NO_FINAL_TARGET`. A match with no scoreable scene has a null match score; the confirmatory analysis is then not estimable rather than dropping that match. Invalid or missing model predictions fail that model cell.
+A directed scene must have at least one valid target at future sample 15 to be scoreable; the same scene population is used for all metrics. A scene with no final target has null metrics and reason `NO_FINAL_TARGET`, and is excluded from every metric. A physical window with no scoreable scene has a null window score and is excluded from that match's mean. A match with no scoreable window has a null match score; keep it in the four-match population and do not report an across-match summary if any match lacks a score. Invalid or missing model predictions fail that model cell, including predictions at null-truth positions.
 
-Aggregation is fixed: compute a metric over valid target/time labels within each directed scene; average scoreable home/away scenes equally within a physical window; average eligible window scores equally within each match; average the four evaluation-match scores equally. Multiple seeds are averaged within each match first. Frames, windows, scenes, and seeds are not independent generalization units.
+Aggregation is fixed: compute a metric over valid target/time labels within each directed scene; average scoreable home/away scenes equally within a physical window; average eligible windows with at least one scoreable scene equally within each match; average the four evaluation-match scores equally only when all four have a score. Multiple seeds are averaged within each match first. Frames, windows, scenes, and seeds are not independent generalization units.
 
-For confirmatory contrasts, report paired match-level differences (control ADE minus context ADE) for the four evaluation matches, a two-sided 95% Student-t interval, and a one-sided paired Student-t test under the declared independent-match assumption. Apply Holm step-down correction at familywise alpha 0.05 across the four primary hypotheses. No match is dropped to repair a missing comparison. Report descriptive match dispersion and valid-label counts. LOMO uncertainty remains not estimable because its training folds overlap.
+The four preregistered directional ADE contrasts are descriptive: report each evaluation match's control ADE minus context ADE and their equal-match mean. Positive values mean lower ADE with added realized context. Do not report p-values, confidence intervals, multiplicity corrections, or significance claims. Do not drop a match to repair a missing comparison. LOMO inference remains unavailable because its training folds overlap.
 
 Robustness results use only the eight composable strata defined in Linear issue 437: player detection exposure, ball detection exposure, player completeness, ball completeness, temporal continuity, identity-transition exposure, source-quality uncertainty, and play context. Report stratum and match counts descriptively, keep the policy's thresholds, and do not add post hoc bins or confirmatory tests.
 
-## Preregistered hypotheses
+## Preregistered descriptive directional ADE contrasts
 
-All four hypotheses use ADE and predict lower error with added realized context. They form one Holm-corrected confirmatory family for the single primary model class that Linear issue 339 must designate before training:
+All four contrasts use ADE and preregister the expected direction of lower error with added realized context. They apply to the single primary model class that Linear issue 339 must designate before training:
 
 1. Future ball versus history only for absolute XY.
 2. Future ball versus history only for origin-relative displacement.

@@ -152,6 +152,28 @@ def test_protocol_rejects_incompatible_metrics_and_missing_delegated_decisions()
         _validate(document)
 
 
+def test_protocol_rejects_four_match_confirmatory_inference_even_when_rehashed() -> None:
+    changes = (
+        ("confirmatory_scope", "four directional confirmatory hypotheses"),
+        ("method", "paired one-sided Student t test on four match-level contrasts"),
+        ("confidence_interval", "two-sided 95% Student t interval"),
+        ("multiplicity", "Holm step-down familywise alpha 0.05"),
+    )
+    for key, value in changes:
+        document = copy.deepcopy(load_prospective_protocol())
+        state = cast(dict[str, object], document["scientific_state"])
+        analysis = cast(dict[str, object], state["analysis"])
+        if key == "confirmatory_scope":
+            analysis[key] = value
+        else:
+            uncertainty = cast(dict[str, object], analysis["uncertainty"])
+            uncertainty[key] = value
+        _rehash(document)
+
+        with pytest.raises(ValueError):
+            _validate(document)
+
+
 def test_protocol_rejects_authority_manifest_hash_drift() -> None:
     source, measurement, eligibility = _authorities()
     measurement["data_state_hash"] = "0" * 64

@@ -1,9 +1,9 @@
 {
   "schema_id": "fpdbench.prospective-benchmark-protocol",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "protocol_id": "skillcorner.prospective_conditional_motion",
-  "protocol_version": "1.0.0",
-  "protocol_sha256": "5a0f1e54df44cbbe893050f9d758aeeb48e3aeb82758c95a2cfa16283b7a9d8f",
+  "protocol_version": "1.1.0",
+  "protocol_sha256": "865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c",
   "scientific_state": {
     "identity": {
       "research_question_id": "skillcorner.prospective.conditional_motion.context_ablation",
@@ -287,7 +287,7 @@
     "evaluation": {
       "evaluation_population": "all eligible windows in the four fixed evaluation-role matches",
       "evaluator_id": "skillcorner.prospective.masked_physical_xy",
-      "evaluator_version": "1.0.0",
+      "evaluator_version": "2.0.0",
       "coordinate_units": "metres",
       "xy_scale_m": [
         1.0,
@@ -310,67 +310,69 @@
           "formula": "square root of mean squared x/y scalar residual over valid target-player by future-sample pairs"
         }
       ],
-      "scene_scoreability": "a directed scene is scoreable only if at least one origin target has valid truth at future sample 15; apply this rule to all three metrics",
+      "scene_scoreability": "a directed scene is scoreable only if at least one origin target has valid truth at future sample 15; use the same scoreable scene population for all three metrics",
       "truth_mask_denominator": "finite source XY pairs for origin target IDs only; is_detected=false counts as finite truth per Linear issue 437",
       "null_and_error_rules": {
         "invalid_or_missing_prediction": "fail the model cell; never drop a model-specific row",
         "no_valid_final_target_in_scene": "null scene metric with reason NO_FINAL_TARGET; exclude that scene from every metric and count it",
-        "no_scoreable_scene_in_match": "null match metric; the confirmatory analysis is not estimable if any evaluation match lacks a score",
+        "no_scoreable_scene_in_match": "null match metric; retain the match and report no four-match descriptive mean or contrast summary if any evaluation match lacks a score",
         "constant_truth": "valid for ADE/FDE/XY-RMSE; no SRE or calibrated reward is produced",
-        "partial_xy_pair": "error; missingness is represented only by a null XY pair"
+        "partial_xy_pair": "error; missingness is represented only by a null XY pair",
+        "no_scoreable_scene_in_window": "null window metric; retain and count the window, but exclude it from the within-match mean"
       },
       "aggregation_order": [
         "compute each metric over valid target-player/time labels within each directed scene",
-        "average scoreable home/away directed scenes equally within each physical window",
-        "average eligible physical-window scores equally within each match",
-        "average the four match scores equally for the evaluation-population estimate"
+        "average scoreable home/away directed scenes equally within each physical window; exclude every NO_FINAL_TARGET scene from every metric and count it",
+        "average eligible physical windows with at least one scoreable scene equally within each match; retain and count windows with no scoreable scene",
+        "average the four evaluation-match scores equally only when every evaluation match has a score; otherwise the population metric is null"
       ],
-      "metric_contract_sha256": "ac400a97b5b0f8d8b9e41747e4c44710b32e8f6fc998b35befe87c2076e76d11"
+      "metric_contract_sha256": "978209bfb9c504687b5911a945639a34ff0b59973bad72ae1019c43569f1d858"
     },
     "analysis": {
       "primary_model_class": "the single model class labeled primary in Linear issue 339, with its exact identity frozen before training",
-      "primary_hypotheses": [
+      "planned_directional_contrasts": [
         {
-          "hypothesis_id": "H1_ABSOLUTE_XY_FUTURE_BALL",
           "benchmark_id": "skillcorner.prospective.conditional_motion.absolute_xy",
           "control_regime": "history_only",
           "context_regime": "future_ball",
           "metric_id": "trajectory.ade_m.v1",
-          "direction": "context ADE is lower than control ADE"
+          "contrast_id": "C1_ABSOLUTE_XY_FUTURE_BALL",
+          "directional_expectation": "context ADE is lower than control ADE"
         },
         {
-          "hypothesis_id": "H1_DISPLACEMENT_FUTURE_BALL",
           "benchmark_id": "skillcorner.prospective.conditional_motion.origin_relative_displacement",
           "control_regime": "history_only",
           "context_regime": "future_ball",
           "metric_id": "trajectory.ade_m.v1",
-          "direction": "context ADE is lower than control ADE"
+          "contrast_id": "C1_DISPLACEMENT_FUTURE_BALL",
+          "directional_expectation": "context ADE is lower than control ADE"
         },
         {
-          "hypothesis_id": "H2_ABSOLUTE_XY_FUTURE_OPPONENT",
           "benchmark_id": "skillcorner.prospective.conditional_motion.absolute_xy",
           "control_regime": "future_ball",
           "context_regime": "future_opponent_plus_ball",
           "metric_id": "trajectory.ade_m.v1",
-          "direction": "context ADE is lower than control ADE"
+          "contrast_id": "C2_ABSOLUTE_XY_FUTURE_OPPONENT",
+          "directional_expectation": "context ADE is lower than control ADE"
         },
         {
-          "hypothesis_id": "H2_DISPLACEMENT_FUTURE_OPPONENT",
           "benchmark_id": "skillcorner.prospective.conditional_motion.origin_relative_displacement",
           "control_regime": "future_ball",
           "context_regime": "future_opponent_plus_ball",
           "metric_id": "trajectory.ade_m.v1",
-          "direction": "context ADE is lower than control ADE"
+          "contrast_id": "C2_DISPLACEMENT_FUTURE_OPPONENT",
+          "directional_expectation": "context ADE is lower than control ADE"
         }
       ],
-      "confirmatory_scope": "the four directional ADE contrasts above for the Linear issue 339 primary model class only",
+      "confirmatory_scope": "none; the four preregistered directional ADE contrasts are descriptive and carry no significance claims",
       "match_level_contrast": "within each evaluation match, control ADE minus context ADE; positive means lower error with the added future context",
+      "directional_contrast_reporting": "report all four match-level control-minus-context ADE differences and their equal-match mean as descriptive values; no p-values, confidence intervals, multiplicity corrections, or significance claims",
       "uncertainty": {
         "independent_unit": "physical_match",
-        "method": "paired one-sided Student t test on four match-level contrasts; assume independent evaluation matches",
-        "confidence_interval": "two-sided 95% Student t interval for each mean contrast",
-        "multiplicity": "Holm step-down familywise alpha 0.05 across the four primary hypotheses",
-        "missing_match": "no match is dropped; any missing required cell makes that hypothesis not estimable",
+        "method": "descriptive match-level directional ADE contrasts; no inferential tests",
+        "confidence_interval": "none",
+        "multiplicity": "not applicable; no hypothesis tests or significance claims",
+        "missing_match": "do not drop a match; if any evaluation match lacks a required cell or score, the across-match contrast summary is not estimable",
         "lomo_inference": "not estimable because LOMO training sets overlap"
       },
       "robustness_strata": [
@@ -405,7 +407,7 @@
         "same_seed_ids_across_comparable_cells": true,
         "seed_schedule_frozen_before_training": true,
         "seed_changes_after_observing_results": false,
-        "aggregation": "average seed results within each match before match-level inference",
+        "aggregation": "average seed results within each match before descriptive match-level contrasts",
         "seeds_are_generalization_units": false
       },
       "early_stopping": {
@@ -429,7 +431,7 @@
         "stop at the fixed Linear issue 339 run or campaign compute ceiling",
         "stop a run only at the Linear issue 339 fixed early-stopping or maximum-step rule",
         "do not add cells, seeds, retries, or training time in response to outcomes",
-        "a missing primary cell leaves confirmatory results incomplete"
+        "a missing primary cell leaves the descriptive contrast set incomplete; do not report a four-match summary"
       ]
     },
     "delegations_and_gates": {
@@ -443,7 +445,7 @@
           "run order and result manifest schema"
         ],
         "may_not_change": [
-          "the Linear issue 336 benchmark identities, targets, regimes, match roles, LOMO assignments, metrics, hypotheses, or multiplicity family"
+          "the Linear issue 336 benchmark identities, targets, regimes, match roles, LOMO assignments, metrics, planned directional contrasts, or descriptive-only analysis policy"
         ]
       },
       "issue_439": {

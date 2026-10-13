@@ -12,7 +12,7 @@ from typing import cast
 from fpdbench.evaluation.metrics import ADE_METRIC_ID, FDE_METRIC_ID, XY_RMSE_METRIC_ID
 
 PROTOCOL_FILE = "prospective_skillcorner_protocol_v1.json"
-PROTOCOL_SHA256 = "5a0f1e54df44cbbe893050f9d758aeeb48e3aeb82758c95a2cfa16283b7a9d8f"
+PROTOCOL_SHA256 = "865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c"
 EXPECTED_SOURCE_RELEASE_HASH = "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
 EXPECTED_SOURCE_POPULATION_HASH = "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
 EXPECTED_MEASUREMENT_STATE_HASH = "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
@@ -21,7 +21,7 @@ EXPECTED_ELIGIBILITY_POLICY_HASH = (
 )
 
 _PROTOCOL_ID = "skillcorner.prospective_conditional_motion"
-_PROTOCOL_VERSION = "1.0.0"
+_PROTOCOL_VERSION = "1.1.0"
 _BENCHMARK_IDS = (
     "skillcorner.prospective.conditional_motion.absolute_xy",
     "skillcorner.prospective.conditional_motion.origin_relative_displacement",
@@ -121,7 +121,7 @@ def _integer(value: object, label: str) -> int:
 
 def _expect(actual: object, expected: object, label: str) -> None:
     if type(actual) is not type(expected) or actual != expected:
-        raise ValueError(f"{label} differs from the Linear issue 336 v1.0.0 authority")
+        raise ValueError(f"{label} differs from the Linear issue 336 v1.1.0 authority")
 
 
 def _expect_keys(value: Mapping[str, object], keys: set[str], label: str) -> None:
@@ -169,7 +169,7 @@ def _validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
         "protocol",
     )
     _expect(document["schema_id"], "fpdbench.prospective-benchmark-protocol", "schema_id")
-    _expect(document["schema_version"], "1.0.0", "schema_version")
+    _expect(document["schema_version"], "1.1.0", "schema_version")
     _expect(document["protocol_id"], _PROTOCOL_ID, "protocol_id")
     _expect(document["protocol_version"], _PROTOCOL_VERSION, "protocol_version")
     state = _mapping(document["scientific_state"], "scientific_state")
@@ -358,6 +358,7 @@ def _validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
     _expect(
         evaluation["evaluator_id"], "skillcorner.prospective.masked_physical_xy", "evaluator ID"
     )
+    _expect(evaluation["evaluator_version"], "2.0.0", "prospective evaluator version")
     _expect(evaluation["coordinate_units"], "metres", "metric units")
     _expect(evaluation["xy_scale_m"], [1.0, 1.0], "physical XY scale")
     primary = _mapping(evaluation["primary_metric"], "primary metric")
@@ -378,22 +379,44 @@ def _validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
         raise ValueError("metric null and error rules are required")
 
     analysis = _mapping(state["analysis"], "analysis")
-    hypotheses = _list(analysis["primary_hypotheses"], "primary hypotheses")
-    expected_hypothesis_ids = (
-        "H1_ABSOLUTE_XY_FUTURE_BALL",
-        "H1_DISPLACEMENT_FUTURE_BALL",
-        "H2_ABSOLUTE_XY_FUTURE_OPPONENT",
-        "H2_DISPLACEMENT_FUTURE_OPPONENT",
+    contrasts = _list(analysis["planned_directional_contrasts"], "planned directional contrasts")
+    expected_contrast_ids = (
+        "C1_ABSOLUTE_XY_FUTURE_BALL",
+        "C1_DISPLACEMENT_FUTURE_BALL",
+        "C2_ABSOLUTE_XY_FUTURE_OPPONENT",
+        "C2_DISPLACEMENT_FUTURE_OPPONENT",
     )
     if (
-        tuple(_mapping(item, "hypothesis").get("hypothesis_id") for item in hypotheses)
-        != expected_hypothesis_ids
+        tuple(_mapping(item, "directional contrast").get("contrast_id") for item in contrasts)
+        != expected_contrast_ids
     ):
-        raise ValueError("the four preregistered primary hypotheses are missing or changed")
+        raise ValueError("the four preregistered directional ADE contrasts are missing or changed")
+    _expect(
+        analysis["confirmatory_scope"],
+        "none; the four preregistered directional ADE contrasts are descriptive and carry no "
+        "significance claims",
+        "confirmatory scope",
+    )
     uncertainty = _mapping(analysis["uncertainty"], "analysis uncertainty")
     _expect(uncertainty["independent_unit"], "physical_match", "uncertainty unit")
-    if "Holm" not in cast(str, uncertainty["multiplicity"]):
-        raise ValueError("a multiplicity rule is required for the primary hypotheses")
+    _expect(
+        uncertainty["method"],
+        "descriptive match-level directional ADE contrasts; no inferential tests",
+        "analysis method",
+    )
+    _expect(uncertainty["confidence_interval"], "none", "descriptive uncertainty")
+    _expect(
+        uncertainty["multiplicity"],
+        "not applicable; no hypothesis tests or significance claims",
+        "multiplicity policy",
+    )
+    _expect(
+        analysis["directional_contrast_reporting"],
+        "report all four match-level control-minus-context ADE differences and their equal-match "
+        "mean as descriptive values; no p-values, confidence intervals, multiplicity corrections, "
+        "or significance claims",
+        "directional contrast reporting",
+    )
 
     selection = _mapping(state["selection_and_execution"], "selection and execution")
     _expect(selection["final_fit_role"], "training", "final fit role")
