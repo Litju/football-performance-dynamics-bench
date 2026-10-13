@@ -9,7 +9,7 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 - `future_response_forecasting`: a research family with no recovered historical benchmark or assigned target, scorer, model, or horizon.
 - `conditional_multi_agent_motion_prediction`: the recovered absolute-position and origin-relative displacement benchmark identities; displacement reconstruction remains partial pending scorer/result parity.
 
-Only `conditional_multi_agent_motion_prediction/absolute_position_prediction` and `conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction` are benchmark identities. Families and research objects have separate discovery commands: `fpdbench families list` and `fpdbench research-objects list`.
+The registry's executable benchmark identities are the recovered historical `conditional_multi_agent_motion_prediction/absolute_position_prediction` and `conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction`. The separate [prospective SkillCorner protocol](docs/prospective-skillcorner-protocol.md) freezes two new pre-training identities without changing those historical locks. Families and research objects have separate discovery commands: `fpdbench families list` and `fpdbench research-objects list`.
 
 Conditional multi-agent response uses realized future opponent and ball context while withholding the target team's future positions. Causal forecasting instead requires ex-ante available exposures and an explicit causal information boundary; the two tasks are not interchangeable.
 

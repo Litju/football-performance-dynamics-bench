@@ -11,6 +11,7 @@ from fpdbench.evaluation.metrics.trajectory import (
     PITCH_SCALE_M,
     XY,
     XY_RMSE_METRIC_ID,
+    MaskedTrajectoryMetrics,
     PositionFrame,
     PositionTrajectory,
     ScaleXY,
@@ -18,6 +19,7 @@ from fpdbench.evaluation.metrics.trajectory import (
     immutable_xy_frame,
     immutable_xy_trajectory,
     immutable_xy_vector,
+    masked_physical_trajectory_metrics,
     physical_trajectory_metrics,
 )
 
@@ -30,6 +32,7 @@ __all__ = [
     "PositionFrame",
     "PositionTrajectory",
     "ScaleXY",
+    "MaskedTrajectoryMetrics",
     "TrajectoryMetrics",
     "XY",
     "XY_RMSE_METRIC_ID",
@@ -37,6 +40,7 @@ __all__ = [
     "immutable_xy_frame",
     "immutable_xy_trajectory",
     "immutable_xy_vector",
+    "masked_physical_trajectory_metrics",
     "physical_trajectory_metrics",
     "population_standardized_relative_error",
     "rmse",

@@ -10,6 +10,7 @@ type XY = tuple[float, float]
 type PositionFrame = tuple[XY, ...]
 type PositionTrajectory = tuple[PositionFrame, ...]
 type TrajectoryBatch = Sequence[Sequence[Sequence[Sequence[float]]]]
+type MaskedTrajectoryBatch = Sequence[Sequence[Sequence[Sequence[float] | None]]]
 type ScaleXY = tuple[float, float]
 PITCH_SCALE_M: ScaleXY = (52.5, 34.0)
 ADE_METRIC_ID = "trajectory.ade_m.v1"
@@ -71,6 +72,84 @@ class TrajectoryMetrics:
     ade_m: float
     fde_m: float
     xy_rmse_m: float
+
+
+@dataclass(frozen=True, slots=True)
+class MaskedTrajectoryMetrics:
+    ade_m: float
+    fde_m: float
+    xy_rmse_m: float
+    scored_points: int
+    final_targets: int
+
+
+def masked_physical_trajectory_metrics(
+    prediction: TrajectoryBatch,
+    truth: MaskedTrajectoryBatch,
+    scale_xy_m: ScaleXY = (1.0, 1.0),
+) -> MaskedTrajectoryMetrics:
+    """Score variable-size target panels; a null truth XY pair is the only mask."""
+    if len(prediction) != len(truth) or not prediction:
+        raise ValueError("prediction and truth must contain the same nonempty batch")
+    if len(scale_xy_m) != 2 or any(not math.isfinite(scale) or scale <= 0 for scale in scale_xy_m):
+        raise ValueError("physical XY scales must contain two finite positive values")
+
+    distance_sum = final_distance_sum = squared_sum = 0.0
+    scored_points = final_targets = scalar_count = 0
+    expected_steps: int | None = None
+    for predicted, actual in zip(prediction, truth, strict=True):
+        if not predicted or len(predicted) != len(actual):
+            raise ValueError("each trajectory must have matching nonempty horizons")
+        if expected_steps is None:
+            expected_steps = len(predicted)
+        elif len(predicted) != expected_steps:
+            raise ValueError("all trajectories must use the same horizon")
+        expected_entities: int | None = None
+        for step_index, (predicted_step, actual_step) in enumerate(
+            zip(predicted, actual, strict=True)
+        ):
+            if not predicted_step or len(predicted_step) != len(actual_step):
+                raise ValueError("each time step must contain the same nonempty target panel")
+            if expected_entities is None:
+                expected_entities = len(predicted_step)
+            elif len(predicted_step) != expected_entities:
+                raise ValueError("target entity order and cardinality must stay fixed per scene")
+            for predicted_xy_raw, actual_xy_raw in zip(predicted_step, actual_step, strict=True):
+                try:
+                    predicted_xy = immutable_xy_vector(
+                        predicted_xy_raw, name="predicted physical XY"
+                    )
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("predictions must contain finite XY pairs") from exc
+                if actual_xy_raw is None:
+                    continue
+                try:
+                    actual_xy = immutable_xy_vector(actual_xy_raw, name="truth physical XY")
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        "truth must contain finite XY pairs or a null XY mask"
+                    ) from exc
+                dx = (predicted_xy[0] - actual_xy[0]) * scale_xy_m[0]
+                dy = (predicted_xy[1] - actual_xy[1]) * scale_xy_m[1]
+                distance = math.hypot(dx, dy)
+                distance_sum += distance
+                squared_sum += dx * dx + dy * dy
+                scored_points += 1
+                scalar_count += 2
+                if step_index == len(predicted) - 1:
+                    final_distance_sum += distance
+                    final_targets += 1
+    if not scored_points:
+        raise ValueError("trajectories contain no valid truth targets")
+    if not final_targets:
+        raise ValueError("trajectories contain no valid final-horizon targets")
+    return MaskedTrajectoryMetrics(
+        ade_m=distance_sum / scored_points,
+        fde_m=final_distance_sum / final_targets,
+        xy_rmse_m=math.sqrt(squared_sum / scalar_count),
+        scored_points=scored_points,
+        final_targets=final_targets,
+    )
 
 
 def physical_trajectory_metrics(
