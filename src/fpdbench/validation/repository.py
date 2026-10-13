@@ -11,6 +11,8 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     PRIVATE_RESULT_RECORDS,
     PUBLIC_VALIDATION_PHYSICAL_SCIENTIFIC_LOCK,
     PUBLIC_VALIDATION_RAW_SCIENTIFIC_LOCK,
+    empirical_experiment_plan,
+    evaluation_population,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
     validate_prospective_protocol,
@@ -35,6 +37,8 @@ def validate_repository(root: Path) -> tuple[str, ...]:
     errors.extend(validate_transition_graph())
     errors.extend(validate_canonical_protocols())
     errors.extend(validate_prospective_protocol(root))
+    errors.extend(empirical_experiment_plan.validate_empirical_experiment_plan(root))
+    errors.extend(evaluation_population.validate_evaluation_population_schema(root))
     result_output_hashes = tuple(
         digest for result in HISTORICAL_RESULTS for digest in result.output_sha256s
     )

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.prospective-evaluation-population/1.0.0",
+  "title": "Restricted prospective eligible-window population authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id", "schema_version", "population_id", "source_release_hash", "source_population_hash",
+    "measurement_state_hash", "eligibility_policy_hash", "protocol_sha256", "plan_sha256",
+    "candidate_window_count", "eligible_window_count", "candidate_origin_population_sha256",
+    "matches", "membership_sha256", "manifest_sha256"
+  ],
+  "properties": {
+    "schema_id": {"const": "fpdbench.prospective-evaluation-population"},
+    "schema_version": {"const": "1.0.0"},
+    "population_id": {"const": "skillcorner.prospective.conditional_motion.population"},
+    "source_release_hash": {"$ref": "#/$defs/sha256"},
+    "source_population_hash": {"$ref": "#/$defs/sha256"},
+    "measurement_state_hash": {"$ref": "#/$defs/sha256"},
+    "eligibility_policy_hash": {"$ref": "#/$defs/sha256"},
+    "protocol_sha256": {"$ref": "#/$defs/sha256"},
+    "plan_sha256": {"$ref": "#/$defs/sha256"},
+    "candidate_window_count": {"type": "integer", "minimum": 0},
+    "eligible_window_count": {"type": "integer", "minimum": 0},
+    "candidate_origin_population_sha256": {"$ref": "#/$defs/sha256"},
+    "matches": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/match"}
+    },
+    "membership_sha256": {"$ref": "#/$defs/sha256"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "match_id", "windows"],
+      "properties": {
+        "role": {"enum": ["training", "validation", "evaluation"]},
+        "match_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "windows": {"type": "array", "items": {"$ref": "#/$defs/window"}}
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_id", "origin_sample_id", "eligibility_result_sha256", "scenes"],
+      "properties": {
+        "window_id": {"$ref": "#/$defs/sha256"},
+        "origin_sample_id": {"type": "string", "pattern": "^period_[1-5]/sample_(0|[1-9][0-9]*)$"},
+        "eligibility_result_sha256": {"$ref": "#/$defs/sha256"},
+        "scenes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/scene"}
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scene_id", "player_ids", "truth_sha256", "truth_mask_sha256"],
+      "properties": {
+        "scene_id": {"enum": ["home", "away"]},
+        "player_ids": {
+          "type": "array",
+          "minItems": 7,
+          "items": {"type": "string", "pattern": "^[1-9][0-9]*$"}
+        },
+        "truth_sha256": {"$ref": "#/$defs/sha256"},
+        "truth_mask_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

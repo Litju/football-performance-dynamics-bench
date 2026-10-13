@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.prospective-experiment-result/1.0.0",
+  "title": "Prospective experiment run result manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id", "schema_version", "plan_id", "plan_version", "plan_sha256", "protocol_id",
+    "protocol_version", "protocol_sha256", "run_id", "cell_id", "model_class_id",
+    "information_regime", "target_representation", "fit_role", "lomo_fold_id",
+    "held_out_match_id", "seed", "train_match_ids", "validation_match_ids",
+    "population_authority_sha256", "configuration_sha256", "environment_sha256",
+    "checkpoint_sha256", "selected_step", "stopping_reason", "status", "output_artifacts",
+    "metrics", "manifest_sha256"
+  ],
+  "properties": {
+    "schema_id": {"const": "fpdbench.prospective-experiment-result"},
+    "schema_version": {"const": "1.0.0"},
+    "plan_id": {"const": "skillcorner.prospective_conditional_motion.execution"},
+    "plan_version": {"const": "1.0.0"},
+    "plan_sha256": {"$ref": "#/$defs/sha256"},
+    "protocol_id": {"const": "skillcorner.prospective_conditional_motion"},
+    "protocol_version": {"const": "1.1.0"},
+    "protocol_sha256": {"const": "865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c"},
+    "run_id": {"type": "string", "minLength": 1},
+    "cell_id": {"enum": [
+      "origin_persistence_v1|history_only|absolute_xy",
+      "origin_persistence_v1|future_ball|absolute_xy",
+      "origin_persistence_v1|future_opponent_plus_ball|absolute_xy",
+      "origin_persistence_v1|history_only|origin_relative_displacement",
+      "origin_persistence_v1|future_ball|origin_relative_displacement",
+      "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement",
+      "constant_velocity_1s_v1|history_only|absolute_xy",
+      "constant_velocity_1s_v1|future_ball|absolute_xy",
+      "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy",
+      "constant_velocity_1s_v1|history_only|origin_relative_displacement",
+      "constant_velocity_1s_v1|future_ball|origin_relative_displacement",
+      "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement",
+      "per_target_context_deepsets_mlp_v1|history_only|absolute_xy",
+      "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy",
+      "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy",
+      "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement",
+      "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement",
+      "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"
+    ]},
+    "model_class_id": {"enum": [
+      "origin_persistence_v1", "constant_velocity_1s_v1", "per_target_context_deepsets_mlp_v1"
+    ]},
+    "information_regime": {"enum": ["history_only", "future_ball", "future_opponent_plus_ball"]},
+    "target_representation": {"enum": ["absolute_xy", "origin_relative_displacement"]},
+    "fit_role": {"enum": ["final_train", "lomo", "baseline"]},
+    "lomo_fold_id": {"enum": [
+      null, "fold-01", "fold-02", "fold-03", "fold-04", "fold-05", "fold-06",
+      "fold-07", "fold-08", "fold-09", "fold-10", "fold-11", "fold-12"
+    ]},
+    "held_out_match_id": {"anyOf": [
+      {"type": "string", "pattern": "^[1-9][0-9]*$"}, {"type": "null"}
+    ]},
+    "seed": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+    "train_match_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[1-9][0-9]*$"}},
+    "validation_match_ids": {"const": ["1953632", "1996435", "2015213", "2017461"]},
+    "population_authority_sha256": {"$ref": "#/$defs/sha256"},
+    "configuration_sha256": {"$ref": "#/$defs/sha256"},
+    "environment_sha256": {"$ref": "#/$defs/sha256"},
+    "checkpoint_sha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "selected_step": {"anyOf": [{"type": "integer", "minimum": 1, "maximum": 5000}, {"type": "null"}]},
+    "stopping_reason": {"type": "string", "minLength": 1},
+    "status": {"enum": ["completed", "failed_infrastructure", "failed_model", "failed_validation", "incomplete"]},
+    "output_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "sha256", "relation"],
+        "properties": {
+          "artifact_id": {"type": "string", "minLength": 1},
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "relation": {"enum": ["output", "diagnostic"]}
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scope", "match_id", "metric_id", "value", "unit"],
+        "properties": {
+          "scope": {"enum": ["validation_match", "lomo_held_out_match", "evaluation_match"]},
+          "match_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+          "metric_id": {"enum": ["ade_m", "fde_m", "xy_rmse_m"]},
+          "value": {"type": "number", "minimum": 0},
+          "unit": {"const": "metres"}
+        }
+      }
+    },
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"fit_role": {"const": "baseline"}}},
+      "then": {"properties": {
+        "model_class_id": {"enum": ["origin_persistence_v1", "constant_velocity_1s_v1"]},
+        "lomo_fold_id": {"const": null}, "held_out_match_id": {"const": null},
+        "seed": {"const": null}, "checkpoint_sha256": {"const": null}, "selected_step": {"const": null}
+      }}
+    },
+    {
+      "if": {"properties": {"fit_role": {"enum": ["final_train", "lomo"]}}},
+      "then": {"properties": {
+        "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"},
+        "seed": {"enum": [1729, 2718, 31415]}
+      }}
+    },
+    {
+      "if": {"properties": {"fit_role": {"const": "final_train"}}},
+      "then": {"properties": {"lomo_fold_id": {"const": null}, "held_out_match_id": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"fit_role": {"const": "lomo"}}},
+      "then": {"properties": {"lomo_fold_id": {"type": "string"}, "held_out_match_id": {"type": "string"}}}
+    }
+  ],
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}
