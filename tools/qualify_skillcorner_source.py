@@ -8,6 +8,7 @@ import inspect
 import json
 import os
 import platform
+import stat
 import subprocess
 import traceback
 from collections import Counter
@@ -29,16 +30,67 @@ from fpdbench.data_sources.skillcorner import (
 from fpdbench.data_states.skillcorner import iter_skillcorner_5hz
 
 
+def _has_symlink_component(path):
+    path = Path(path)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        if part in {"", "."}:
+            continue
+        current /= part
+        if current.is_symlink():
+            return True
+    return False
+
+
 def private_directory(path):
-    path = path.resolve()
+    if _has_symlink_component(path):
+        raise ValueError("restricted directory path must not contain symlinks")
+    path = path.resolve(strict=True)
     repo = Path(__file__).resolve().parents[1]
     if path == repo or repo in path.parents:
         raise ValueError("restricted storage must be outside the repository")
-    if not path.is_dir() or path.stat().st_mode & 0o077:
+    info = path.stat()
+    if not stat.S_ISDIR(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o700:
         raise ValueError("restricted directory must exist with mode 0700")
-    if path.stat().st_uid != os.getuid():
+    if info.st_uid != os.getuid():
         raise ValueError("restricted directory must belong to the current user")
+    for parent in path.parents:
+        parent_info = parent.stat()
+        if parent_info.st_mode & 0o022 and not parent_info.st_mode & stat.S_ISVTX:
+            raise ValueError("restricted directory has an unsafe writable parent")
     return path
+
+
+def validate_storage_boundary(source_root, destination):
+    repo = Path(__file__).resolve().parents[1]
+    if (
+        source_root in destination.parents
+        or destination in source_root.parents
+        or source_root == destination
+    ):
+        raise ValueError("restricted source and output directories must not overlap")
+
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env["LC_ALL"] = "C"
+    result = subprocess.run(
+        ["git", "-C", str(destination), "rev-parse", "--is-inside-work-tree"],
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+    if result.returncode == 0:
+        if result.stdout.strip() == "true":
+            raise ValueError("restricted storage must be outside every Git worktree")
+        if result.stdout.strip() != "false":
+            raise ValueError("could not verify restricted storage is outside Git worktrees")
+    elif "not a git repository" not in result.stderr:
+        raise ValueError("could not verify restricted storage is outside Git worktrees")
+
+    if destination == repo or repo in destination.parents:
+        raise ValueError("restricted storage must be outside the repository")
 
 
 def write_private(path, value):
@@ -218,6 +270,7 @@ def main():
     try:
         destination = private_directory(args.restricted_output)
         root = private_directory(args.source_root)
+        validate_storage_boundary(root, destination)
         if any(destination.iterdir()):
             raise ValueError("use an empty receipt directory to preserve previous receipts")
     except (ValueError, OSError):

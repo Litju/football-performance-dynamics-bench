@@ -2,8 +2,10 @@
 
 import hashlib
 import json
+import os
 import runpy
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,26 @@ from fpdbench.data_states.skillcorner import iter_skillcorner_5hz, load_manifest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "tools/qualify_skillcorner_source.py"
 preflight = runpy.run_path(str(SCRIPT))
+
+
+def private_dir(path):
+    path.mkdir(parents=True)
+    path.chmod(0o700)
+    return path
+
+
+def git_repo(path):
+    path.mkdir()
+    subprocess.run(["git", "-C", str(path), "init", "--quiet"], check=True)
+    subprocess.run(["git", "-C", str(path), "config", "user.name", "Synthetic"], check=True)
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "synthetic@example.invalid"],
+        check=True,
+    )
+    (path / "tracked.txt").write_text("synthetic only\n")
+    subprocess.run(["git", "-C", str(path), "add", "tracked.txt"], check=True)
+    subprocess.run(["git", "-C", str(path), "commit", "--quiet", "-m", "Synthetic"], check=True)
+    return path
 
 
 def test_null_ball_flag_independently_detected_and_frozen_transform_rejects():
@@ -100,6 +122,134 @@ def test_restricted_output_rejects_repo_permissions_and_overwrite(tmp_path):
     with pytest.raises(FileExistsError):
         preflight["write_private"](path, {"status": "PASS"})
     assert json.loads(path.read_text()) == {"status": "FAIL"}
+
+
+@pytest.mark.parametrize("mode", [0o755, 0o750, 0o500])
+def test_restricted_output_requires_exact_private_mode(tmp_path, mode):
+    tmp_path.chmod(mode)
+    try:
+        with pytest.raises(ValueError, match="mode 0700"):
+            preflight["private_directory"](tmp_path)
+    finally:
+        tmp_path.chmod(0o700)
+
+
+def test_restricted_output_requires_current_user_ownership(tmp_path, monkeypatch):
+    directory = tmp_path
+    directory.chmod(0o700)
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "getuid", lambda: directory.stat().st_uid + 1)
+        with pytest.raises(ValueError, match="current user"):
+            preflight["private_directory"](directory)
+
+
+def test_restricted_output_rejects_unprotected_writable_parent(tmp_path):
+    parent = tmp_path / "writable-parent"
+    parent.mkdir()
+    parent.chmod(0o777)
+    destination = private_dir(parent / "receipts")
+    try:
+        with pytest.raises(ValueError, match="unsafe writable parent"):
+            preflight["private_directory"](destination)
+    finally:
+        parent.chmod(0o700)
+
+
+def test_legitimate_restricted_destination_is_accepted_and_private(tmp_path):
+    source = private_dir(tmp_path / "source")
+    destination = private_dir(tmp_path / "receipts")
+    root = preflight["private_directory"](source)
+    output = preflight["private_directory"](destination)
+    preflight["validate_storage_boundary"](root, output)
+    assert output == destination.resolve()
+
+
+def test_source_root_child_destination_is_rejected_before_qualification(tmp_path, monkeypatch):
+    source = git_repo(tmp_path / "source")
+    source.chmod(0o700)
+    destination = private_dir(source / "receipts")
+    monkeypatch.setitem(
+        preflight["main"].__globals__,
+        "qualify",
+        lambda *_: pytest.fail("source bytes must not be processed"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "qualify_skillcorner_source.py",
+            "--source-root",
+            str(source),
+            "--restricted-output",
+            str(destination),
+        ],
+    )
+    with pytest.raises(SystemExit, match="restricted storage requirements") as error:
+        preflight["main"]()
+    assert str(source) not in str(error.value)
+    assert str(destination) not in str(error.value)
+    assert list(destination.iterdir()) == []
+
+
+def test_destination_inside_unrelated_git_worktree_is_rejected(tmp_path):
+    source = private_dir(tmp_path / "source")
+    repo = git_repo(tmp_path / "unrelated-repository")
+    destination = private_dir(repo / "receipts")
+    with pytest.raises(ValueError, match="outside every Git worktree"):
+        preflight["validate_storage_boundary"](source, destination)
+
+
+def test_destination_inside_nested_git_repository_is_rejected(tmp_path):
+    source = private_dir(tmp_path / "source")
+    outer = git_repo(tmp_path / "outer-repository")
+    nested = git_repo(outer / "nested")
+    destination = private_dir(nested / "receipts")
+    with pytest.raises(ValueError, match="outside every Git worktree"):
+        preflight["validate_storage_boundary"](source, destination)
+
+
+def test_destination_inside_linked_git_worktree_is_rejected(tmp_path):
+    source = private_dir(tmp_path / "source")
+    repo = git_repo(tmp_path / "repository")
+    linked = tmp_path / "linked-worktree"
+    subprocess.run(
+        ["git", "-C", str(repo), "worktree", "add", "--quiet", "--detach", str(linked), "HEAD"],
+        check=True,
+    )
+    destination = private_dir(linked / "receipts")
+    with pytest.raises(ValueError, match="outside every Git worktree"):
+        preflight["validate_storage_boundary"](source, destination)
+
+
+def test_destination_symlink_escape_is_rejected(tmp_path):
+    source = private_dir(tmp_path / "source")
+    escaped = private_dir(source / "receipts")
+    alias = tmp_path / "receipt-alias"
+    alias.symlink_to(escaped, target_is_directory=True)
+    with pytest.raises(ValueError, match="must not contain symlinks"):
+        preflight["private_directory"](alias)
+
+
+@pytest.mark.parametrize("nested", ["output-inside-source", "source-inside-output"])
+def test_overlapping_source_and_output_roots_are_rejected(tmp_path, nested):
+    if nested == "output-inside-source":
+        source = private_dir(tmp_path / "source")
+        destination = private_dir(source / "receipts")
+    else:
+        destination = private_dir(tmp_path / "receipts")
+        source = private_dir(destination / "source")
+    with pytest.raises(ValueError, match="must not overlap"):
+        preflight["validate_storage_boundary"](source, destination)
+
+
+def test_exclusive_receipt_creation_does_not_follow_file_symlinks(tmp_path):
+    target = tmp_path / "target.json"
+    target.write_text('{"status":"FAIL"}')
+    receipt = tmp_path / "receipt.json"
+    receipt.symlink_to(target)
+    with pytest.raises(FileExistsError):
+        preflight["write_private"](receipt, {"status": "PASS"})
+    assert target.read_text() == '{"status":"FAIL"}'
 
 
 def test_source_preflight_pinned_git_objects_and_actual_lfs_bytes(tmp_path, monkeypatch):

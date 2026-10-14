@@ -44,9 +44,11 @@ the existing pointer-or-payload acquisition check by requiring complete tracking
 payloads and the pinned checkout revision. It runs an independent raw-schema scan
 and the frozen canonicalizer separately for every selected match, rechecks source
 identities after processing, and writes receipts only to an empty, user-owned
-0700 directory outside this repository. Files are created with mode 0600 and never
-overwritten. CLI output contains only a safe status; detailed failures stay in
-restricted receipts.
+0700 directory outside the FPD repository, source checkout, and every Git worktree.
+The resolved source and receipt roots must not overlap, and receipt paths cannot
+contain symlinks or unprotected group/other-writable parents. Files are created
+with mode 0600 and never overwritten. CLI output contains only a safe status;
+detailed failures stay in restricted receipts.
 
 Run locally with an authorized source checkout and an empty restricted destination:
 
