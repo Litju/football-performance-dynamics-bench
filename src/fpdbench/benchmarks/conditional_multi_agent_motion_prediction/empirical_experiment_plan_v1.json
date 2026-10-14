@@ -1,9 +1,9 @@
 {
   "schema_id": "fpdbench.prospective-experiment-plan",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "plan_id": "skillcorner.prospective_conditional_motion.execution",
-  "plan_version": "1.0.0",
-  "plan_sha256": "f5bc1b9d6735436df520272f9c601f530b33bd1072f11e39d73e3e0e4274422a",
+  "plan_version": "1.1.0",
+  "plan_sha256": "0446649e1ad049880cf6f8a76b4f3e03421d8bd7a1f7a2c562b5770461527775",
   "protocol_id": "skillcorner.prospective_conditional_motion",
   "protocol_version": "1.1.0",
   "protocol_sha256": "865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c",
@@ -156,27 +156,57 @@
   },
   "population_authority": {
     "schema_id": "fpdbench.prospective-evaluation-population",
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "schema_file": "evaluation_population_authority_v1.schema.json",
-    "schema_sha256": "23ea2f1c9b8f053afd612ebf8a6e26e13b275398f84e4eca5d752ce6872d2213",
+    "schema_sha256": "13cc71c618972cd2614b29ed1028172866bd68de7bf1df61058523c1cc2b8cde",
     "artifact_storage": "restricted authorized runtime storage; never commit the artifact, row-level identities, truth hashes, or payload rows",
     "required_before_training_or_scoring": true,
     "match_roles": "all 20 matches and the exact protocol role assignment",
     "coverage": "all candidate origins enumerated in canonical sample order; retain every and only window accepted by the pinned eligibility policy",
     "score_gate": "exact ordered window, origin, home/away player IDs, target truth digest, target truth-mask digest, role, and population digest equality",
-    "missing_or_invalid_authority": "fail closed before training, validation selection, LOMO scoring, or evaluation scoring"
+    "missing_or_invalid_authority": "fail closed before training, validation selection, LOMO scoring, or evaluation scoring",
+    "truth_identity_contract": {
+      "absolute_xy_truth_sha256": "representation-tagged absolute physical XY metre panel",
+      "displacement_truth_sha256": "representation-tagged per-player origin-relative displacement metre panel",
+      "qualification": "The protected population qualification blocker must independently verify both sealed panels describe identical physical truth using observed nonzero per-player origin XY; masks and ordered membership must be identical",
+      "scorer_binding": "output target_representation must equal the exact frozen cell; validation uses all four validation matches, LOMO uses exactly the protocol fold held-out training match, evaluation uses all four evaluation matches"
+    }
   },
   "result_manifest_schema": {
     "schema_id": "fpdbench.prospective-experiment-result",
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "schema_file": "prospective_experiment_result_v1.schema.json",
-    "schema_sha256": "3bc52c6921aee98f1c0f29fd9c82da02fe43b9db64ff186e4748a022a72f5145",
+    "schema_sha256": "7c81ea13d5c8accdeb1e900217abbfd7c84409955fd49388dea0eaaac49ae527",
     "required_fields": [
-      "schema_id", "schema_version", "plan_id", "plan_version", "plan_sha256", "protocol_id", "protocol_version", "protocol_sha256",
-      "run_id", "cell_id", "model_class_id", "information_regime", "target_representation",
-      "fit_role", "lomo_fold_id", "held_out_match_id", "seed", "train_match_ids", "validation_match_ids",
-      "population_authority_sha256", "configuration_sha256", "environment_sha256", "checkpoint_sha256",
-      "selected_step", "stopping_reason", "status", "output_artifacts", "metrics", "manifest_sha256"
+      "schema_id",
+      "schema_version",
+      "plan_id",
+      "plan_version",
+      "plan_sha256",
+      "protocol_id",
+      "protocol_version",
+      "protocol_sha256",
+      "run_id",
+      "cell_id",
+      "model_class_id",
+      "information_regime",
+      "target_representation",
+      "fit_role",
+      "lomo_fold_id",
+      "held_out_match_id",
+      "seed",
+      "train_match_ids",
+      "validation_match_ids",
+      "population_authority_sha256",
+      "configuration_sha256",
+      "environment_sha256",
+      "checkpoint_sha256",
+      "selected_step",
+      "stopping_reason",
+      "status",
+      "output_artifacts",
+      "metrics",
+      "manifest_sha256"
     ],
     "run_id_format": "<cell_id>|<fit_role>|<fold_id-or-final>|<seed-or-deterministic>",
     "field_types": {
@@ -187,20 +217,68 @@
       "fit_role": "final_train | lomo | baseline",
       "lomo_fold_id_held_out_match_id": "protocol fold identity and held-out training match for lomo; null otherwise",
       "seed": "one frozen integer seed for learned fits; null for deterministic baselines",
-      "train_match_ids_validation_match_ids": "ordered arrays exactly matching the declared fit role and protocol validation role",
+      "train_match_ids_validation_match_ids": "ordered protocol training matches for final fits, all except held-out for LOMO, empty for baseline; validation always exact protocol validation matches",
       "population_authority_sha256_configuration_sha256_environment_sha256": "lowercase SHA-256 strings",
       "checkpoint_sha256": "lowercase SHA-256 for a learned checkpoint; null for a deterministic baseline or failed fit",
-      "selected_step": "integer from 1 through 5000 for learned fits; null for deterministic baselines",
+      "selected_step": "completed learned checkpoint: multiple of 100 from 100 through 5000; null for baseline or unsuccessful result",
       "stopping_reason": "nonempty fixed-rule reason",
       "status": "one value from status_values",
-      "output_artifacts": "array of artifact ID, SHA-256 and input/output/diagnostic relation records",
+      "output_artifacts": "unique artifact IDs, lowercase SHA-256, output or diagnostic relation",
       "metrics": "array of match-scoped ADE/FDE/XY-RMSE finite values with metres as unit",
       "manifest_sha256": "SHA-256 of canonical manifest fields excluding manifest_sha256"
     },
-    "status_values": ["completed", "failed_infrastructure", "failed_model", "failed_validation", "incomplete"],
-    "metric_ids": ["ade_m", "fde_m", "xy_rmse_m"],
+    "status_values": [
+      "completed",
+      "failed_infrastructure",
+      "failed_model",
+      "failed_validation",
+      "incomplete"
+    ],
+    "metric_ids": [
+      "ade_m",
+      "fde_m",
+      "xy_rmse_m"
+    ],
     "metric_unit": "metres",
-    "aggregate_identity_fields": ["population_authority_sha256", "plan_sha256", "protocol_sha256", "cell_id", "seed_ids", "match_ids"]
+    "aggregate_identity_fields": [
+      "population_authority_sha256",
+      "plan_sha256",
+      "protocol_sha256",
+      "cell_id",
+      "seed_ids",
+      "match_ids"
+    ],
+    "semantic_validator": "evaluation_population.validate_prospective_result_document; mandatory before consuming any result; JSON Schema alone is insufficient",
+    "completed_metric_scopes": {
+      "final_train": "all four validation and all four evaluation matches",
+      "lomo": "all four validation matches and exactly the fold held-out match",
+      "baseline": "all four validation, all four evaluation, and all twelve training matches as descriptive LOMO controls"
+    },
+    "unsuccessful_results": "no metrics, checkpoint or selected step; output/diagnostic artifacts may record failures",
+    "stopping_reasons_by_status": {
+      "completed": [
+        "baseline_complete",
+        "early_stopping",
+        "maximum_optimizer_steps",
+        "compute_ceiling"
+      ],
+      "failed_infrastructure": [
+        "external_worker_interruption"
+      ],
+      "failed_model": [
+        "nonfinite_model",
+        "out_of_memory",
+        "nondeterministic_runtime"
+      ],
+      "failed_validation": [
+        "invalid_population",
+        "missing_validation_score",
+        "evaluation_failure"
+      ],
+      "incomplete": [
+        "campaign_incomplete"
+      ]
+    }
   },
   "plan_constraints": {
     "no_training_or_empirical_runs_performed_by_freeze": true,

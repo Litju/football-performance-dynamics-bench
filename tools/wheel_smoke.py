@@ -54,6 +54,10 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_p
     PROTOCOL_SHA256,
     load_prospective_protocol,
 )
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    load_empirical_experiment_plan,
+    validate_empirical_experiment_plan_document,
+)
 from fpdbench.evaluation import (
     ABSOLUTE_POSITION_HISTORICAL_SCORER,
     RAW_DISPLACEMENT_EVALUATOR_CONFIGURATION,
@@ -78,6 +82,8 @@ assert PHYSICAL_TRAJECTORY_EVALUATOR.evaluator_id == "physical_trajectory.ade_fd
 assert load_manifest()["data_state_id"] == "skillcorner_5hz_v1"
 assert validate_manifest(load_manifest()) == ()
 assert load_prospective_protocol()["protocol_sha256"] == PROTOCOL_SHA256
+validate_empirical_experiment_plan_document(load_empirical_experiment_plan())
+assert load_empirical_experiment_plan()["plan_version"] == "1.1.0"
 croissant = json.loads(
     importlib.resources.files("fpdbench")
     .joinpath("data_sources/skillcorner_croissant_rai_draft.json")

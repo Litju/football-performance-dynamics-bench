@@ -12,9 +12,9 @@ from typing import cast
 from .prospective_protocol import PROTOCOL_SHA256, load_prospective_protocol
 
 PLAN_FILE = "empirical_experiment_plan_v1.json"
-PLAN_SHA256 = "f5bc1b9d6735436df520272f9c601f530b33bd1072f11e39d73e3e0e4274422a"
+PLAN_SHA256 = "0446649e1ad049880cf6f8a76b4f3e03421d8bd7a1f7a2c562b5770461527775"
 _PLAN_ID = "skillcorner.prospective_conditional_motion.execution"
-_PLAN_VERSION = "1.0.0"
+_PLAN_VERSION = "1.1.0"
 _REGIMES = ("history_only", "future_ball", "future_opponent_plus_ball")
 _TARGETS = ("absolute_xy", "origin_relative_displacement")
 _MODELS = (
@@ -104,7 +104,7 @@ def validate_empirical_experiment_plan_document(
     plan = _mapping(document, "experiment plan")
     if plan.get("schema_id") != "fpdbench.prospective-experiment-plan":
         raise ValueError("unexpected experiment-plan schema_id")
-    if plan.get("schema_version") != "1.0.0":
+    if plan.get("schema_version") != "1.1.0":
         raise ValueError("unsupported experiment-plan schema_version")
     if plan.get("plan_id") != _PLAN_ID or plan.get("plan_version") != _PLAN_VERSION:
         raise ValueError("unexpected experiment-plan identity")
@@ -208,7 +208,7 @@ def validate_empirical_experiment_plan_document(
     schema_file = population_authority.get("schema_file")
     if (
         population_authority.get("schema_id") != "fpdbench.prospective-evaluation-population"
-        or population_authority.get("schema_version") != "1.0.0"
+        or population_authority.get("schema_version") != "1.1.0"
         or schema_file != "evaluation_population_authority_v1.schema.json"
         or population_authority.get("required_before_training_or_scoring") is not True
         or population_authority.get("match_roles")
@@ -224,7 +224,7 @@ def validate_empirical_experiment_plan_document(
     result_schema = _mapping(plan.get("result_manifest_schema"), "result manifest schema")
     if (
         result_schema.get("schema_id") != "fpdbench.prospective-experiment-result"
-        or result_schema.get("schema_version") != "1.0.0"
+        or result_schema.get("schema_version") != "1.1.0"
         or result_schema.get("schema_file") != "prospective_experiment_result_v1.schema.json"
         or tuple(_list(result_schema.get("required_fields"), "result-manifest fields"))
         != _RESULT_MANIFEST_FIELDS
@@ -256,12 +256,12 @@ def validate_empirical_experiment_plan_document(
     cell_ids = tuple(_mapping(item, "result cell").get("cell_id") for item in cells)
     if (
         result_document.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
-        or result_document.get("$id") != "fpdbench.prospective-experiment-result/1.0.0"
+        or result_document.get("$id") != "fpdbench.prospective-experiment-result/1.1.0"
         or result_document.get("additionalProperties") is not False
         or tuple(_list(result_document.get("required"), "result-manifest schema required"))
         != _RESULT_MANIFEST_FIELDS
         or result_properties.get("schema_id") != {"const": "fpdbench.prospective-experiment-result"}
-        or result_properties.get("schema_version") != {"const": "1.0.0"}
+        or result_properties.get("schema_version") != {"const": "1.1.0"}
         or cell_schema.get("enum") != list(cell_ids)
         or status_schema.get("enum") != result_schema.get("status_values")
         or _mapping(result_metric_properties.get("metric_id"), "result metric ID schema").get(
@@ -327,6 +327,32 @@ def validate_empirical_experiment_plan(root: Path) -> tuple[str, ...]:
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         return (f"prospective experiment plan: {exc}",)
     return ()
+
+
+def experiment_cell(cell_id: str) -> Mapping[str, object]:
+    """Resolve only an exact frozen factorial row."""
+    plan = load_empirical_experiment_plan()
+    validate_empirical_experiment_plan_document(plan)
+    cells = _list(_mapping(plan["factorial"], "factorial")["cells"], "cells")
+    for item in cells:
+        cell = _mapping(item, "cell")
+        if cell["cell_id"] == cell_id:
+            return cell
+    raise ValueError("unknown frozen experiment cell")
+
+
+def protocol_split() -> Mapping[str, object]:
+    state = _mapping(load_prospective_protocol()["scientific_state"], "scientific state")
+    return _mapping(state["split"], "split")
+
+
+def lomo_held_out_match(fold_id: str) -> str:
+    folds = _list(_mapping(protocol_split()["lomo"], "LOMO")["folds"], "folds")
+    for item in folds:
+        fold = _mapping(item, "fold")
+        if fold["fold_id"] == fold_id:
+            return cast(str, fold["held_out_match"])
+    raise ValueError("unknown frozen LOMO fold")
 
 
 __all__ = [

@@ -85,13 +85,19 @@ def _score_scene(
 def evaluate_prospective_trajectories(
     output: EvaluationPopulationOutput,
     population: EvaluationPopulationAuthority,
+    *,
+    cell_id: str,
+    role: str = "evaluation",
+    lomo_fold_id: str | None = None,
 ) -> ProspectiveEvaluationScore:
     """Validate exact population identity, then score every scene, window, and match."""
     if tuple(population.match_ids("evaluation")) != EVALUATION_MATCH_IDS:
         raise ValueError("population authority does not bind the four evaluation matches")
-    validate_population_bound_evaluation(population, output)
+    validate_population_bound_evaluation(
+        population, output, cell_id=cell_id, role=role, lomo_fold_id=lomo_fold_id
+    )
     match_scores: list[MatchScore] = []
-    for match_id in EVALUATION_MATCH_IDS:
+    for match_id in output.matches:
         predicted_match = output.matches[match_id]
         window_scores: list[PhysicalWindowScore] = []
         for predicted_window in predicted_match:

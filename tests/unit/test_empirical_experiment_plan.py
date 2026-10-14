@@ -44,7 +44,7 @@ def test_result_manifest_schema_is_pinned_to_the_plan() -> None:
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
-    assert schema["$id"] == "fpdbench.prospective-experiment-result/1.0.0"
+    assert schema["$id"] == "fpdbench.prospective-experiment-result/1.1.0"
     assert hashlib.sha256(schema_path.read_bytes()).hexdigest() == schema_reference["schema_sha256"]
     assert schema["required"] == schema_reference["required_fields"]
     assert len(schema["properties"]["cell_id"]["enum"]) == 18

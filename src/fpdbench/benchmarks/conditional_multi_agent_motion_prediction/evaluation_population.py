@@ -13,7 +13,12 @@ from typing import cast
 
 from fpdbench.data_sources.skillcorner import canonical_bytes
 
-from .empirical_experiment_plan import load_empirical_experiment_plan
+from .empirical_experiment_plan import (
+    experiment_cell,
+    load_empirical_experiment_plan,
+    lomo_held_out_match,
+    protocol_split,
+)
 from .prospective_protocol import (
     EXPECTED_ELIGIBILITY_POLICY_HASH,
     EXPECTED_MEASUREMENT_STATE_HASH,
@@ -27,7 +32,7 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _ORIGIN_ID = re.compile(r"period_([1-5])/sample_(0|[1-9][0-9]*)\Z")
 _PLAYER_ID = re.compile(r"[1-9][0-9]*\Z")
 _SCHEMA_ID = "fpdbench.prospective-evaluation-population"
-_SCHEMA_VERSION = "1.0.0"
+_SCHEMA_VERSION = "1.1.0"
 POPULATION_SCHEMA_FILE = "evaluation_population_authority_v1.schema.json"
 _POPULATION_ID = "skillcorner.prospective.conditional_motion.population"
 
@@ -96,7 +101,8 @@ def prospective_window_id(match_id: str, origin_sample_id: str) -> str:
 class SceneMembership:
     scene_id: str
     player_ids: tuple[str, ...]
-    truth_sha256: str
+    absolute_xy_truth_sha256: str
+    displacement_truth_sha256: str
     truth_mask_sha256: str
 
 
@@ -150,6 +156,7 @@ class PopulationBoundWindow:
 class EvaluationPopulationOutput:
     population_authority_sha256: str
     matches: Mapping[str, Sequence[PopulationBoundWindow]]
+    target_representation: str
 
 
 def _protocol_roles() -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -277,7 +284,13 @@ def validate_evaluation_population_authority_document(
                 scene = _mapping(raw_scene, "directed scene membership")
                 _keys(
                     scene,
-                    {"scene_id", "player_ids", "truth_sha256", "truth_mask_sha256"},
+                    {
+                        "scene_id",
+                        "player_ids",
+                        "absolute_xy_truth_sha256",
+                        "displacement_truth_sha256",
+                        "truth_mask_sha256",
+                    },
                     "directed scene membership",
                 )
                 if scene.get("scene_id") != expected_scene_id:
@@ -299,7 +312,10 @@ def validate_evaluation_population_authority_document(
                     SceneMembership(
                         expected_scene_id,
                         player_ids,
-                        _sha256(scene.get("truth_sha256"), "target truth digest"),
+                        _sha256(scene.get("absolute_xy_truth_sha256"), "absolute truth digest"),
+                        _sha256(
+                            scene.get("displacement_truth_sha256"), "displacement truth digest"
+                        ),
                         _sha256(scene.get("truth_mask_sha256"), "target truth-mask digest"),
                     )
                 )
@@ -402,12 +418,15 @@ def validate_evaluation_population_schema(root: Path) -> tuple[str, ...]:
     return ()
 
 
-def truth_sha256(truth: SceneTruth) -> str:
-    """Hash an ordered physical truth panel without serializing it into the manifest."""
+def truth_sha256(truth: SceneTruth, *, target_representation: str) -> str:
+    """Seal an ordered truth panel in its explicit metre-valued target frame."""
+    if target_representation not in {"absolute_xy", "origin_relative_displacement"}:
+        raise ValueError("unknown target representation")
     return _digest(
         {
             "schema_id": "fpdbench.prospective-truth-panel",
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
+            "target_representation": target_representation,
             "samples": _truth_rows(truth),
         }
     )
@@ -493,14 +512,34 @@ def _validate_predictions(prediction: ScenePrediction, target_count: int) -> Non
 
 
 def validate_population_bound_evaluation(
-    authority: EvaluationPopulationAuthority, output: EvaluationPopulationOutput
+    authority: EvaluationPopulationAuthority,
+    output: EvaluationPopulationOutput,
+    *,
+    cell_id: str,
+    role: str = "evaluation",
+    lomo_fold_id: str | None = None,
 ) -> None:
     """Reject population drift, masking, identity changes, or reordered scorer inputs."""
     if output.population_authority_sha256 != authority.manifest_sha256:
         raise ValueError("evaluation output uses a different population authority")
-    expected_matches = authority.matches_for_role("evaluation")
+    cell = experiment_cell(cell_id)
+    if output.target_representation != cell["target_representation"]:
+        raise ValueError("output target representation differs from frozen cell")
+    if role == "lomo" and lomo_fold_id is not None:
+        held_out = lomo_held_out_match(lomo_fold_id)
+        expected_matches = tuple(
+            match for match in authority.matches_for_role("training") if match.match_id == held_out
+        )
+    elif role in {"validation", "evaluation"} and lomo_fold_id is None:
+        expected_matches = authority.matches_for_role(role)
+    else:
+        raise ValueError("scoring role and LOMO fold are incompatible")
+    if not expected_matches:
+        raise ValueError("population authority lacks the scoring role")
     if tuple(output.matches) != tuple(match.match_id for match in expected_matches):
-        raise ValueError("evaluation output must contain all four matches in protocol order")
+        raise ValueError(
+            "evaluation output must contain all scoring-role matches in protocol order"
+        )
     for match, match_id in zip(expected_matches, output.matches, strict=True):
         actual_windows = output.matches[match_id]
         if len(actual_windows) != len(match.windows):
@@ -524,15 +563,182 @@ def validate_population_bound_evaluation(
                     raise ValueError("evaluation target player IDs or order differ from authority")
                 if len(actual_scene.player_ids) != len(set(actual_scene.player_ids)):
                     raise ValueError("evaluation target player IDs must be unique")
-                truth_digest = truth_sha256(actual_scene.truth)
+                truth_digest = truth_sha256(
+                    actual_scene.truth, target_representation=output.target_representation
+                )
                 mask_digest = truth_mask_sha256(actual_scene.truth)
-                if truth_digest != expected_scene.truth_sha256:
+                expected_digest = (
+                    expected_scene.absolute_xy_truth_sha256
+                    if output.target_representation == "absolute_xy"
+                    else expected_scene.displacement_truth_sha256
+                )
+                if truth_digest != expected_digest:
                     raise ValueError(
                         "evaluation target truth differs from the population authority"
                     )
                 if mask_digest != expected_scene.truth_mask_sha256:
                     raise ValueError("model-dependent target masking is not allowed")
+                if any(len(row) != len(expected_scene.player_ids) for row in actual_scene.truth):
+                    raise ValueError("truth must contain every origin target")
                 _validate_predictions(actual_scene.prediction, len(expected_scene.player_ids))
+
+
+def validate_prospective_result_document(
+    document: Mapping[str, object], population: EvaluationPopulationAuthority
+) -> None:
+    """Require exact run membership and complete match metrics, never partial success."""
+    value = _mapping(document, "result manifest")
+    plan = load_empirical_experiment_plan()
+    contract = _mapping(plan["result_manifest_schema"], "result contract")
+    required = _list(contract["required_fields"], "result fields")
+    _keys(value, set(cast(list[str], required)), "result manifest")
+    for field in (
+        "plan_id",
+        "plan_version",
+        "plan_sha256",
+        "protocol_id",
+        "protocol_version",
+        "protocol_sha256",
+    ):
+        if value[field] != plan[field]:
+            raise ValueError(f"result {field} differs from frozen authority")
+    if (
+        value["schema_id"] != "fpdbench.prospective-experiment-result"
+        or value["schema_version"] != "1.1.0"
+    ):
+        raise ValueError("unsupported result schema identity")
+    if not isinstance(value["cell_id"], str):
+        raise ValueError("result cell_id must be a string")
+    cell = experiment_cell(value["cell_id"])
+    if any(value[field] != cell[field] for field in cell):
+        raise ValueError("result cell/model/regime/target contradiction")
+    roles = _mapping(protocol_split()["roles"], "match roles")
+    training = _list(roles["training"], "training matches")
+    validation = _list(roles["validation"], "validation matches")
+    evaluation = _list(roles["evaluation"], "evaluation matches")
+    learned = value["model_class_id"] == "per_target_context_deepsets_mlp_v1"
+    role = value["fit_role"]
+    held_out: str | None = None
+    if learned and role == "lomo" and isinstance(value["lomo_fold_id"], str):
+        held_out = lomo_held_out_match(value["lomo_fold_id"])
+        train = [match for match in training if match != held_out]
+    elif (learned and role == "final_train") or (not learned and role == "baseline"):
+        if value["lomo_fold_id"] is not None:
+            raise ValueError("non-LOMO result cannot name a fold")
+        train = training if learned else []
+    else:
+        raise ValueError("result model and fit role are incompatible")
+    if value["held_out_match_id"] != held_out:
+        raise ValueError("result held-out identity differs from frozen fold")
+    if value["train_match_ids"] != train or value["validation_match_ids"] != validation:
+        raise ValueError("result train/validation membership differs from protocol")
+    seed = value["seed"]
+    if learned:
+        if type(seed) is not int or seed not in [1729, 2718, 31415]:
+            raise ValueError("result seed differs from frozen schedule")
+    elif seed is not None:
+        raise ValueError("deterministic baseline cannot name a seed")
+    fold_part = value["lomo_fold_id"] if held_out is not None else "final"
+    seed_part = seed if learned else "deterministic"
+    if value["run_id"] != f"{value['cell_id']}|{role}|{fold_part}|{seed_part}":
+        raise ValueError("result run ID differs from canonical run identity")
+    for field in (
+        "population_authority_sha256",
+        "configuration_sha256",
+        "environment_sha256",
+        "manifest_sha256",
+    ):
+        _sha256(value[field], field)
+    if value["population_authority_sha256"] != population.manifest_sha256:
+        raise ValueError("result uses a different population authority")
+    # Also reject a caller-constructed authority with the wrong role membership.
+    for population_role in ("training", "validation", "evaluation"):
+        if list(population.match_ids(population_role)) != roles[population_role]:
+            raise ValueError("result population roles differ from protocol")
+    status = value["status"]
+    contract = _mapping(plan["result_manifest_schema"], "result contract")
+    if status not in _list(contract["status_values"], "statuses"):
+        raise ValueError("unsupported result status")
+    reasons = _mapping(contract["stopping_reasons_by_status"], "stopping reasons")
+    if value["stopping_reason"] not in _list(reasons[cast(str, status)], "status reasons"):
+        raise ValueError("result stopping reason contradicts status")
+    completed = status == "completed"
+    if completed and learned:
+        _sha256(value["checkpoint_sha256"], "completed learned checkpoint")
+        step = value["selected_step"]
+        if type(step) is not int or not 100 <= step <= 5000 or step % 100:
+            raise ValueError("selected checkpoint step differs from validation cadence")
+        if value["stopping_reason"] == "baseline_complete":
+            raise ValueError("learned result cannot use baseline stopping reason")
+    else:
+        if value["checkpoint_sha256"] is not None or value["selected_step"] is not None:
+            raise ValueError("baseline or unsuccessful result cannot publish a checkpoint")
+        if completed and value["stopping_reason"] != "baseline_complete":
+            raise ValueError("baseline completion requires baseline stopping reason")
+    artifacts = _list(value["output_artifacts"], "output artifacts")
+    artifact_ids: set[str] = set()
+    for item in artifacts:
+        artifact = _mapping(item, "artifact")
+        _keys(artifact, {"artifact_id", "sha256", "relation"}, "artifact")
+        identity = artifact["artifact_id"]
+        if not isinstance(identity, str) or not identity or identity in artifact_ids:
+            raise ValueError("artifact IDs must be nonempty and unique")
+        artifact_ids.add(identity)
+        _sha256(artifact["sha256"], "artifact digest")
+        if artifact["relation"] not in {"output", "diagnostic"}:
+            raise ValueError("unsupported result artifact relation")
+    metrics = _list(value["metrics"], "metrics")
+    expected = {
+        (scope, match, metric)
+        for scope, matches in (
+            ("validation_match", validation),
+            ("evaluation_match", evaluation if role != "lomo" else []),
+            (
+                "lomo_held_out_match",
+                [held_out] if role == "lomo" else training if role == "baseline" else [],
+            ),
+        )
+        for match in matches
+        for metric in ("ade_m", "fde_m", "xy_rmse_m")
+    }
+    actual: set[tuple[str, str, str]] = set()
+    for item in metrics:
+        metric = _mapping(item, "metric")
+        _keys(metric, {"scope", "match_id", "metric_id", "value", "unit"}, "metric")
+        identity_fields = (metric["scope"], metric["match_id"], metric["metric_id"])
+        if not all(isinstance(part, str) for part in identity_fields):
+            raise ValueError("metric identity fields must be strings")
+        identity = cast(tuple[str, str, str], identity_fields)
+        number = metric["value"]
+        if (
+            identity in actual
+            or identity not in expected
+            or metric["unit"] != "metres"
+            or isinstance(number, bool)
+            or not isinstance(number, int | float)
+            or not math.isfinite(number)
+            or number < 0
+        ):
+            raise ValueError("invalid, duplicate, or out-of-scope result metric")
+        actual.add(identity)
+    if (completed and actual != expected) or (not completed and metrics):
+        raise ValueError("result status requires complete metrics or no metrics on failure")
+    if value["manifest_sha256"] != _digest(
+        {key: item for key, item in value.items() if key != "manifest_sha256"}
+    ):
+        raise ValueError("result canonical manifest SHA-256 mismatch")
+
+
+def load_prospective_result(
+    path: Path, population: EvaluationPopulationAuthority
+) -> dict[str, object]:
+    """Read duplicate-key-safe restricted result JSON and validate it before use."""
+    value = _mapping(
+        json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object),
+        "result manifest",
+    )
+    validate_prospective_result_document(value, population)
+    return dict(value)
 
 
 __all__ = [
@@ -544,6 +750,8 @@ __all__ = [
     "PopulationBoundWindow",
     "SceneMembership",
     "WindowMembership",
+    "load_prospective_result",
+    "validate_prospective_result_document",
     "load_evaluation_population_authority",
     "prospective_window_id",
     "truth_mask_sha256",

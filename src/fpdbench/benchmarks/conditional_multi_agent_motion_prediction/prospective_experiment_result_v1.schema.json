@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "fpdbench.prospective-experiment-result/1.0.0",
+  "$id": "fpdbench.prospective-experiment-result/1.1.0",
   "title": "Prospective experiment run result manifest",
   "type": "object",
   "additionalProperties": false,
@@ -15,9 +15,9 @@
   ],
   "properties": {
     "schema_id": {"const": "fpdbench.prospective-experiment-result"},
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"const": "1.1.0"},
     "plan_id": {"const": "skillcorner.prospective_conditional_motion.execution"},
-    "plan_version": {"const": "1.0.0"},
+    "plan_version": {"const": "1.1.0"},
     "plan_sha256": {"$ref": "#/$defs/sha256"},
     "protocol_id": {"const": "skillcorner.prospective_conditional_motion"},
     "protocol_version": {"const": "1.1.0"},
@@ -119,6 +119,166 @@
     {
       "if": {"properties": {"fit_role": {"const": "lomo"}}},
       "then": {"properties": {"lomo_fold_id": {"type": "string"}, "held_out_match_id": {"type": "string"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|history_only|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|history_only|absolute_xy"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_ball|absolute_xy"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|history_only|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|history_only|origin_relative_displacement"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_ball|origin_relative_displacement"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement"}, "model_class_id": {"const": "origin_persistence_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|history_only|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|history_only|absolute_xy"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_ball|absolute_xy"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|history_only|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|history_only|origin_relative_displacement"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_ball|origin_relative_displacement"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement"}, "model_class_id": {"const": "constant_velocity_1s_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "absolute_xy"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "history_only"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "future_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"}}},
+      "then": {"properties": {"cell_id": {"const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"}, "model_class_id": {"const": "per_target_context_deepsets_mlp_v1"}, "information_regime": {"const": "future_opponent_plus_ball"}, "target_representation": {"const": "origin_relative_displacement"}}}
+    },
+    {
+      "if": {"properties": {"fit_role": {"const": "baseline"}}},
+      "then": {"properties": {"train_match_ids": {"const": []}}}
+    },
+    {
+      "if": {"properties": {"fit_role": {"const": "final_train"}}},
+      "then": {"properties": {"train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-01"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1886347"}, "train_match_ids": {"const": ["1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-02"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1899585"}, "train_match_ids": {"const": ["1886347", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-03"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1927964"}, "train_match_ids": {"const": ["1886347", "1899585", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-04"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1959846"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-05"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1986691"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-06"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "1996436"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "2006363", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-07"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2006363"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2007448", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-08"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2007448"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007721", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-09"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2007721"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2011166", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-10"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2011166"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2013725", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-11"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2013725"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2016236"]}}}
+    },
+    {
+      "if": {"properties": {"lomo_fold_id": {"const": "fold-12"}}},
+      "then": {"properties": {"fit_role": {"const": "lomo"}, "held_out_match_id": {"const": "2016236"}, "train_match_ids": {"const": ["1886347", "1899585", "1927964", "1959846", "1986691", "1996436", "2006363", "2007448", "2007721", "2011166", "2013725"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "completed"}, "fit_role": {"enum": ["final_train", "lomo"]}}},
+      "then": {"properties": {"checkpoint_sha256": {"$ref": "#/$defs/sha256"}, "selected_step": {"type": "integer", "minimum": 100, "maximum": 5000, "multipleOf": 100}, "stopping_reason": {"enum": ["early_stopping", "maximum_optimizer_steps", "compute_ceiling"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"enum": ["failed_infrastructure", "failed_model", "failed_validation", "incomplete"]}}},
+      "then": {"properties": {"checkpoint_sha256": {"const": null}, "selected_step": {"const": null}, "metrics": {"const": []}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "completed"}}},
+      "then": {"properties": {"stopping_reason": {"enum": ["baseline_complete", "early_stopping", "maximum_optimizer_steps", "compute_ceiling"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failed_infrastructure"}}},
+      "then": {"properties": {"stopping_reason": {"enum": ["external_worker_interruption"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failed_model"}}},
+      "then": {"properties": {"stopping_reason": {"enum": ["nonfinite_model", "out_of_memory", "nondeterministic_runtime"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failed_validation"}}},
+      "then": {"properties": {"stopping_reason": {"enum": ["invalid_population", "missing_validation_score", "evaluation_failure"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "incomplete"}}},
+      "then": {"properties": {"stopping_reason": {"enum": ["campaign_incomplete"]}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "completed"}, "fit_role": {"const": "baseline"}}},
+      "then": {"properties": {"stopping_reason": {"const": "baseline_complete"}}}
     }
   ],
   "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}

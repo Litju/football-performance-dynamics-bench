@@ -71,12 +71,14 @@ from .evaluation_population import (
     SceneMembership,
     WindowMembership,
     load_evaluation_population_authority,
+    load_prospective_result,
     prospective_window_id,
     truth_mask_sha256,
     truth_sha256,
     validate_evaluation_population_authority_document,
     validate_evaluation_population_schema,
     validate_population_bound_evaluation,
+    validate_prospective_result_document,
 )
 from .forecast_origin import (
     ForecastOrigin,
@@ -198,6 +200,8 @@ __all__ = [
     "invert_origin_relative_displacement",
     "make_absolute_position_target",
     "make_origin_relative_displacement_target",
+    "load_prospective_result",
+    "validate_prospective_result_document",
     "load_empirical_experiment_plan",
     "load_evaluation_population_authority",
     "normalized_displacement_to_physical",
