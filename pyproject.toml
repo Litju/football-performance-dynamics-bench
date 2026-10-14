@@ -29,6 +29,9 @@ packages = ["src/fpdbench"]
 "src/fpdbench/data_states/skillcorner_5hz_v1.json" = "fpdbench/data_states/skillcorner_5hz_v1.json"
 "src/fpdbench/eligibility/skillcorner_window_v1.json" = "fpdbench/eligibility/skillcorner_window_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v1.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v1.schema.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v1.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v1.schema.json"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

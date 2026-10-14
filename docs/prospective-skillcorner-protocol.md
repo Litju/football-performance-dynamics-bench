@@ -6,6 +6,8 @@
 
 **Machine authority:** [`prospective_skillcorner_protocol_v1.json`](../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json)
 
+Execution details delegated by this protocol are frozen in the [prospective experiment plan](prospective-experiment-plan.md), whose separate plan hash leaves this scientific protocol hash unchanged.
+
 This is the hard pre-training lock for the prospective 20-match SkillCorner study. It creates new prospective identities for absolute pitch XY and origin-relative displacement. It does not version or repair the historical reconstructed benchmarks. Historical J03 match roles, fixtures, private qualification truth, results, and scientific locks remain separate; `J03WMX` is not prospective evaluation data.
 
 The lock binds the pinned source population hash `e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4`, source release hash `e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07`, measurement state hash `4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3`, and eligibility policy hash `f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b`. Validation compares these values with the checked-in authorities and verifies that the split covers exactly their 20 match IDs. No row-level payload or derived observation is included.
@@ -66,7 +68,7 @@ Robustness results use only the eight composable strata defined in Linear issue 
 
 ## Preregistered descriptive directional ADE contrasts
 
-All four contrasts use ADE and preregister the expected direction of lower error with added realized context. They apply to the single primary model class that Linear issue 339 must designate before training:
+All four contrasts use ADE and preregister the expected direction of lower error with added realized context. They apply to the single primary model class designated before training in the [prospective experiment plan](prospective-experiment-plan.md):
 
 1. Future ball versus history only for absolute XY.
 2. Future ball versus history only for origin-relative displacement.
@@ -77,10 +79,10 @@ FDE and XY-RMSE contrasts, all other model-class comparisons, interactions, hori
 
 ## Selection and pre-training gate
 
-Final fits use training matches only. Validation matches may select checkpoints and control early stopping using the equal mean of the four validation-match ADE values; minimize it and break checkpoint ties by choosing the earliest step. Any other validation-tuned parameter must be explicitly declared by Linear issue 339. Evaluation matches cannot be used for tuning, early stopping, retries, or threshold changes.
+Final fits use training matches only. Validation matches may select checkpoints and control early stopping using the equal mean of the four validation-match ADE values; minimize it and break checkpoint ties by choosing the earliest step. The plan declares no other validation-tuned parameter. Evaluation matches cannot be used for tuning, early stopping, retries, or threshold changes.
 
-Stochastic cells use at least three distinct seeds, shared across comparable cells; exact seed IDs/count and seed-dependent run cells are owned by Linear issue 339. Report seed sensitivity separately, not as match uncertainty. Linear issue 339 must also freeze the exact experiment matrix, primary model class, compute ceilings, early-stopping patience/maximum steps, retry count, run order, and result manifest before training. No extra cells, seeds, compute, or retries may be added in response to outcomes.
+Stochastic cells use at least three distinct seeds, shared across comparable cells; the plan freezes the exact seed IDs/count and run cells. Report seed sensitivity separately, not as match uncertainty. The plan also freezes the exact experiment matrix, primary model class, compute ceilings, early-stopping patience/maximum steps, retry count, run order, and result manifest before training. No extra cells, seeds, compute, or retries may be added in response to outcomes.
 
-**Training remains blocked** until Linear issue 336 receives independent scientific review and is complete, and Linear issue 339 freezes every delegated execution decision. This protocol alone does not authorize training. No learned-model training, empirical campaign, private truth inspection, or model-result-driven protocol change was performed to create this lock.
+**Training and empirical scoring remain blocked** until the restricted eligible-window population authority is materialized and independently verified under its separate linked blocker. The scorer fails closed without that artifact. This protocol and execution plan do not authorize training by themselves. No learned-model training, empirical campaign, private truth inspection, or model-result-driven protocol change was performed to create these authorities.
 
 The machine authority is validated by `fpdbench validate` and its canonical digest covers the complete result-bearing scientific state. Changes before training require an explicit versioned amendment and new review; changes after observing a model outcome are forbidden.

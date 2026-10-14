@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
 from fpdbench.evaluation.metrics import MaskedTrajectoryMetrics, TrajectoryMetrics
 from fpdbench.evaluation.metrics.trajectory import masked_physical_trajectory_metrics
 
-from .prospective_protocol import load_prospective_protocol
-
-type DirectedScenePrediction = Sequence[Sequence[Sequence[float]]]
-type DirectedSceneTruth = Sequence[Sequence[Sequence[float] | None]]
-type MatchPrediction = Sequence[Sequence[DirectedScenePrediction]]
-type MatchTruth = Sequence[Sequence[DirectedSceneTruth]]
-type EvaluationPrediction = Mapping[str, MatchPrediction]
-type EvaluationTruth = Mapping[str, MatchTruth]
+from .evaluation_population import (
+    EvaluationPopulationAuthority,
+    EvaluationPopulationOutput,
+    validate_population_bound_evaluation,
+)
+from .prospective_protocol import PROTOCOL_SHA256, load_prospective_protocol
 
 _PROTOCOL_STATE = cast(dict[str, object], load_prospective_protocol()["scientific_state"])
 _PROTOCOL_SPLIT = cast(dict[str, object], _PROTOCOL_STATE["split"])
@@ -50,6 +48,7 @@ class MatchScore:
 class ProspectiveEvaluationScore:
     matches: tuple[MatchScore, ...]
     metrics: TrajectoryMetrics | None
+    population_authority_sha256: str
 
 
 def _mean_metrics(
@@ -66,8 +65,8 @@ def _mean_metrics(
 
 
 def _score_scene(
-    prediction: DirectedScenePrediction,
-    truth: DirectedSceneTruth,
+    prediction: Sequence[Sequence[Sequence[float]]],
+    truth: Sequence[Sequence[Sequence[float] | None]],
 ) -> DirectedSceneScore:
     if len(prediction) != FORECAST_SAMPLE_COUNT or len(truth) != FORECAST_SAMPLE_COUNT:
         raise ValueError("each directed scene must contain exactly 15 future samples")
@@ -84,34 +83,26 @@ def _score_scene(
 
 
 def evaluate_prospective_trajectories(
-    prediction: EvaluationPrediction,
-    truth: EvaluationTruth,
+    output: EvaluationPopulationOutput,
+    population: EvaluationPopulationAuthority,
+    *,
+    cell_id: str,
+    role: str = "evaluation",
+    lomo_fold_id: str | None = None,
 ) -> ProspectiveEvaluationScore:
-    """Score every scene, window, and match using the locked equal-weight order.
-
-    The mapping must contain the four fixed evaluation match IDs. Each match
-    contains eligible windows, each with its home and away directed scenes.
-    """
-    if set(prediction) != set(EVALUATION_MATCH_IDS) or set(truth) != set(EVALUATION_MATCH_IDS):
-        raise ValueError("prediction and truth must contain all four evaluation matches")
+    """Validate exact population identity, then score every scene, window, and match."""
+    if tuple(population.match_ids("evaluation")) != EVALUATION_MATCH_IDS:
+        raise ValueError("population authority does not bind the four evaluation matches")
+    validate_population_bound_evaluation(
+        population, output, cell_id=cell_id, role=role, lomo_fold_id=lomo_fold_id
+    )
     match_scores: list[MatchScore] = []
-    for match_id in EVALUATION_MATCH_IDS:
-        predicted_match = prediction[match_id]
-        actual_match = truth[match_id]
-        if len(predicted_match) != len(actual_match):
-            raise ValueError("prediction and truth must contain the same windows per match")
+    for match_id in output.matches:
+        predicted_match = output.matches[match_id]
         window_scores: list[PhysicalWindowScore] = []
-        for predicted_window, actual_window in zip(predicted_match, actual_match, strict=True):
-            if (
-                len(predicted_window) != DIRECTED_SCENES_PER_WINDOW
-                or len(actual_window) != DIRECTED_SCENES_PER_WINDOW
-            ):
-                raise ValueError("each physical window must contain home and away directed scenes")
+        for predicted_window in predicted_match:
             scene_scores = tuple(
-                _score_scene(predicted_scene, actual_scene)
-                for predicted_scene, actual_scene in zip(
-                    predicted_window, actual_window, strict=True
-                )
+                _score_scene(scene.prediction, scene.truth) for scene in predicted_window.scenes
             )
             scoreable_scenes = tuple(
                 score.metrics for score in scene_scores if score.metrics is not None
@@ -130,13 +121,16 @@ def evaluate_prospective_trajectories(
         if all(metrics is not None for metrics in match_metrics)
         else None
     )
-    return ProspectiveEvaluationScore(tuple(match_scores), population_metrics)
+    return ProspectiveEvaluationScore(
+        tuple(match_scores), population_metrics, population.manifest_sha256
+    )
 
 
 __all__ = [
     "DIRECTED_SCENES_PER_WINDOW",
     "EVALUATION_MATCH_IDS",
     "FORECAST_SAMPLE_COUNT",
+    "PROTOCOL_SHA256",
     "DirectedSceneScore",
     "MatchScore",
     "PhysicalWindowScore",
