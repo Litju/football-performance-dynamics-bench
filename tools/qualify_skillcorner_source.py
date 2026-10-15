@@ -281,7 +281,11 @@ def main():
         try:
             write_private(
                 destination / "failure.json",
-                {"status": "FAIL", "stage": "source_preflight", "diagnostic": traceback.format_exc()},
+                {
+                    "status": "FAIL",
+                    "stage": "source_preflight",
+                    "diagnostic": traceback.format_exc(),
+                },
             )
         except Exception:
             raise SystemExit("FAIL: source preflight; restricted diagnostics unavailable") from None
