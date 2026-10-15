@@ -278,10 +278,13 @@ def main():
     try:
         passed = qualify(root, destination)
     except Exception:
-        write_private(
-            destination / "failure.json",
-            {"status": "FAIL", "stage": "source_preflight", "diagnostic": traceback.format_exc()},
-        )
+        try:
+            write_private(
+                destination / "failure.json",
+                {"status": "FAIL", "stage": "source_preflight", "diagnostic": traceback.format_exc()},
+            )
+        except Exception:
+            raise SystemExit("FAIL: source preflight; restricted diagnostics unavailable") from None
         raise SystemExit("FAIL: source preflight; diagnostics remain restricted") from None
     if not passed:
         raise SystemExit(

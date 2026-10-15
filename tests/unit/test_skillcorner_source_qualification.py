@@ -323,3 +323,55 @@ def test_source_preflight_pinned_git_objects_and_actual_lfs_bytes(tmp_path, monk
     tracking.unlink()
     with pytest.raises(ValueError, match="inventory"):
         preflight["source_preflight"](root)
+
+
+@pytest.mark.parametrize("receipt_write_fails", [False, True])
+def test_emergency_receipt_write_failure_cannot_leak_restricted_paths(
+    tmp_path, monkeypatch, capsys, receipt_write_fails
+):
+    source = private_dir(tmp_path / "restricted-source")
+    destination = private_dir(tmp_path / "restricted-receipts")
+    secret_source = f"PRIVATE_SOURCE_MARKER:{source}"
+    secret_writer = f"PRIVATE_WRITER_MARKER:{destination}"
+
+    def fail_qualification(*_args):
+        raise RuntimeError(secret_source)
+
+    def fail_receipt_write(*_args):
+        raise OSError(secret_writer)
+
+    namespace = preflight["main"].__globals__
+    monkeypatch.setitem(namespace, "qualify", fail_qualification)
+    if receipt_write_fails:
+        monkeypatch.setitem(namespace, "write_private", fail_receipt_write)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "qualify_skillcorner_source.py",
+            "--source-root",
+            str(source),
+            "--restricted-output",
+            str(destination),
+        ],
+    )
+    with pytest.raises(SystemExit) as exc:
+        preflight["main"]()
+    expected = (
+        "FAIL: source preflight; restricted diagnostics unavailable"
+        if receipt_write_fails
+        else "FAIL: source preflight; diagnostics remain restricted"
+    )
+    assert str(exc.value) == expected
+    output = capsys.readouterr()
+    for private_value in (secret_source, secret_writer, str(source), str(destination)):
+        assert private_value not in str(exc.value)
+        assert private_value not in output.out
+        assert private_value not in output.err
+    if receipt_write_fails:
+        assert list(destination.iterdir()) == []
+    else:
+        receipt = json.loads((destination / "failure.json").read_text(encoding="utf-8"))
+        assert receipt["status"] == "FAIL"
+        assert receipt["stage"] == "source_preflight"
+        assert secret_source in receipt["diagnostic"]
