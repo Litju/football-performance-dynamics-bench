@@ -20,13 +20,23 @@ from fpdbench.data_states.skillcorner import (
     load_manifest as load_data_state_manifest,
 )
 from fpdbench.data_states.skillcorner import (
+    load_manifest_v2 as load_data_state_manifest_v2,
+)
+from fpdbench.data_states.skillcorner import (
     validate_manifest as validate_data_state_manifest,
+)
+from fpdbench.data_states.skillcorner import (
+    validate_manifest_v2 as validate_data_state_manifest_v2,
 )
 
 MANIFEST_PATH = Path(__file__).with_name("skillcorner_window_v1.json")
+MANIFEST_V2_PATH = Path(__file__).with_name("skillcorner_window_v2.json")
 SUPPORTED_POLICY_ID = "skillcorner_window_v1"
 SUPPORTED_POLICY_VERSION = "1.1.0"
 SUPPORTED_POLICY_HASH = "f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b"
+SUPPORTED_POLICY_V2_HASH = "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED = "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"
+_V2_POLICY_ID = "skillcorner_window_v2"
 _PERIOD_NAME = re.compile(r"period_([1-5])\Z")
 _SAMPLE_FIELDS = frozenset(
     {
@@ -87,6 +97,16 @@ class WindowEligibilityResult:
     quality: Mapping[str, object]
 
 
+class BallPopulationQualificationStop(ValueError):
+    """Raised when a source-wide nullable-ball drift sentinel is observed."""
+
+    code = BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED
+
+    def __init__(self, count: int = 1) -> None:
+        self.count = count
+        super().__init__(f"{self.code}: {count} source observation(s)")
+
+
 def policy_hash(scientific_policy: Mapping[str, object]) -> str:
     """Hash policy semantics only; descriptive manifest fields are excluded."""
     return hashlib.sha256(canonical_bytes(scientific_policy)).hexdigest()
@@ -100,6 +120,13 @@ def load_manifest() -> dict[str, object]:
     if not all(isinstance(key, str) for key in typed_value):
         raise ValueError("window eligibility manifest keys must be strings")
     return cast(dict[str, object], typed_value)
+
+
+def load_manifest_v2() -> dict[str, object]:
+    value = json.loads(MANIFEST_V2_PATH.read_text(encoding="utf-8"))
+    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+        raise ValueError("v2 window eligibility manifest must be a JSON object")
+    return cast(dict[str, object], value)
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
@@ -223,6 +250,108 @@ def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(errors)
 
 
+def validate_manifest_v2(manifest: Mapping[str, object]) -> tuple[str, ...]:
+    errors: list[str] = []
+    try:
+        source = load_source_manifest()
+        state = load_data_state_manifest_v2()
+        errors.extend(validate_data_state_manifest_v2(state))
+        expected_fields = {
+            "schema_id": "fpdbench.skillcorner-window-eligibility",
+            "schema_version": "2.0.0",
+            "policy_id": _V2_POLICY_ID,
+            "policy_version": "2.0.0",
+        }
+        for field, expected in expected_fields.items():
+            if manifest.get(field) != expected:
+                errors.append(f"unexpected v2 eligibility {field}")
+        bindings = {
+            "source_release_id": source.get("source_release_id"),
+            "source_release_hash": source.get("source_release_hash"),
+            "data_state_id": state.get("data_state_id"),
+            "data_state_version": state.get("data_state_version"),
+            "data_state_hash": state.get("data_state_hash"),
+        }
+        for field, expected in bindings.items():
+            if manifest.get(field) != expected:
+                errors.append(f"v2 {field} does not match its pinned authority")
+        policy = _mapping(manifest.get("scientific_policy"), "scientific_policy")
+        identity = _mapping(policy.get("identity"), "scientific_policy.identity")
+        for field, expected in {
+            "policy_id": _V2_POLICY_ID,
+            "policy_version": "2.0.0",
+            **bindings,
+        }.items():
+            if identity.get(field) != expected:
+                errors.append(f"v2 scientific_policy.identity.{field} does not match manifest")
+        digest = policy_hash(policy)
+        if manifest.get("policy_hash") != digest:
+            errors.append("v2 window eligibility policy_hash mismatch")
+        if digest != SUPPORTED_POLICY_V2_HASH:
+            errors.append("v2 scientific_policy differs from its approved contract")
+        ball = _section(policy, "ball_observations")
+        if (
+            ball.get("expected_support_slots") != 41
+            or ball.get("minimum_valid_positions") != 39
+            or ball.get("minimum_valid_fraction") != 0.95
+            or ball.get("null_flag_finite_xy_stop_code") != BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED
+        ):
+            errors.append("v2 ball support and population stop differ from the approved contract")
+        quality = _section(policy, "quality_strata")
+        v1_quality = _section(
+            _mapping(load_manifest()["scientific_policy"], "v1 policy"), "quality_strata"
+        )
+        if quality.get("dimensions") != v1_quality.get("dimensions"):
+            errors.append("v2 must preserve the eight composable quality dimensions")
+        if policy.get("population_qualification") != {
+            "stop_codes": [BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED],
+            "scope": (
+                "source-specific and population-wide; evaluate all retained frames before "
+                "eligible membership or model masks"
+            ),
+            "on_stop": (
+                "preserve samples and restricted aggregate diagnostics; do not issue an eligible "
+                "population or continue by filtering affected windows"
+            ),
+        }:
+            errors.append("v2 population qualification stop differs from the approved contract")
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        errors.append(f"invalid v2 window eligibility manifest: {exc}")
+    return tuple(errors)
+
+
+def validate_ball_population_drift_v2(samples: Iterable[Mapping[str, object]]) -> None:
+    """Stop v2 population qualification if any retained ball has null flag and finite XY."""
+    manifest = load_data_state_manifest_v2()
+    state_hash = manifest.get("data_state_hash")
+    source = load_source_manifest()
+    drift_count = 0
+    for raw_sample in samples:
+        sample = _mapping(raw_sample, "v2 canonical sample")
+        if (
+            sample.get("data_state_id") != "skillcorner_5hz_v2"
+            or sample.get("data_state_hash") != state_hash
+            or sample.get("source_release_id") != source.get("source_release_id")
+            or sample.get("source_release_hash") != source.get("source_release_hash")
+        ):
+            raise ValueError("INVALID_SAMPLE_SCHEMA: sample is not bound to the pinned v2 source")
+        raw_ball = sample.get("ball")
+        if raw_ball is None:
+            continue
+        ball = _mapping(raw_ball, "v2 canonical ball")
+        if frozenset(ball) != _BALL_FIELDS:
+            raise ValueError("INVALID_SAMPLE_SCHEMA: canonical ball fields differ from v2 schema")
+        detected = ball.get("is_detected")
+        if detected is not None and not isinstance(detected, bool):
+            raise ValueError("INVALID_DETECTION_FLAG: is_detected must be boolean or null")
+        x = _number(ball.get("x_m"), "ball x_m", nullable=True)
+        y = _number(ball.get("y_m"), "ball y_m", nullable=True)
+        if detected is None and x is not None and y is not None:
+            drift_count += 1
+    if drift_count:
+        raise BallPopulationQualificationStop(drift_count)
+
+
 def _issues(items: Iterable[EligibilityIssue]) -> tuple[EligibilityIssue, ...]:
     unique = {(item.code, item.message, item.sample_index): item for item in items}
     return tuple(
@@ -337,29 +466,40 @@ def _period_ranges(
     return result, tuple(issues)
 
 
-def evaluate_skillcorner_window(
-    samples: Iterable[Mapping[str, object]],
+def _evaluate_skillcorner_window(
+    samples: Iterable[Mapping[str, object] | None],
     *,
     history_intervals: int,
     future_intervals: int,
     match_metadata: Mapping[str, object],
     phase_intervals: Iterable[PhaseInterval],
     policy_manifest: Mapping[str, object] | None = None,
+    v2: bool,
 ) -> WindowEligibilityResult:
     """Evaluate exactly one candidate; memory use is bounded by its support length."""
     history_intervals = _integer(history_intervals, "history_intervals", minimum=1)
     future_intervals = _integer(future_intervals, "future_intervals", minimum=1)
-    manifest = load_manifest() if policy_manifest is None else dict(policy_manifest)
-    manifest_errors = validate_manifest(manifest)
+    manifest = (
+        (load_manifest_v2() if v2 else load_manifest())
+        if policy_manifest is None
+        else dict(policy_manifest)
+    )
+    validator = validate_manifest_v2 if v2 else validate_manifest
+    manifest_errors = validator(manifest)
     if manifest_errors:
         raise ValueError("invalid window eligibility manifest: " + "; ".join(manifest_errors))
     policy = _mapping(manifest["scientific_policy"], "scientific_policy")
     source = _mapping(load_source_manifest(), "source manifest")
-    data_state = _mapping(load_data_state_manifest(), "data-state manifest")
+    data_state = _mapping(
+        load_data_state_manifest_v2() if v2 else load_data_state_manifest(),
+        "data-state manifest",
+    )
     policy_id = cast(str, manifest["policy_id"])
     version = cast(str, manifest["policy_version"])
     digest = cast(str, manifest["policy_hash"])
     expected_count = history_intervals + future_intervals + 1
+    if v2 and expected_count != 41:
+        raise ValueError("skillcorner_window_v2 requires exactly 41 support slots")
     values = list(islice(samples, expected_count + 1))
     candidate = values[:expected_count]
 
@@ -473,7 +613,8 @@ def evaluate_skillcorner_window(
     extrapolated_players = 0
     player_expected_frames = 0
     player_valid_active_positions = 0
-    support_complete = len(candidate) == expected_count
+    support_span_available = len(candidate) == expected_count
+    support_complete = support_span_available and not any(item is None for item in candidate)
     player_completeness_known = roster_complete and support_complete
     unknown_roster_samples = 0
     missing_active_records = 0
@@ -484,6 +625,32 @@ def evaluate_skillcorner_window(
     valid_ball_positions = 0
     detected_balls = 0
     extrapolated_balls = 0
+    unknown_ball_positions = 0
+    ball_flag_true_count = 0
+    ball_flag_false_count = 0
+    ball_flag_null_count = 0
+    absent_ball_objects = 0
+    missing_source_sample_count = max(0, expected_count - len(candidate))
+    coordinate_states = (
+        "both_finite",
+        "x_only",
+        "y_only",
+        "both_null",
+        "object_absent",
+        "source_sample_missing",
+    )
+    flag_states = (
+        "true",
+        "false",
+        "null",
+        "object_absent_not_applicable",
+        "source_sample_missing_not_applicable",
+    )
+    flag_coordinate_counts = {flag: dict.fromkeys(coordinate_states, 0) for flag in flag_states}
+    if missing_source_sample_count:
+        cast(dict[str, int], flag_coordinate_counts["source_sample_missing_not_applicable"])[
+            "source_sample_missing"
+        ] += missing_source_sample_count
     outside_pitch_balls = 0
     ball_outlier_count = 0
     ball_displacement_pairs = 0
@@ -510,6 +677,13 @@ def evaluate_skillcorner_window(
         player_positions_by_frame.append({})
         ball_positions_by_frame.append(None)
         sample_index: int | None = None
+        if v2 and raw_sample is None:
+            missing_source_sample_count += 1
+            cast(dict[str, int], flag_coordinate_counts["source_sample_missing_not_applicable"])[
+                "source_sample_missing"
+            ] += 1
+            exclude("TEMPORAL_GAP", "expected source sample is missing")
+            continue
         try:
             sample = _mapping(raw_sample, "canonical sample")
             sample_index = _integer(sample.get("canonical_sample_index"), "canonical_sample_index")
@@ -727,22 +901,79 @@ def evaluate_skillcorner_window(
             player_positions_by_frame[offset] = positions
 
             ball_position: tuple[float, float] | None = None
-            if raw_ball is not None:
+            if v2 and raw_ball is None:
+                absent_ball_objects += 1
+                cast(dict[str, int], flag_coordinate_counts["object_absent_not_applicable"])[
+                    "object_absent"
+                ] += 1
+                warn("BALL_OBJECT_ABSENT", "ball_data is absent", sample_index)
+            elif raw_ball is not None:
                 try:
                     ball = _mapping(raw_ball, "canonical ball")
                     if frozenset(ball) != _BALL_FIELDS:
                         raise ValueError("canonical ball fields differ from the measurement schema")
                     detected = ball.get("is_detected")
-                    if not isinstance(detected, bool):
+                    if (detected is not None and not isinstance(detected, bool)) or (
+                        not v2 and not isinstance(detected, bool)
+                    ):
                         exclude(
                             "INVALID_DETECTION_FLAG",
-                            "ball has a non-boolean is_detected",
+                            "ball is_detected must be boolean" + (" or null" if v2 else ""),
                             sample_index,
                         )
                     else:
                         x = _number(ball.get("x_m"), "ball x_m", nullable=True)
                         y = _number(ball.get("y_m"), "ball y_m", nullable=True)
-                        if x is None or y is None:
+                        if v2:
+                            flag_state = (
+                                "true"
+                                if detected is True
+                                else "false"
+                                if detected is False
+                                else "null"
+                            )
+                            coordinate_state = (
+                                "both_finite"
+                                if x is not None and y is not None
+                                else "x_only"
+                                if x is not None
+                                else "y_only"
+                                if y is not None
+                                else "both_null"
+                            )
+                            cast(dict[str, int], flag_coordinate_counts[flag_state])[
+                                coordinate_state
+                            ] += 1
+                            if detected is True:
+                                ball_flag_true_count += 1
+                            elif detected is False:
+                                ball_flag_false_count += 1
+                            else:
+                                ball_flag_null_count += 1
+                                warn(
+                                    "BALL_DETECTION_UNKNOWN",
+                                    "ball detection flag is null",
+                                    sample_index,
+                                )
+                            if x is not None and y is not None:
+                                valid_ball_positions += 1
+                                if detected is None:
+                                    raise BallPopulationQualificationStop(
+                                        BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED
+                                    )
+                            elif x is not None or y is not None:
+                                warn(
+                                    "BALL_COORDINATES_PARTIAL",
+                                    "ball has only one finite coordinate",
+                                    sample_index,
+                                )
+                            else:
+                                warn(
+                                    "BALL_COORDINATES_MISSING",
+                                    "ball has no finite XY coordinates",
+                                    sample_index,
+                                )
+                        elif x is None or y is None:
                             warn(
                                 "BALL_COORDINATES_MISSING",
                                 "ball has a null coordinate",
@@ -756,8 +987,9 @@ def evaluate_skillcorner_window(
                             )
                         else:
                             ball_position = (x, y)
-                            valid_ball_positions += 1
-                            if detected:
+                            if not v2:
+                                valid_ball_positions += 1
+                            if detected is True:
                                 detected_balls += 1
                             else:
                                 extrapolated_balls += 1
@@ -768,13 +1000,38 @@ def evaluate_skillcorner_window(
                                     "ball is outside the pitch rectangle",
                                     sample_index,
                                 )
+                        if v2 and x is not None and y is not None:
+                            if abs(x) > ball_limit or abs(y) > ball_y_limit:
+                                exclude(
+                                    "COORDINATE_IMPLAUSIBLE",
+                                    "ball exceeds gross pitch-relative bounds",
+                                    sample_index,
+                                )
+                            else:
+                                ball_position = (x, y)
+                                if detected is True:
+                                    detected_balls += 1
+                                elif detected is False:
+                                    extrapolated_balls += 1
+                                else:
+                                    unknown_ball_positions += 1
+                                if abs(x) > pitch_length / 2.0 or abs(y) > pitch_width / 2.0:
+                                    outside_pitch_balls += 1
+                                    warn(
+                                        "BALL_OUTSIDE_PITCH",
+                                        "ball is outside the pitch rectangle",
+                                        sample_index,
+                                    )
+                except BallPopulationQualificationStop:
+                    raise
                 except (ValueError, TypeError) as exc:
                     code = (
                         "NONFINITE_COORDINATE" if "finite" in str(exc) else "INVALID_SAMPLE_SCHEMA"
                     )
                     exclude(code, str(exc), sample_index)
             else:
-                warn("BALL_COORDINATES_MISSING", "ball observation is null", sample_index)
+                if not v2:
+                    warn("BALL_COORDINATES_MISSING", "ball observation is null", sample_index)
             ball_positions_by_frame[offset] = ball_position
 
             possession = sample.get("possession")
@@ -815,6 +1072,8 @@ def evaluate_skillcorner_window(
                     "possession observation is null",
                     sample_index,
                 )
+        except BallPopulationQualificationStop:
+            raise
         except (ValueError, TypeError) as exc:
             exclude("INVALID_SAMPLE_SCHEMA", str(exc), sample_index)
 
@@ -968,7 +1227,13 @@ def evaluate_skillcorner_window(
     support_count = len(candidate)
     expected_intervals = max(0, expected_count - 1)
     observed_intervals = max(0, support_count - 1)
-    ball_fraction = valid_ball_positions / support_count if support_count else None
+    ball_fraction = (
+        valid_ball_positions / expected_count
+        if v2 and support_span_available
+        else valid_ball_positions / support_count
+        if support_count and not v2
+        else None
+    )
     if support_count > history_intervals and ball_positions_by_frame[history_intervals] is None:
         exclude(
             "BALL_MISSING_AT_ORIGIN",
@@ -1011,11 +1276,13 @@ def evaluate_skillcorner_window(
     )
     ball_detection_stratum = (
         "unknown"
-        if not support_complete or valid_ball_positions == 0
+        if not support_complete or valid_ball_positions == 0 or unknown_ball_positions > 0
         else "all_detected"
         if extrapolated_balls == 0
+        else "all_false_flag"
+        if v2 and detected_balls == 0
         else "all_extrapolated"
-        if detected_balls == 0
+        if not v2 and detected_balls == 0
         else "mixed"
     )
     player_completeness_stratum = (
@@ -1069,6 +1336,70 @@ def evaluate_skillcorner_window(
         "no per-observation player-identity confidence is supplied by SkillCorner",
     )
 
+    ball_quality: dict[str, object] = {
+        "valid_position_count": valid_ball_positions,
+        "denominator_sample_count": support_count,
+        "completeness_fraction": ball_fraction,
+        "detected_position_count": detected_balls,
+        "extrapolated_position_count": extrapolated_balls,
+        "extrapolation_fraction": (
+            extrapolated_balls / valid_ball_positions if valid_ball_positions else None
+        ),
+        "outside_pitch_count": outside_pitch_balls,
+        "outside_pitch_fraction": (
+            outside_pitch_balls / valid_ball_positions if valid_ball_positions else None
+        ),
+        "displacement_outlier_count": ball_outlier_count,
+        "displacement_pair_denominator": ball_displacement_pairs,
+        "displacement_outlier_fraction": (
+            ball_outlier_count / ball_displacement_pairs if ball_displacement_pairs else None
+        ),
+    }
+    if v2:
+        known_flags = ball_flag_true_count + ball_flag_false_count
+        ball_quality.pop("extrapolated_position_count")
+        ball_quality.pop("extrapolation_fraction")
+        cross_tab_slots = sum(sum(counts.values()) for counts in flag_coordinate_counts.values())
+        ball_quality = {
+            **ball_quality,
+            "expected_support_slot_count": expected_count,
+            "valid_position_count": valid_ball_positions,
+            "denominator_sample_count": expected_count,
+            "position_coverage_fraction": ball_fraction,
+            "completeness_fraction": ball_fraction,
+            "flag_true_count": ball_flag_true_count,
+            "flag_false_count": ball_flag_false_count,
+            "flag_null_count": ball_flag_null_count,
+            "absent_object_count": absent_ball_objects,
+            "missing_source_sample_count": missing_source_sample_count,
+            "known_flag_count": known_flags,
+            "known_flag_coverage_fraction": (
+                known_flags / expected_count if support_span_available else None
+            ),
+            "detected_share_among_known_flags": (
+                ball_flag_true_count / known_flags if known_flags else None
+            ),
+            "flag_by_coordinate_state_counts": flag_coordinate_counts,
+            "finite_xy_by_flag": {
+                "true": cast(dict[str, int], flag_coordinate_counts["true"])["both_finite"],
+                "false": cast(dict[str, int], flag_coordinate_counts["false"])["both_finite"],
+                "null": cast(dict[str, int], flag_coordinate_counts["null"])["both_finite"],
+            },
+            "cross_tab_slot_count": cross_tab_slots,
+            "cross_tab_reconciles_to_expected_support": cross_tab_slots == expected_count,
+            "detected_position_count": detected_balls,
+            "false_flag_position_count": extrapolated_balls,
+            "outside_pitch_count": outside_pitch_balls,
+            "outside_pitch_fraction": (
+                outside_pitch_balls / valid_ball_positions if valid_ball_positions else None
+            ),
+            "displacement_outlier_count": ball_outlier_count,
+            "displacement_pair_denominator": ball_displacement_pairs,
+            "displacement_outlier_fraction": (
+                ball_outlier_count / ball_displacement_pairs if ball_displacement_pairs else None
+            ),
+        }
+
     quality: dict[str, object] = {
         "support_sample_count": support_count,
         "origin_offset": history_intervals,
@@ -1107,25 +1438,7 @@ def evaluate_skillcorner_window(
                 else None
             ),
         },
-        "ball_observations": {
-            "valid_position_count": valid_ball_positions,
-            "denominator_sample_count": support_count,
-            "completeness_fraction": ball_fraction,
-            "detected_position_count": detected_balls,
-            "extrapolated_position_count": extrapolated_balls,
-            "extrapolation_fraction": (
-                extrapolated_balls / valid_ball_positions if valid_ball_positions else None
-            ),
-            "outside_pitch_count": outside_pitch_balls,
-            "outside_pitch_fraction": (
-                outside_pitch_balls / valid_ball_positions if valid_ball_positions else None
-            ),
-            "displacement_outlier_count": ball_outlier_count,
-            "displacement_pair_denominator": ball_displacement_pairs,
-            "displacement_outlier_fraction": (
-                ball_outlier_count / ball_displacement_pairs if ball_displacement_pairs else None
-            ),
-        },
+        "ball_observations": ball_quality,
         "temporal": {
             "expected_intervals": expected_intervals,
             "observed_intervals": observed_intervals,
@@ -1186,4 +1499,46 @@ def evaluate_skillcorner_window(
         exclusion_reasons=_issues(exclusions),
         warnings=_issues(warnings),
         quality=quality,
+    )
+
+
+def evaluate_skillcorner_window(
+    samples: Iterable[Mapping[str, object]],
+    *,
+    history_intervals: int,
+    future_intervals: int,
+    match_metadata: Mapping[str, object],
+    phase_intervals: Iterable[PhaseInterval],
+    policy_manifest: Mapping[str, object] | None = None,
+) -> WindowEligibilityResult:
+    """Evaluate a candidate with the frozen v1 eligibility contract."""
+    return _evaluate_skillcorner_window(
+        samples,
+        history_intervals=history_intervals,
+        future_intervals=future_intervals,
+        match_metadata=match_metadata,
+        phase_intervals=phase_intervals,
+        policy_manifest=policy_manifest,
+        v2=False,
+    )
+
+
+def evaluate_skillcorner_window_v2(
+    samples: Iterable[Mapping[str, object] | None],
+    *,
+    history_intervals: int,
+    future_intervals: int,
+    match_metadata: Mapping[str, object],
+    phase_intervals: Iterable[PhaseInterval],
+    policy_manifest: Mapping[str, object] | None = None,
+) -> WindowEligibilityResult:
+    """Evaluate a candidate under nullable-ball v2 after the population drift gate."""
+    return _evaluate_skillcorner_window(
+        samples,
+        history_intervals=history_intervals,
+        future_intervals=future_intervals,
+        match_metadata=match_metadata,
+        phase_intervals=phase_intervals,
+        policy_manifest=policy_manifest,
+        v2=True,
     )

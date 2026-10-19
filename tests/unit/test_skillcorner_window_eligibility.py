@@ -6,14 +6,21 @@ import pytest
 
 from fpdbench.data_sources.skillcorner import load_manifest as load_source_manifest
 from fpdbench.data_states.skillcorner import load_manifest as load_data_state_manifest
+from fpdbench.data_states.skillcorner import load_manifest_v2 as load_data_state_manifest_v2
 from fpdbench.eligibility.skillcorner import (
+    BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED,
+    BallPopulationQualificationStop,
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
     evaluate_skillcorner_window,
+    evaluate_skillcorner_window_v2,
     load_manifest,
+    load_manifest_v2,
     policy_hash,
+    validate_ball_population_drift_v2,
     validate_manifest,
+    validate_manifest_v2,
 )
 
 
@@ -81,6 +88,14 @@ def _frame(offset: int) -> dict[str, object]:
     }
 
 
+def _frame_v2(offset: int) -> dict[str, object]:
+    sample = _frame(offset)
+    state = load_data_state_manifest_v2()
+    sample["data_state_id"] = state["data_state_id"]
+    sample["data_state_hash"] = state["data_state_hash"]
+    return sample
+
+
 def _window(
     samples: list[dict[str, object]] | None = None,
     *,
@@ -95,6 +110,16 @@ def _window(
         match_metadata=metadata if metadata is not None else _metadata(),
         phase_intervals=phases if phases is not None else [_phase(1, 100, 200)],
         policy_manifest=policy,
+    )
+
+
+def _window_v2(samples: list[dict[str, object] | None] | None = None) -> WindowEligibilityResult:
+    return evaluate_skillcorner_window_v2(
+        samples if samples is not None else [_frame_v2(index) for index in range(41)],
+        history_intervals=25,
+        future_intervals=15,
+        match_metadata=_metadata(),
+        phase_intervals=[_phase(1, 100, 200)],
     )
 
 
@@ -139,6 +164,117 @@ def test_policy_manifest_binds_pinned_source_and_state_and_hashes_semantics() ->
     wrong_state = copy.deepcopy(manifest)
     wrong_state["data_state_hash"] = "0" * 64
     assert any("data_state_hash" in error for error in validate_manifest(wrong_state))
+
+
+def test_v2_policy_binds_measurement_and_exact_ball_stop_contract() -> None:
+    manifest = load_manifest_v2()
+    assert validate_manifest_v2(manifest) == ()
+    assert manifest["policy_id"] == "skillcorner_window_v2"
+    assert manifest["data_state_id"] == "skillcorner_5hz_v2"
+
+    changed = copy.deepcopy(manifest)
+    policy = cast(dict[str, object], changed["scientific_policy"])
+    ball = cast(dict[str, object], policy["ball_observations"])
+    ball["minimum_valid_positions"] = 38
+    changed["policy_hash"] = policy_hash(policy)
+    assert validate_manifest_v2(changed)
+
+
+def test_v2_accepts_39_of_41_and_keeps_false_positions() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[0]["ball"] = None
+    samples[1]["ball"] = {"x_m": None, "y_m": None, "is_detected": None}
+    cast(dict[str, object], samples[2]["ball"])["is_detected"] = False
+
+    result = _window_v2(samples)
+    ball = cast(dict[str, object], result.quality["ball_observations"])
+
+    assert result.eligible
+    assert ball["valid_position_count"] == 39
+    assert ball["position_coverage_fraction"] == pytest.approx(39 / 41)
+    assert ball["flag_false_count"] == 1
+    assert ball["absent_object_count"] == 1
+    assert "BALL_OBJECT_ABSENT" in _warning_codes(result)
+    assert "BALL_DETECTION_UNKNOWN" in _warning_codes(result)
+
+
+def test_v2_rejects_38_of_41_and_requires_a_finite_origin() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    for offset in (0, 1, 2):
+        samples[offset]["ball"] = None
+    result = _window_v2(samples)
+    assert "BALL_COVERAGE_BELOW_MINIMUM" in _reason_codes(result)
+    assert cast(dict[str, object], result.quality["ball_observations"])[
+        "position_coverage_fraction"
+    ] == pytest.approx(38 / 41)
+
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[25]["ball"] = {"x_m": None, "y_m": 2.0, "is_detected": False}
+    result = _window_v2(samples)
+    assert "BALL_MISSING_AT_ORIGIN" in _reason_codes(result)
+    assert "BALL_COORDINATES_PARTIAL" in _warning_codes(result)
+
+
+def test_v2_partial_xy_warns_without_excluding_when_origin_and_coverage_pass() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[2]["ball"] = {"x_m": 2.0, "y_m": None, "is_detected": True}
+    samples[3]["ball"] = {"x_m": None, "y_m": 3.0, "is_detected": False}
+
+    result = _window_v2(samples)
+    assert result.eligible
+    assert (
+        cast(dict[str, object], result.quality["ball_observations"])["valid_position_count"] == 39
+    )
+    assert "BALL_COORDINATES_PARTIAL" in _warning_codes(result)
+
+
+def test_v2_counts_all_flag_states_and_zero_denominators() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    for sample in samples:
+        sample["ball"] = {"x_m": None, "y_m": None, "is_detected": None}
+    samples[1]["ball"] = None
+
+    result = _window_v2(samples)
+    ball = cast(dict[str, object], result.quality["ball_observations"])
+    cross_tab = cast(dict[str, dict[str, int]], ball["flag_by_coordinate_state_counts"])
+
+    assert ball["flag_true_count"] == 0
+    assert ball["flag_false_count"] == 0
+    assert ball["flag_null_count"] == 40
+    assert ball["known_flag_coverage_fraction"] == 0.0
+    assert ball["detected_share_among_known_flags"] is None
+    assert ball["position_coverage_fraction"] == 0.0
+    assert ball["outside_pitch_fraction"] is None
+    assert ball["displacement_outlier_fraction"] is None
+    assert ball["cross_tab_slot_count"] == 41
+    assert sum(sum(values.values()) for values in cross_tab.values()) == 41
+    assert result.quality["strata"]["ball_detection_exposure"] == "unknown"
+
+
+def test_v2_gap_counts_missing_slot_and_keeps_temporal_exclusion() -> None:
+    samples: list[dict[str, object] | None] = [_frame_v2(index) for index in range(41)]
+    samples[40] = None
+    result = _window_v2(samples)
+    ball = cast(dict[str, object], result.quality["ball_observations"])
+
+    assert not result.eligible
+    assert "TEMPORAL_GAP" in _reason_codes(result)
+    assert ball["missing_source_sample_count"] == 1
+    assert ball["position_coverage_fraction"] == pytest.approx(40 / 41)
+    assert ball["cross_tab_reconciles_to_expected_support"] is True
+
+
+def test_v2_null_flag_finite_xy_stops_population_and_window_qualification() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[40]["ball"] = {"x_m": 3.0, "y_m": 4.0, "is_detected": None}
+
+    with pytest.raises(BallPopulationQualificationStop) as error:
+        validate_ball_population_drift_v2(samples)
+    assert error.value.code == BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED
+    assert error.value.count == 1
+
+    with pytest.raises(BallPopulationQualificationStop):
+        _window_v2(samples)
 
 
 @pytest.mark.parametrize(
