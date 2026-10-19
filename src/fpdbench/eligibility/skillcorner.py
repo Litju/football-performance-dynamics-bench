@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
@@ -413,6 +413,89 @@ def validate_ball_population_drift_v2(
     )
 
 
+def _possession_context(
+    sample: Mapping[str, object],
+    player_ids: set[int],
+    sample_index: int | None,
+    exclude: Callable[[str, str, int | None], None],
+    warn: Callable[[str, str, int | None], None],
+) -> tuple[int, int, int, object]:
+    possession_home = possession_away = possession_unknown = 0
+    category: object = "invalid"
+    possession = sample.get("possession")
+    if possession is not None:
+        try:
+            context = _mapping(possession, "possession")
+            if frozenset(context) != _POSSESSION_FIELDS:
+                raise ValueError("possession fields differ from the measurement schema")
+            group = context.get("group")
+            possession_player = context.get("player_id")
+            if group == "home team":
+                possession_home += 1
+            elif group == "away team":
+                possession_away += 1
+            elif group is None:
+                possession_unknown += 1
+                warn(
+                    "POSSESSION_CONTEXT_UNKNOWN",
+                    "possession group is null",
+                    sample_index,
+                )
+            else:
+                raise ValueError("possession group is not home team, away team, or null")
+            if possession_player is not None:
+                player_id = _integer(possession_player, "possession player_id", minimum=1)
+                if player_id not in player_ids:
+                    warn(
+                        "POSSESSION_PLAYER_UNOBSERVED",
+                        "possession player is absent from this sample",
+                        sample_index,
+                    )
+            category = group
+        except (ValueError, TypeError) as exc:
+            exclude("INVALID_SAMPLE_SCHEMA", str(exc), sample_index)
+    if possession is None:
+        if "possession" in sample:
+            category = None
+        possession_unknown += 1
+        warn(
+            "POSSESSION_CONTEXT_UNKNOWN",
+            "possession observation is null",
+            sample_index,
+        )
+    return possession_home, possession_away, possession_unknown, category
+
+
+def _possession_quality_v2(
+    categories: list[object], support_span_available: bool
+) -> dict[str, object]:
+    # Keep every expected slot; missing/invalid observations are not observed unknowns.
+    expected_count = len(categories)
+    quality: dict[str, object] = {
+        "possession_denominator_samples": expected_count,
+        "possession_support_span_available": support_span_available,
+    }
+    classified_samples = 0
+    for category, state in (
+        ("home", "home team"),
+        ("away", "away team"),
+        ("unknown", None),
+        ("missing", "missing"),
+        ("invalid", "invalid"),
+    ):
+        count = categories.count(state)
+        classified_samples += count
+        quality[f"possession_{category}_samples"] = count
+        quality[f"possession_{category}_fraction"] = (
+            count / expected_count if support_span_available else None
+        )
+    quality["possession_classified_samples"] = classified_samples
+    quality["possession_counts_reconcile_to_expected_support"] = (
+        classified_samples == expected_count
+    )
+    return quality
+
+
 def _issues(items: Iterable[EligibilityIssue]) -> tuple[EligibilityIssue, ...]:
     unique = {(item.code, item.message, item.sample_index): item for item in items}
     return tuple(
@@ -720,6 +803,7 @@ def _evaluate_skillcorner_window(
     possession_home = 0
     possession_away = 0
     possession_unknown = 0
+    possession_categories: list[object] = ["missing"] * expected_count
     transition_intervals = 0
     transition_player_ids: set[int] = set()
     observed_identity_change_intervals = 0
@@ -747,6 +831,7 @@ def _evaluate_skillcorner_window(
             ] += 1
             exclude("TEMPORAL_GAP", "expected source sample is missing")
             continue
+        possession_categories[offset] = "invalid"
         try:
             sample = _mapping(raw_sample, "canonical sample")
             sample_index = _integer(sample.get("canonical_sample_index"), "canonical_sample_index")
@@ -1095,44 +1180,13 @@ def _evaluate_skillcorner_window(
                     warn("BALL_COORDINATES_MISSING", "ball observation is null", sample_index)
             ball_positions_by_frame[offset] = ball_position
 
-            possession = sample.get("possession")
-            if possession is not None:
-                try:
-                    context = _mapping(possession, "possession")
-                    if frozenset(context) != _POSSESSION_FIELDS:
-                        raise ValueError("possession fields differ from the measurement schema")
-                    group = context.get("group")
-                    possession_player = context.get("player_id")
-                    if group == "home team":
-                        possession_home += 1
-                    elif group == "away team":
-                        possession_away += 1
-                    elif group is None:
-                        possession_unknown += 1
-                        warn(
-                            "POSSESSION_CONTEXT_UNKNOWN",
-                            "possession group is null",
-                            sample_index,
-                        )
-                    else:
-                        raise ValueError("possession group is not home team, away team, or null")
-                    if possession_player is not None:
-                        player_id = _integer(possession_player, "possession player_id", minimum=1)
-                        if player_id not in player_ids:
-                            warn(
-                                "POSSESSION_PLAYER_UNOBSERVED",
-                                "possession player is absent from this sample",
-                                sample_index,
-                            )
-                except (ValueError, TypeError) as exc:
-                    exclude("INVALID_SAMPLE_SCHEMA", str(exc), sample_index)
-            if possession is None:
-                possession_unknown += 1
-                warn(
-                    "POSSESSION_CONTEXT_UNKNOWN",
-                    "possession observation is null",
-                    sample_index,
-                )
+            home, away, unknown, category = _possession_context(
+                sample, player_ids, sample_index, exclude, warn
+            )
+            possession_home += home
+            possession_away += away
+            possession_unknown += unknown
+            possession_categories[offset] = category
         except BallPopulationQualificationStop:
             raise
         except (ValueError, TypeError) as exc:
@@ -1547,6 +1601,10 @@ def _evaluate_skillcorner_window(
         },
         "strata": strata,
     }
+    if v2:
+        cast(dict[str, object], quality["play_context"]).update(
+            _possession_quality_v2(possession_categories, support_span_available)
+        )
     return WindowEligibilityResult(
         policy_id=policy_id,
         policy_version=version,

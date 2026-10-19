@@ -26,7 +26,7 @@ Measurement v2 remains `1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d9
 
 No protected receipt verifier or qualification PASS is implemented or simulated as valid authority. The public v2 eligibility gate rejects every unverified object. Structural population objects expose `empirically_qualified == False`; the qualification boundary rejects empty required matches and otherwise blocks pending independent protected verification. Failed-validation result documents remain structurally inspectable.
 
-## Validation
+## Previous repair validation
 
 - Full pytest: **415 passed**, including the 19 new adversarial/parity parameter instances.
 - Ruff lint and format: passed. Strict Pyright: **0 errors, 0 warnings**.
@@ -65,3 +65,22 @@ All 12 tracked v1/lock/snapshot JSON files were also compared byte-for-byte agai
 | `src/fpdbench/evaluation/absolute_xy_calibration_lock.json` | `f3b4155899c5d8e9632e9cab7a25e471411c62c4a9a7489c58c1edb16180ce94` |
 
 Restricted data processing, real population qualification, GPU training, checkpoint selection, LOMO, scoring, and unrelated merges were not performed. Empirical v2 work remains blocked pending the separate independent protected-population verifier and qualification.
+
+## Public diagnostic and possession continuation
+
+Starting HEAD: `a25a1b7c5f8e57cf83100ec89ed2e3ed10c92ed9`. The public diagnostic API was added in `bf0544e`; the possession fix and this evidence are committed separately. The final exact HEAD and push/PR CI are recorded in the PR description and delivery report.
+
+`diagnose_skillcorner_window_v2` is exported from `fpdbench.eligibility` and calls the production policy implementation. `CandidateWindowDiagnosticV2` always has status `UNQUALIFIED`; `candidate_rules_pass` reports only candidate rules, never empirical membership. It has no `eligible` flag. Tests no longer call the private evaluator. Policy validation, exact 25/15 horizons, null/false flag distinctions, coordinate thresholds, and the null-flag/finite-XY global stop remain enforced. The empirical evaluator rejects diagnostic objects, fabricated counts and incomplete receipts. Existing structural population and result boundaries remain unchanged. No protected verifier or accepted receipt was added.
+
+Possession retains the 41-slot denominator, with separate home, away, observed unknown, missing and invalid categories that reconcile over all expected slots. Gaps retain temporal exclusions. Truncated spans retain support exclusions and null fractions. Empty, extra, all-missing and malformed supports are tested. The possession parser was extracted with its original error handling and legacy counters intact so strict type-flow analysis remains tractable; v1 outputs are unchanged.
+
+Current complete validation:
+
+- Full pytest: **436 passed**, including all prior acceptance coverage and 21 additional parameterized cases since the starting HEAD. The candidate eligibility test module has **84 passing cases**, all v2 candidate evaluation through the public API.
+- Ruff lint and format passed; strict Pyright reported **0 errors, 0 warnings**.
+- Naming, repository, evidence and reproducibility validation passed; evidence remains 232 references / 63 digests and the snapshot hash is unchanged.
+- Wheel and sdist-derived wheel were installed in separate fresh environments. Isolated smoke checks exercised public diagnostics on passing/excluded candidates, changed horizons, false flags, global null-flag drift, missing-slot possession reconciliation, and rejected diagnostic-based empirical authorization.
+- All **20 tracked JSON files**, including every v1/v2 authority/schema, scientific lock and snapshot, were compared byte-for-byte to the starting HEAD and match. Every scientific hash in this report remains unchanged.
+- A differential self-check compared complete v1 result dictionaries against the starting implementation for **11** null, known, malformed, missing-field and invalid-player possession scenarios; every result matched, including exclusions and warnings.
+
+No restricted source processing, empirical qualification, training, checkpoint selection, LOMO, empirical scoring or merges were performed. The owner-ratified scientific decision remains separate and draft; deliberate integration/review sequencing and independent protected-population verification remain required before empirical execution.

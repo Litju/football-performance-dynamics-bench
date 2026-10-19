@@ -161,6 +161,16 @@ except ValueError as error:
     assert "population drift gate" in str(error)
 else:
     raise AssertionError("installed diagnostic authorized empirical membership")
+gapped = [*samples[:3], None, *samples[4:]]
+gap_diagnostic = diagnose_skillcorner_window_v2(gapped, **kwargs)
+context = gap_diagnostic.quality["play_context"]
+assert context["possession_denominator_samples"] == 41
+assert context["possession_unknown_samples"] == 40
+assert context["possession_missing_samples"] == 1
+assert context["possession_invalid_samples"] == 0
+assert context["possession_unknown_fraction"] == 40 / 41
+assert context["possession_counts_reconcile_to_expected_support"] is True
+assert "TEMPORAL_GAP" in {{issue.code for issue in gap_diagnostic.exclusion_reasons}}
 samples[25]["ball"] = None
 excluded = diagnose_skillcorner_window_v2(samples, **kwargs)
 assert excluded.status == "UNQUALIFIED" and not excluded.candidate_rules_pass

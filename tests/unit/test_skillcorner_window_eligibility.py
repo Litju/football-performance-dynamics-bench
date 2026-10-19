@@ -774,3 +774,95 @@ def test_public_v2_diagnostic_does_not_bypass_policy_validation() -> None:
             phase_intervals=[_phase(1, 100, 200)],
             policy_manifest=manifest,
         )
+
+
+def test_v2_possession_distinguishes_missing_slots_and_observed_unknowns() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    for sample in samples:
+        sample["possession"] = {"group": "home team", "player_id": 1001}
+    samples[0]["possession"] = {"group": "away team", "player_id": 1009}
+    samples[1]["possession"] = {"group": None, "player_id": None}
+    samples[2]["possession"] = None
+    samples[3] = None
+    result = _window_v2(samples)
+    context = result.quality["play_context"]
+    assert result.status == "UNQUALIFIED" and not result.candidate_rules_pass
+    assert "TEMPORAL_GAP" in _reason_codes(result)
+    assert context["possession_denominator_samples"] == 41
+    assert context["possession_home_samples"] == 37
+    assert context["possession_away_samples"] == 1
+    assert context["possession_unknown_samples"] == 2
+    assert context["possession_missing_samples"] == 1
+    assert context["possession_invalid_samples"] == 0
+    assert context["possession_unknown_fraction"] == pytest.approx(2 / 41)
+    assert context["possession_missing_fraction"] == pytest.approx(1 / 41)
+    assert context["possession_classified_samples"] == 41
+    assert context["possession_counts_reconcile_to_expected_support"] is True
+    assert sum(
+        context[f"possession_{category}_fraction"]
+        for category in ("home", "away", "unknown", "missing", "invalid")
+    ) == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "missing", "invalid", "reason", "span_available"),
+    [
+        ("empty", 41, 0, "INSUFFICIENT_HISTORY_SUPPORT", False),
+        ("truncated", 1, 0, "INSUFFICIENT_FUTURE_SUPPORT", False),
+        ("extra", 0, 0, "WINDOW_SUPPORT_LENGTH_MISMATCH", True),
+        ("all_missing", 41, 0, "TEMPORAL_GAP", True),
+        ("invalid_sample", 0, 1, "INVALID_SAMPLE_SCHEMA", True),
+        ("missing_possession_key", 0, 1, "INVALID_SAMPLE_SCHEMA", True),
+        ("invalid_group", 0, 1, "INVALID_SAMPLE_SCHEMA", True),
+        ("invalid_player", 0, 1, "INVALID_SAMPLE_SCHEMA", True),
+    ],
+)
+def test_v2_possession_reconciles_invalid_support_without_shrinking_denominator(
+    mutation, missing, invalid, reason, span_available
+) -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    if mutation == "empty":
+        samples = []
+    elif mutation == "truncated":
+        samples.pop()
+    elif mutation == "extra":
+        samples.append(_frame_v2(41))
+    elif mutation == "all_missing":
+        samples = [None] * 41
+    elif mutation == "invalid_sample":
+        samples[0] = {}
+    elif mutation == "missing_possession_key":
+        samples[0].pop("possession")
+    elif mutation == "invalid_group":
+        samples[0]["possession"] = {"group": "not a team", "player_id": None}
+    else:
+        samples[0]["possession"] = {"group": "home team", "player_id": "invalid"}
+    result = _window_v2(samples)
+    context = result.quality["play_context"]
+    assert not result.candidate_rules_pass
+    assert reason in _reason_codes(result)
+    assert context["possession_denominator_samples"] == 41
+    assert context["possession_missing_samples"] == missing
+    assert context["possession_invalid_samples"] == invalid
+    assert context["possession_unknown_samples"] == 41 - missing - invalid
+    assert context["possession_support_span_available"] is span_available
+    assert context["possession_counts_reconcile_to_expected_support"] is True
+    assert (
+        sum(
+            context[f"possession_{category}_samples"]
+            for category in ("home", "away", "unknown", "missing", "invalid")
+        )
+        == 41
+    )
+    if not span_available:
+        assert context["possession_unknown_fraction"] is None
+        assert context["possession_missing_fraction"] is None
+
+
+def test_v1_possession_output_contract_is_unchanged() -> None:
+    context = _window().quality["play_context"]
+    assert context["possession_denominator_samples"] == 5
+    assert context["possession_unknown_samples"] == 5
+    assert context["possession_unknown_fraction"] == 1.0
+    assert "possession_missing_samples" not in context
+    assert "possession_invalid_samples" not in context
