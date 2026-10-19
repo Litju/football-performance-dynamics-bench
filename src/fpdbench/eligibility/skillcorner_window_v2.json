@@ -3,7 +3,7 @@
   "schema_version": "2.0.0",
   "policy_id": "skillcorner_window_v2",
   "policy_version": "2.0.0",
-  "policy_hash": "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581",
+  "policy_hash": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11",
   "source_release_id": "skillcorner_open_data_v1:sha256:e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
   "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
   "data_state_id": "skillcorner_5hz_v2",
@@ -173,7 +173,6 @@
     },
     "exclusion_reason_codes": [
       "BALL_COVERAGE_BELOW_MINIMUM",
-      "BALL_DETECTION_UNKNOWN_AT_ORIGIN",
       "BALL_MISSING_AT_ORIGIN",
       "CANONICAL_FRAME_MISMATCH",
       "COORDINATE_IMPLAUSIBLE",

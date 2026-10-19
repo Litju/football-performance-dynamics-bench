@@ -98,7 +98,7 @@ assert measurement_v2["data_state_hash"] == (
 eligibility_v2 = load_eligibility_manifest_v2()
 assert validate_eligibility_manifest_v2(eligibility_v2) == ()
 assert eligibility_v2["policy_hash"] == (
-    "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+    "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
 )
 assert load_prospective_protocol()["protocol_sha256"] == PROTOCOL_SHA256
 assert load_prospective_protocol_v2()["protocol_sha256"] == PROTOCOL_V2_SHA256
@@ -107,7 +107,7 @@ assert load_empirical_experiment_plan()["plan_version"] == "1.1.0"
 plan_v2 = load_empirical_experiment_plan_v2()
 validate_empirical_experiment_plan_v2_document(plan_v2)
 assert plan_v2["plan_sha256"] == (
-    "12db6cf4da3018cd467cf468ebcbe07369208f8a4dc83a063579b7b781453203"
+    "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62"
 )
 versioned_files = (
     "data_states/skillcorner_5hz_v2.json",

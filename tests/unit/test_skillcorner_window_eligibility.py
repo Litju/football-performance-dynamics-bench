@@ -14,6 +14,7 @@ from fpdbench.eligibility.skillcorner import (
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
+    _evaluate_skillcorner_window,
     evaluate_skillcorner_window,
     evaluate_skillcorner_window_v2,
     load_manifest,
@@ -116,17 +117,10 @@ def _window(
 
 def _window_v2(samples: list[dict[str, object] | None] | None = None) -> WindowEligibilityResult:
     support = samples if samples is not None else [_frame_v2(index) for index in range(41)]
-    gate_samples = [copy.deepcopy(sample) for sample in support if sample is not None]
-    seen_match_ids = {sample["match_id"] for sample in gate_samples}
-    for match_id in load_source_manifest()["selected_source_matches"]:
-        if match_id not in seen_match_ids:
-            extra = copy.deepcopy(gate_samples[0])
-            extra["match_id"] = match_id
-            gate_samples.append(extra)
-    qualification = validate_ball_population_drift_v2(gate_samples)
-    return evaluate_skillcorner_window_v2(
+    # Exercise candidate mechanics only; no synthetic fixture grants source qualification.
+    return _evaluate_skillcorner_window(
         support,
-        population_qualification=qualification,
+        v2=True,
         history_intervals=25,
         future_intervals=15,
         match_metadata=_metadata(),
@@ -666,3 +660,58 @@ def test_candidate_support_requires_history_origin_and_future_samples(
     result = _window([_frame(index) for index in range(sample_count)])
     assert reason in _reason_codes(result)
     assert result.quality["strata"]["temporal_continuity"] == "unknown"  # type: ignore[index]
+
+
+@pytest.mark.parametrize(("history", "future"), [(24, 16), (26, 14), (25, 14), (24, 15)])
+def test_v2_rejects_changed_horizon_even_when_support_total_is_41(history, future) -> None:
+    with pytest.raises(ValueError, match="exactly 25 history and 15 future"):
+        _evaluate_skillcorner_window(
+            [_frame_v2(index) for index in range(41)],
+            history_intervals=history,
+            future_intervals=future,
+            match_metadata=_metadata(),
+            phase_intervals=[_phase(1, 100, 200)],
+            v2=True,
+        )
+
+
+@pytest.mark.parametrize("evidence", ["partial_scan", "all_matches", "constructed", "receipt"])
+def test_v2_partial_scans_and_forged_receipts_never_authorize_membership(evidence) -> None:
+    source = load_source_manifest()
+    state = load_data_state_manifest_v2()
+    if evidence in {"partial_scan", "all_matches"}:
+        samples = []
+        match_ids = source["selected_source_matches"]
+        for match_id in match_ids[:1] if evidence == "partial_scan" else match_ids:
+            sample = _frame_v2(0)
+            sample["match_id"] = match_id
+            samples.append(sample)
+        qualification = validate_ball_population_drift_v2(samples)
+        assert qualification.checked_sample_count <= 20
+    elif evidence == "constructed":
+        qualification = BallPopulationQualificationV2(
+            source["source_release_hash"], state["data_state_hash"], 622414, 20
+        )
+    else:
+        qualification = {"status": "PASS", "checked_match_count": 20, "receipt_sha256": "a" * 64}
+    with pytest.raises(
+        ValueError, match="independently verified exhaustive protected-population receipt"
+    ):
+        evaluate_skillcorner_window_v2(
+            [_frame_v2(index) for index in range(41)],
+            population_qualification=qualification,
+            history_intervals=25,
+            future_intervals=15,
+            match_metadata=_metadata(),
+            phase_intervals=[_phase(1, 100, 200)],
+        )
+
+
+def test_v2_false_detection_at_origin_keeps_finite_xy_eligible() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[25]["ball"] = {"x_m": 3.0, "y_m": 4.0, "is_detected": False}
+    assert _window_v2(samples).eligible
+    assert (
+        "BALL_DETECTION_UNKNOWN_AT_ORIGIN"
+        not in load_manifest_v2()["scientific_policy"]["exclusion_reason_codes"]
+    )

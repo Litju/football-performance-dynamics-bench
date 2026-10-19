@@ -34,7 +34,7 @@ MANIFEST_V2_PATH = Path(__file__).with_name("skillcorner_window_v2.json")
 SUPPORTED_POLICY_ID = "skillcorner_window_v1"
 SUPPORTED_POLICY_VERSION = "1.1.0"
 SUPPORTED_POLICY_HASH = "f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b"
-SUPPORTED_POLICY_V2_HASH = "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+SUPPORTED_POLICY_V2_HASH = "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
 BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED = "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"
 _V2_POLICY_ID = "skillcorner_window_v2"
 _PERIOD_NAME = re.compile(r"period_([1-5])\Z")
@@ -99,7 +99,7 @@ class WindowEligibilityResult:
 
 @dataclass(frozen=True, slots=True)
 class BallPopulationQualificationV2:
-    """Proof that the v2 source-wide nullable-ball stop was checked and cleared."""
+    """Untrusted scan diagnostics only; never an exhaustive source qualification receipt."""
 
     source_release_hash: str
     data_state_hash: str
@@ -337,7 +337,7 @@ def validate_manifest_v2(manifest: Mapping[str, object]) -> tuple[str, ...]:
 def validate_ball_population_drift_v2(
     samples: Iterable[Mapping[str, object]],
 ) -> BallPopulationQualificationV2:
-    """Stop v2 population qualification if any retained ball has null flag and finite XY."""
+    """Scan for drift; counts cannot establish exhaustive coverage or qualification."""
     manifest = load_data_state_manifest_v2()
     state_hash = manifest.get("data_state_hash")
     source = load_source_manifest()
@@ -540,8 +540,10 @@ def _evaluate_skillcorner_window(
     version = cast(str, manifest["policy_version"])
     digest = cast(str, manifest["policy_hash"])
     expected_count = history_intervals + future_intervals + 1
-    if v2 and expected_count != 41:
-        raise ValueError("skillcorner_window_v2 requires exactly 41 support slots")
+    if v2 and (history_intervals, future_intervals) != (25, 15):
+        raise ValueError(
+            "skillcorner_window_v2 requires exactly 25 history and 15 future intervals"
+        )
     values = list(islice(samples, expected_count + 1))
     candidate = values[:expected_count]
 
@@ -1573,22 +1575,14 @@ def evaluate_skillcorner_window_v2(
     phase_intervals: Iterable[PhaseInterval],
     policy_manifest: Mapping[str, object] | None = None,
 ) -> WindowEligibilityResult:
-    """Evaluate a candidate under nullable-ball v2 after the population drift gate."""
-    state = load_data_state_manifest_v2()
-    source = load_source_manifest()
-    if (
-        population_qualification.source_release_hash != source.get("source_release_hash")
-        or population_qualification.data_state_hash != state.get("data_state_hash")
-        or population_qualification.checked_match_count != 20
-        or population_qualification.null_flag_finite_xy_count != 0
-    ):
-        raise ValueError("v2 population drift gate is missing or bound to another source")
-    return _evaluate_skillcorner_window(
-        samples,
-        history_intervals=history_intervals,
-        future_intervals=future_intervals,
-        match_metadata=match_metadata,
-        phase_intervals=phase_intervals,
-        policy_manifest=policy_manifest,
-        v2=True,
+    """Fail closed pending an independent exhaustive protected-population receipt verifier."""
+    if (history_intervals, future_intervals) != (25, 15):
+        raise ValueError(
+            "skillcorner_window_v2 requires exactly 25 history and 15 future intervals"
+        )
+    # Scan diagnostics and caller-constructed objects cannot authenticate source coverage.
+    raise ValueError(
+        "v2 population drift gate requires an independently verified exhaustive "
+        "protected-population receipt; "
+        "verification is unavailable and empirical eligibility remains blocked"
     )

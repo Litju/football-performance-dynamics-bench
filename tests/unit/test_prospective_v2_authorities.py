@@ -9,15 +9,23 @@ from typing import cast
 import pytest
 
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    ForecastOrigin,
     empirical_experiment_plan,
+    invert_origin_relative_displacement,
+    make_absolute_position_target,
+    make_origin_relative_displacement_target,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.evaluation_population import (
     EvaluationPopulationAuthorityV2,
+    EvaluationPopulationOutput,
     load_prospective_result_v2,
     prospective_window_id,
     prospective_window_id_v2,
+    truth_mask_sha256,
+    truth_sha256,
     validate_evaluation_population_authority_v2_document,
     validate_evaluation_population_schema_v2,
+    validate_population_bound_evaluation,
     validate_prospective_result_document_v2,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
@@ -205,3 +213,112 @@ def test_v2_result_manifest_binds_population_and_all_successor_hashes(tmp_path: 
     )
     with pytest.raises(ValueError, match="measurement_state_hash"):
         validate_prospective_result_document_v2(changed, population)
+
+
+def _reseal(document: dict[str, object]) -> None:
+    document["membership_sha256"] = _digest(document["matches"])
+    document["manifest_sha256"] = _digest(
+        {key: item for key, item in document.items() if key != "manifest_sha256"}
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation", ["none", "empty_match", "all_empty", "truth", "mask", "candidate", "receipt"]
+)
+def test_at07_structural_manifests_cannot_be_promoted_to_res501_qualification(mutation) -> None:
+    document = _population_document()
+    matches = cast(list[dict[str, object]], document["matches"])
+    if mutation in {"empty_match", "all_empty"}:
+        emptied = matches[:1] if mutation == "empty_match" else matches
+        for match in emptied:
+            match["windows"] = []
+        document["eligible_window_count"] = 20 - len(emptied)
+    elif mutation in {"truth", "mask"}:
+        window = cast(list[dict[str, object]], matches[0]["windows"])[0]
+        scene = cast(list[dict[str, object]], window["scenes"])[0]
+        field = "absolute_xy_truth_sha256" if mutation == "truth" else "truth_mask_sha256"
+        scene[field] = "f" * 64
+    elif mutation == "candidate":
+        document["candidate_origin_population_sha256"] = "f" * 64
+    elif mutation == "receipt":
+        document["qualification_receipt"] = {"status": "PASS", "receipt_sha256": _SHA}
+        _reseal(document)
+        with pytest.raises(ValueError):
+            validate_evaluation_population_authority_v2_document(document)
+        return
+    _reseal(document)
+    population = validate_evaluation_population_authority_v2_document(document)
+    assert population.empirically_qualified is False
+    with pytest.raises(ValueError, match="protected-population"):
+        population.require_empirical_qualification()
+    result = _result(population)
+    result["status"] = "completed"
+    result["manifest_sha256"] = _digest(
+        {key: item for key, item in result.items() if key != "manifest_sha256"}
+    )
+    with pytest.raises(ValueError, match="protected-population"):
+        validate_prospective_result_document_v2(result, population)
+
+
+@pytest.mark.parametrize("regime", ["history_only", "future_ball", "future_opponent_plus_ball"])
+def test_at05_common_physical_truth_and_masks_do_not_imply_population_qualification(regime) -> None:
+
+    origins = tuple((10.0 + player, -5.0 - player) for player in range(11))
+    origin = ForecastOrigin(5.0, (5.0,), ("history_target_team_xy",), origins)
+    physical = tuple(tuple((x + time, y - 2 * time) for x, y in origins) for time in range(15))
+    absolute_target = make_absolute_position_target(physical)
+    displacement_target = make_origin_relative_displacement_target(physical, origin)
+    recovered = invert_origin_relative_displacement(displacement_target, origin)
+    for expected_row, actual_row, normalized_row in zip(
+        physical, recovered, absolute_target, strict=True
+    ):
+        for expected, actual, normalized in zip(
+            expected_row, actual_row, normalized_row, strict=True
+        ):
+            assert actual == pytest.approx(expected)
+            assert (normalized[0] * 52.5, normalized[1] * 34.0) == pytest.approx(expected)
+    absolute = tuple(
+        tuple(
+            None if time == 3 and player == 2 else (x + time, y - 2 * time)
+            for player, (x, y) in enumerate(origins)
+        )
+        for time in range(15)
+    )
+    displacement = tuple(
+        tuple(
+            None if pair is None else (pair[0] - x, pair[1] - y)
+            for pair, (x, y) in zip(row, origins, strict=True)
+        )
+        for row in absolute
+    )
+    reconstructed = tuple(
+        tuple(
+            None if pair is None else (pair[0] + x, pair[1] + y)
+            for pair, (x, y) in zip(row, origins, strict=True)
+        )
+        for row in displacement
+    )
+    assert reconstructed == absolute
+    assert truth_mask_sha256(absolute) == truth_mask_sha256(displacement)
+    changed = list(displacement)
+    changed[0] = (None, *changed[0][1:])
+    assert truth_mask_sha256(changed) != truth_mask_sha256(absolute)
+    document = _population_document()
+    for match in document["matches"]:
+        for window in match["windows"]:
+            for scene in window["scenes"]:
+                scene["absolute_xy_truth_sha256"] = truth_sha256(
+                    absolute, target_representation="absolute_xy"
+                )
+                scene["displacement_truth_sha256"] = truth_sha256(
+                    displacement, target_representation="origin_relative_displacement"
+                )
+                scene["truth_mask_sha256"] = truth_mask_sha256(absolute)
+    _reseal(document)
+    population = validate_evaluation_population_authority_v2_document(document)
+    for representation in ("absolute_xy", "origin_relative_displacement"):
+        output = EvaluationPopulationOutput(population.manifest_sha256, {}, representation)
+        with pytest.raises(ValueError, match="independently verified protected-population"):
+            validate_population_bound_evaluation(
+                population, output, cell_id=f"origin_persistence_v1|{regime}|{representation}"
+            )

@@ -24,7 +24,7 @@ from .prospective_protocol import (
 PLAN_FILE = "empirical_experiment_plan_v1.json"
 PLAN_V2_FILE = "empirical_experiment_plan_v2.json"
 PLAN_SHA256 = "0446649e1ad049880cf6f8a76b4f3e03421d8bd7a1f7a2c562b5770461527775"
-PLAN_V2_SHA256 = "12db6cf4da3018cd467cf468ebcbe07369208f8a4dc83a063579b7b781453203"
+PLAN_V2_SHA256 = "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62"
 _PLAN_ID = "skillcorner.prospective_conditional_motion.execution"
 _PLAN_VERSION = "1.1.0"
 _REGIMES = ("history_only", "future_ball", "future_opponent_plus_ball")

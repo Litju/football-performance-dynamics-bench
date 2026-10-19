@@ -191,6 +191,22 @@ class EvaluationPopulationAuthorityV2:
     membership_sha256: str
     manifest_sha256: str
 
+    @property
+    def empirically_qualified(self) -> bool:
+        """Structural validation never authenticates source-derived truth or masks."""
+        return False
+
+    def require_empirical_qualification(self) -> None:
+        if any(not match.windows for match in self.matches) or len(self.matches) != 20:
+            raise ValueError(
+                "protected-population qualification requires scoreable windows in every match"
+            )
+        # The independent protected receipt verifier is a separate qualification task.
+        raise ValueError(
+            "independently verified protected-population receipt required; "
+            "structural hashes do not qualify source membership, physical truth, or masks"
+        )
+
     def match_ids(self, role: str) -> tuple[str, ...]:
         return tuple(match.match_id for match in self.matches if match.role == role)
 
@@ -447,7 +463,7 @@ def load_evaluation_population_authority(path: Path) -> EvaluationPopulationAuth
 def validate_evaluation_population_authority_v2_document(
     document: Mapping[str, object],
 ) -> EvaluationPopulationAuthorityV2:
-    """Validate a v2 population's complete upstream bindings and all membership rows."""
+    """Validate structure and hash bindings only; return an empirically unqualified manifest."""
     value = _mapping(document, "v2 population authority")
     plan = load_empirical_experiment_plan_v2()
     validate_empirical_experiment_plan_v2_document(plan)
@@ -822,6 +838,8 @@ def validate_population_bound_evaluation(
     lomo_fold_id: str | None = None,
 ) -> None:
     """Reject population drift, masking, identity changes, or reordered scorer inputs."""
+    if isinstance(authority, EvaluationPopulationAuthorityV2):
+        authority.require_empirical_qualification()
     if output.population_authority_sha256 != authority.manifest_sha256:
         raise ValueError("evaluation output uses a different population authority")
     cell = experiment_cell(cell_id)
@@ -1035,7 +1053,9 @@ def validate_prospective_result_document_v2(
     document: Mapping[str, object],
     population: EvaluationPopulationAuthorityV2,
 ) -> None:
-    """Validate every v2 authority binding and apply the frozen result semantics."""
+    """Validate result structure; empirical results additionally require protected-population."""
+    if document.get("status") != "failed_validation":
+        population.require_empirical_qualification()
     value = _mapping(document, "v2 result manifest")
     plan = load_empirical_experiment_plan_v2()
     validate_empirical_experiment_plan_v2_document(plan)

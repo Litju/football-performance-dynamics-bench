@@ -71,7 +71,7 @@
       "const": "2.0.0"
     },
     "protocol_sha256": {
-      "const": "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e"
+      "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
     },
     "run_id": {
       "type": "string",
@@ -324,7 +324,7 @@
       "const": "2.0.0"
     },
     "eligibility_policy_hash": {
-      "const": "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+      "const": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
     },
     "population_id": {
       "const": "skillcorner.prospective.conditional_motion.population_v2"
@@ -1522,5 +1522,6 @@
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     }
-  }
+  },
+  "description": "Structural validation only. Self-consistent hashes do not prove source membership, physical truth, masks, or scoreability. Empirical use requires a separately independently verified exhaustive protected-population receipt; no verifier or qualified population ships in the successor implementation."
 }

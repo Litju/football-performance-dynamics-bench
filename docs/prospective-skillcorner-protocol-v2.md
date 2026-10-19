@@ -1,7 +1,7 @@
 # Prospective SkillCorner benchmark protocol v2
 
 **Identity:** `skillcorner.prospective_conditional_motion` 2.0.0
-**Protocol SHA-256:** `9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e`
+**Protocol SHA-256:** `3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f`
 
 The protocol binds the pinned SkillCorner release and source population to `skillcorner_5hz_v2` and `skillcorner_window_v2`. The source release and source-population hashes are unchanged. The two benchmark IDs retain their names and advance to version 2.0.0 under this successor protocol.
 
