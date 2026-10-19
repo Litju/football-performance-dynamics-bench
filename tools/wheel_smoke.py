@@ -100,6 +100,79 @@ assert validate_eligibility_manifest_v2(eligibility_v2) == ()
 assert eligibility_v2["policy_hash"] == (
     "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
 )
+# Public v2 candidate diagnostics execute installed production code, without qualification.
+from fpdbench.eligibility import (
+    CandidateWindowDiagnosticV2,
+    BallPopulationQualificationStop,
+    PhaseInterval,
+    diagnose_skillcorner_window_v2,
+    evaluate_skillcorner_window_v2,
+)
+metadata = {{
+    "id": 2017461, "home_team": {{"id": 101}}, "away_team": {{"id": 202}},
+    "pitch_length": 100.0, "pitch_width": 60.0,
+    "match_periods": [{{"period": 1, "start_frame": 100, "end_frame": 200}}],
+    "players": [
+        {{"id": player, "team_id": 101 if player < 1009 else 202,
+         "playing_time": {{"by_period": [
+             {{"name": "period_1", "start_frame": 100, "end_frame": 200}}
+         ]}}}}
+        for player in range(1001, 1017)
+    ],
+}}
+players = [
+    {{"player_id": player, "team_id": 101 if player < 1009 else 202,
+     "group": "home" if player < 1009 else "away",
+     "x_m": float(player % 20), "y_m": 0.0, "is_detected": True}}
+    for player in range(1001, 1017)
+]
+samples = [
+    {{"data_state_id": measurement_v2["data_state_id"],
+     "data_state_hash": measurement_v2["data_state_hash"],
+     "source_release_id": eligibility_v2["source_release_id"],
+     "source_release_hash": eligibility_v2["source_release_hash"],
+     "match_id": 2017461, "period": 1, "source_frame": 100 + 2 * offset,
+     "canonical_sample_index": 50 + offset, "timestamp_deciseconds": 100 + 2 * offset,
+     "home_team_id": 101, "away_team_id": 202, "pitch_length_m": 100.0, "pitch_width_m": 60.0,
+     "players": players, "ball": {{"x_m": 0.0, "y_m": 0.0, "is_detected": False}},
+     "possession": None}}
+    for offset in range(41)
+]
+kwargs = {{
+    "history_intervals": 25, "future_intervals": 15, "match_metadata": metadata,
+    "phase_intervals": [PhaseInterval(eligibility_v2["source_release_id"], 2017461, 1, 100, 200)],
+}}
+diagnostic = diagnose_skillcorner_window_v2(samples, **kwargs)
+assert isinstance(diagnostic, CandidateWindowDiagnosticV2)
+assert diagnostic.status == "UNQUALIFIED" and diagnostic.candidate_rules_pass
+assert not hasattr(diagnostic, "eligible")
+for history, future in ((24, 16), (26, 14)):
+    try:
+        diagnose_skillcorner_window_v2(
+            samples, **{{**kwargs, "history_intervals": history, "future_intervals": future}}
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("installed diagnostic accepted changed horizons")
+try:
+    evaluate_skillcorner_window_v2(samples, population_qualification=diagnostic, **kwargs)
+except ValueError as error:
+    assert "population drift gate" in str(error)
+else:
+    raise AssertionError("installed diagnostic authorized empirical membership")
+samples[25]["ball"] = None
+excluded = diagnose_skillcorner_window_v2(samples, **kwargs)
+assert excluded.status == "UNQUALIFIED" and not excluded.candidate_rules_pass
+assert "BALL_MISSING_AT_ORIGIN" in {{issue.code for issue in excluded.exclusion_reasons}}
+samples[25]["ball"] = {{"x_m": 0.0, "y_m": 0.0, "is_detected": None}}
+try:
+    diagnose_skillcorner_window_v2(samples, **kwargs)
+except BallPopulationQualificationStop:
+    pass
+else:
+    raise AssertionError("installed diagnostic suppressed the global drift stop")
+
 assert load_prospective_protocol()["protocol_sha256"] == PROTOCOL_SHA256
 assert load_prospective_protocol_v2()["protocol_sha256"] == PROTOCOL_V2_SHA256
 validate_empirical_experiment_plan_document(load_empirical_experiment_plan())

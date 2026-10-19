@@ -7,10 +7,10 @@ import json
 import math
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from fpdbench.data_sources.skillcorner import canonical_bytes
 from fpdbench.data_sources.skillcorner import (
@@ -95,6 +95,25 @@ class WindowEligibilityResult:
     exclusion_reasons: tuple[EligibilityIssue, ...]
     warnings: tuple[EligibilityIssue, ...]
     quality: Mapping[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateWindowDiagnosticV2:
+    """Candidate rule outcomes only; never population membership or model inputs."""
+
+    policy_id: str
+    policy_version: str
+    policy_hash: str
+    source_release_id: str
+    source_release_hash: str
+    data_state_id: str
+    data_state_version: str
+    data_state_hash: str
+    candidate_rules_pass: bool
+    exclusion_reasons: tuple[EligibilityIssue, ...]
+    warnings: tuple[EligibilityIssue, ...]
+    quality: Mapping[str, object]
+    status: Literal["UNQUALIFIED"] = field(default="UNQUALIFIED", init=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1562,6 +1581,45 @@ def evaluate_skillcorner_window(
         phase_intervals=phase_intervals,
         policy_manifest=policy_manifest,
         v2=False,
+    )
+
+
+def diagnose_skillcorner_window_v2(
+    samples: Iterable[Mapping[str, object] | None],
+    *,
+    history_intervals: int,
+    future_intervals: int,
+    match_metadata: Mapping[str, object],
+    phase_intervals: Iterable[PhaseInterval],
+    policy_manifest: Mapping[str, object] | None = None,
+) -> CandidateWindowDiagnosticV2:
+    """Run production v2 candidate rules without authorizing any empirical use.
+
+    A passing candidate remains UNQUALIFIED. No population membership or model
+    masks are emitted. The global null-flag/finite-XY sentinel still raises.
+    """
+    result = _evaluate_skillcorner_window(
+        samples,
+        history_intervals=history_intervals,
+        future_intervals=future_intervals,
+        match_metadata=match_metadata,
+        phase_intervals=phase_intervals,
+        policy_manifest=policy_manifest,
+        v2=True,
+    )
+    return CandidateWindowDiagnosticV2(
+        policy_id=result.policy_id,
+        policy_version=result.policy_version,
+        policy_hash=result.policy_hash,
+        source_release_id=result.source_release_id,
+        source_release_hash=result.source_release_hash,
+        data_state_id=result.data_state_id,
+        data_state_version=result.data_state_version,
+        data_state_hash=result.data_state_hash,
+        candidate_rules_pass=result.eligible,
+        exclusion_reasons=result.exclusion_reasons,
+        warnings=result.warnings,
+        quality=result.quality,
     )
 
 

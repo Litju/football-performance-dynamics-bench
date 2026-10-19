@@ -7,6 +7,7 @@ import pytest
 from fpdbench.data_sources.skillcorner import load_manifest as load_source_manifest
 from fpdbench.data_states.skillcorner import load_manifest as load_data_state_manifest
 from fpdbench.data_states.skillcorner import load_manifest_v2 as load_data_state_manifest_v2
+from fpdbench.eligibility import CandidateWindowDiagnosticV2, diagnose_skillcorner_window_v2
 from fpdbench.eligibility.skillcorner import (
     BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED,
     BallPopulationQualificationStop,
@@ -14,7 +15,6 @@ from fpdbench.eligibility.skillcorner import (
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
-    _evaluate_skillcorner_window,
     evaluate_skillcorner_window,
     evaluate_skillcorner_window_v2,
     load_manifest,
@@ -115,12 +115,12 @@ def _window(
     )
 
 
-def _window_v2(samples: list[dict[str, object] | None] | None = None) -> WindowEligibilityResult:
+def _window_v2(
+    samples: list[dict[str, object] | None] | None = None,
+) -> CandidateWindowDiagnosticV2:
     support = samples if samples is not None else [_frame_v2(index) for index in range(41)]
-    # Exercise candidate mechanics only; no synthetic fixture grants source qualification.
-    return _evaluate_skillcorner_window(
+    return diagnose_skillcorner_window_v2(
         support,
-        v2=True,
         history_intervals=25,
         future_intervals=15,
         match_metadata=_metadata(),
@@ -134,12 +134,12 @@ def _phase(period: int, start: int, end: int) -> PhaseInterval:
     )
 
 
-def _reason_codes(result: WindowEligibilityResult) -> set[str]:
+def _reason_codes(result: WindowEligibilityResult | CandidateWindowDiagnosticV2) -> set[str]:
     reasons = cast(tuple[EligibilityIssue, ...], result.exclusion_reasons)
     return {reason.code for reason in reasons}
 
 
-def _warning_codes(result: WindowEligibilityResult) -> set[str]:
+def _warning_codes(result: WindowEligibilityResult | CandidateWindowDiagnosticV2) -> set[str]:
     warnings = cast(tuple[EligibilityIssue, ...], result.warnings)
     return {warning.code for warning in warnings}
 
@@ -194,7 +194,7 @@ def test_v2_accepts_39_of_41_and_keeps_false_positions() -> None:
     result = _window_v2(samples)
     ball = cast(dict[str, object], result.quality["ball_observations"])
 
-    assert result.eligible
+    assert result.candidate_rules_pass
     assert ball["valid_position_count"] == 39
     assert ball["position_coverage_fraction"] == pytest.approx(39 / 41)
     assert ball["flag_false_count"] == 1
@@ -211,7 +211,7 @@ def test_v2_all_false_finite_flags_are_known_but_not_called_extrapolated() -> No
     result = _window_v2(samples)
     ball = cast(dict[str, object], result.quality["ball_observations"])
 
-    assert result.eligible
+    assert result.candidate_rules_pass
     assert result.quality["strata"]["ball_detection_exposure"] == "all_false_flag"
     assert ball["flag_false_count"] == 41
     assert ball["false_flag_position_count"] == 41
@@ -242,7 +242,7 @@ def test_v2_partial_xy_warns_without_excluding_when_origin_and_coverage_pass() -
     samples[3]["ball"] = {"x_m": None, "y_m": 3.0, "is_detected": False}
 
     result = _window_v2(samples)
-    assert result.eligible
+    assert result.candidate_rules_pass
     assert (
         cast(dict[str, object], result.quality["ball_observations"])["valid_position_count"] == 39
     )
@@ -278,16 +278,17 @@ def test_v2_gap_counts_missing_slot_and_keeps_temporal_exclusion() -> None:
     result = _window_v2(samples)
     ball = cast(dict[str, object], result.quality["ball_observations"])
 
-    assert not result.eligible
+    assert not result.candidate_rules_pass
     assert "TEMPORAL_GAP" in _reason_codes(result)
     assert ball["missing_source_sample_count"] == 1
     assert ball["position_coverage_fraction"] == pytest.approx(40 / 41)
     assert ball["cross_tab_reconciles_to_expected_support"] is True
 
 
-def test_v2_null_flag_finite_xy_stops_population_and_window_qualification() -> None:
+@pytest.mark.parametrize("offset", [0, 25, 40])
+def test_v2_null_flag_finite_xy_stops_population_and_window_qualification(offset) -> None:
     samples = [_frame_v2(index) for index in range(41)]
-    samples[40]["ball"] = {"x_m": 3.0, "y_m": 4.0, "is_detected": None}
+    samples[offset]["ball"] = {"x_m": 3.0, "y_m": 4.0, "is_detected": None}
 
     with pytest.raises(BallPopulationQualificationStop) as error:
         validate_ball_population_drift_v2(samples)
@@ -665,17 +666,18 @@ def test_candidate_support_requires_history_origin_and_future_samples(
 @pytest.mark.parametrize(("history", "future"), [(24, 16), (26, 14), (25, 14), (24, 15)])
 def test_v2_rejects_changed_horizon_even_when_support_total_is_41(history, future) -> None:
     with pytest.raises(ValueError, match="exactly 25 history and 15 future"):
-        _evaluate_skillcorner_window(
+        diagnose_skillcorner_window_v2(
             [_frame_v2(index) for index in range(41)],
             history_intervals=history,
             future_intervals=future,
             match_metadata=_metadata(),
             phase_intervals=[_phase(1, 100, 200)],
-            v2=True,
         )
 
 
-@pytest.mark.parametrize("evidence", ["partial_scan", "all_matches", "constructed", "receipt"])
+@pytest.mark.parametrize(
+    "evidence", ["partial_scan", "all_matches", "constructed", "receipt", "diagnostic"]
+)
 def test_v2_partial_scans_and_forged_receipts_never_authorize_membership(evidence) -> None:
     source = load_source_manifest()
     state = load_data_state_manifest_v2()
@@ -688,6 +690,9 @@ def test_v2_partial_scans_and_forged_receipts_never_authorize_membership(evidenc
             samples.append(sample)
         qualification = validate_ball_population_drift_v2(samples)
         assert qualification.checked_sample_count <= 20
+    elif evidence == "diagnostic":
+        qualification = _window_v2()
+        assert qualification.status == "UNQUALIFIED"
     elif evidence == "constructed":
         qualification = BallPopulationQualificationV2(
             source["source_release_hash"], state["data_state_hash"], 622414, 20
@@ -710,8 +715,62 @@ def test_v2_partial_scans_and_forged_receipts_never_authorize_membership(evidenc
 def test_v2_false_detection_at_origin_keeps_finite_xy_eligible() -> None:
     samples = [_frame_v2(index) for index in range(41)]
     samples[25]["ball"] = {"x_m": 3.0, "y_m": 4.0, "is_detected": False}
-    assert _window_v2(samples).eligible
+    assert _window_v2(samples).candidate_rules_pass
     assert (
         "BALL_DETECTION_UNKNOWN_AT_ORIGIN"
         not in load_manifest_v2()["scientific_policy"]["exclusion_reason_codes"]
     )
+
+
+def test_public_v2_diagnostic_is_distinct_and_always_unqualified() -> None:
+    result = _window_v2()
+    assert isinstance(result, CandidateWindowDiagnosticV2)
+    assert not isinstance(result, WindowEligibilityResult | BallPopulationQualificationV2)
+    assert result.status == "UNQUALIFIED"
+    assert result.candidate_rules_pass
+    assert not hasattr(result, "eligible")
+    assert not result.exclusion_reasons
+    assert result.policy_hash == load_manifest_v2()["policy_hash"]
+    samples = [_frame_v2(index) for index in range(41)]
+    samples[25]["ball"] = None
+    excluded = _window_v2(samples)
+    assert excluded.status == "UNQUALIFIED"
+    assert not excluded.candidate_rules_pass
+    assert "BALL_MISSING_AT_ORIGIN" in _reason_codes(excluded)
+
+
+@pytest.mark.parametrize(
+    ("entity", "x", "reason", "passes"),
+    [
+        ("ball", 51.0, "BALL_OUTSIDE_PITCH", True),
+        ("ball", 200.0, "BALL_OUTSIDE_PITCH", True),
+        ("ball", 200.01, "COORDINATE_IMPLAUSIBLE", False),
+        ("player", 51.0, "PLAYER_POSITION_OUTSIDE_PITCH", True),
+        ("player", 100.0, "PLAYER_POSITION_OUTSIDE_PITCH", True),
+        ("player", 100.01, "COORDINATE_IMPLAUSIBLE", False),
+    ],
+)
+def test_public_v2_diagnostic_preserves_coordinate_thresholds(entity, x, reason, passes) -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    for sample in samples:
+        record = sample["ball"] if entity == "ball" else sample["players"][0]
+        record["x_m"] = x
+    result = _window_v2(samples)
+    assert result.status == "UNQUALIFIED"
+    assert result.candidate_rules_pass is passes
+    assert reason in (_warning_codes(result) if passes else _reason_codes(result))
+
+
+def test_public_v2_diagnostic_does_not_bypass_policy_validation() -> None:
+    manifest = copy.deepcopy(load_manifest_v2())
+    manifest["scientific_policy"]["ball_observations"]["minimum_valid_positions"] = 38
+    manifest["policy_hash"] = policy_hash(manifest["scientific_policy"])
+    with pytest.raises(ValueError, match="invalid window eligibility manifest"):
+        diagnose_skillcorner_window_v2(
+            [_frame_v2(index) for index in range(41)],
+            history_intervals=25,
+            future_intervals=15,
+            match_metadata=_metadata(),
+            phase_intervals=[_phase(1, 100, 200)],
+            policy_manifest=manifest,
+        )

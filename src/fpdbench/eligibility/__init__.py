@@ -3,9 +3,11 @@
 from fpdbench.eligibility.skillcorner import (
     BallPopulationQualificationStop,
     BallPopulationQualificationV2,
+    CandidateWindowDiagnosticV2,
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
+    diagnose_skillcorner_window_v2,
     evaluate_skillcorner_window,
     evaluate_skillcorner_window_v2,
     load_manifest,
@@ -18,9 +20,11 @@ from fpdbench.eligibility.skillcorner import (
 __all__ = [
     "BallPopulationQualificationV2",
     "BallPopulationQualificationStop",
+    "CandidateWindowDiagnosticV2",
     "EligibilityIssue",
     "PhaseInterval",
     "WindowEligibilityResult",
+    "diagnose_skillcorner_window_v2",
     "evaluate_skillcorner_window",
     "evaluate_skillcorner_window_v2",
     "load_manifest",
