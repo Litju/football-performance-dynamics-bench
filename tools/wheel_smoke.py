@@ -53,10 +53,14 @@ import fpdbench
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
     PROTOCOL_SHA256,
     load_prospective_protocol,
+    PROTOCOL_V2_SHA256,
+    load_prospective_protocol_v2,
 )
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     load_empirical_experiment_plan,
+    load_empirical_experiment_plan_v2,
     validate_empirical_experiment_plan_document,
+    validate_empirical_experiment_plan_v2_document,
 )
 from fpdbench.evaluation import (
     ABSOLUTE_POSITION_HISTORICAL_SCORER,
@@ -64,6 +68,11 @@ from fpdbench.evaluation import (
 )
 from fpdbench.evaluation.metrics.trajectory import PHYSICAL_TRAJECTORY_EVALUATOR
 from fpdbench.data_states.skillcorner import load_manifest, validate_manifest
+from fpdbench.data_states.skillcorner import load_manifest_v2, validate_manifest_v2
+from fpdbench.eligibility.skillcorner import (
+    load_manifest_v2 as load_eligibility_manifest_v2,
+    validate_manifest_v2 as validate_eligibility_manifest_v2,
+)
 
 assert pathlib.Path(fpdbench.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix))
 calibration = importlib.resources.files("fpdbench").joinpath(
@@ -81,9 +90,48 @@ assert (
 assert PHYSICAL_TRAJECTORY_EVALUATOR.evaluator_id == "physical_trajectory.ade_fde_xy_rmse"
 assert load_manifest()["data_state_id"] == "skillcorner_5hz_v1"
 assert validate_manifest(load_manifest()) == ()
+measurement_v2 = load_manifest_v2()
+assert validate_manifest_v2(measurement_v2) == ()
+assert measurement_v2["data_state_hash"] == (
+    "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671"
+)
+eligibility_v2 = load_eligibility_manifest_v2()
+assert validate_eligibility_manifest_v2(eligibility_v2) == ()
+assert eligibility_v2["policy_hash"] == (
+    "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+)
 assert load_prospective_protocol()["protocol_sha256"] == PROTOCOL_SHA256
+assert load_prospective_protocol_v2()["protocol_sha256"] == PROTOCOL_V2_SHA256
 validate_empirical_experiment_plan_document(load_empirical_experiment_plan())
 assert load_empirical_experiment_plan()["plan_version"] == "1.1.0"
+plan_v2 = load_empirical_experiment_plan_v2()
+validate_empirical_experiment_plan_v2_document(plan_v2)
+assert plan_v2["plan_sha256"] == (
+    "12db6cf4da3018cd467cf468ebcbe07369208f8a4dc83a063579b7b781453203"
+)
+versioned_files = (
+    "data_states/skillcorner_5hz_v2.json",
+    "eligibility/skillcorner_window_v2.json",
+    "benchmarks/conditional_multi_agent_motion_prediction/"
+    "prospective_skillcorner_protocol_v2.json",
+    "benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v2.json",
+    "benchmarks/conditional_multi_agent_motion_prediction/"
+    "evaluation_population_authority_v2.schema.json",
+    "benchmarks/conditional_multi_agent_motion_prediction/"
+    "prospective_experiment_result_v2.schema.json",
+)
+packaged_files = {{
+    relative: importlib.resources.files("fpdbench").joinpath(relative).read_bytes()
+    for relative in versioned_files
+}}
+assert hashlib.sha256(
+    packaged_files["benchmarks/conditional_multi_agent_motion_prediction/"
+                   "evaluation_population_authority_v2.schema.json"]
+).hexdigest() == plan_v2["population_authority"]["schema_sha256"]
+assert hashlib.sha256(
+    packaged_files["benchmarks/conditional_multi_agent_motion_prediction/"
+                   "prospective_experiment_result_v2.schema.json"]
+).hexdigest() == plan_v2["result_manifest_schema"]["schema_sha256"]
 croissant = json.loads(
     importlib.resources.files("fpdbench")
     .joinpath("data_sources/skillcorner_croissant_rai_draft.json")
@@ -135,6 +183,59 @@ assert "limitations under the License." in license_text
             check=True,
             stdout=subprocess.DEVNULL,
         )
+        subprocess.run(
+            [str(cli), "data-states", "verify", "skillcorner_5hz_v2"],
+            cwd=empty_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        subprocess.run(
+            [str(cli), "eligibility", "verify", "skillcorner_window_v2"],
+            cwd=empty_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+
+        sdist_wheels = root / "sdist-wheels"
+        sdist_wheels.mkdir()
+        subprocess.run(
+            ["uv", "build", "--wheel", "--out-dir", str(sdist_wheels), str(sdist)],
+            cwd=empty_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        sdist_wheel = next(sdist_wheels.glob("*.whl"))
+        sdist_environment = root / "sdist-venv"
+        sdist_working_directory = root / "sdist-work"
+        sdist_working_directory.mkdir()
+        venv.EnvBuilder(with_pip=True).create(sdist_environment)
+        sdist_python = sdist_environment / "bin" / "python"
+        sdist_cli = sdist_environment / "bin" / "fpdbench"
+        subprocess.run(
+            [
+                str(sdist_python),
+                "-m",
+                "pip",
+                "install",
+                "--no-index",
+                "--no-deps",
+                str(sdist_wheel),
+            ],
+            cwd=sdist_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        subprocess.run(
+            [str(sdist_python), "-I", "-c", smoke],
+            cwd=sdist_working_directory,
+            check=True,
+        )
+        subprocess.run(
+            [str(sdist_cli), "data-states", "verify", "skillcorner_5hz_v2"],
+            cwd=sdist_working_directory,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
     with tarfile.open(sdist, "r:gz") as archive:
         license_member = next(name for name in archive.getnames() if name.endswith("/LICENSE"))
         metadata_member = next(name for name in archive.getnames() if name.endswith("/PKG-INFO"))
@@ -146,6 +247,17 @@ assert "limitations under the License." in license_text
         metadata_text = package_metadata.read().decode()
         assert "License-Expression: Apache-2.0" in metadata_text
         assert "License-File: LICENSE" in metadata_text
+        versioned_sdist_files = (
+            "src/fpdbench/data_states/skillcorner_5hz_v2.json",
+            "src/fpdbench/eligibility/skillcorner_window_v2.json",
+            "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v2.json",
+            "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v2.json",
+            "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json",
+            "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json",
+        )
+        archive_names = archive.getnames()
+        for relative in versioned_sdist_files:
+            assert any(name.endswith("/" + relative) for name in archive_names)
     print("isolated wheel smoke passed")
     return 0
 
