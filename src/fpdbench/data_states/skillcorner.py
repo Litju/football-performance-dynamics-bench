@@ -405,9 +405,12 @@ def load_manifest() -> dict[str, object]:
 
 def load_manifest_v2() -> dict[str, object]:
     value = json.loads(MANIFEST_V2_PATH.read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+    if not isinstance(value, dict):
         raise ValueError("v2 data-state manifest must be a JSON object with string keys")
-    return cast(dict[str, object], value)
+    typed_value = cast(dict[object, object], value)
+    if not all(isinstance(key, str) for key in typed_value):
+        raise ValueError("v2 data-state manifest must be a JSON object with string keys")
+    return cast(dict[str, object], typed_value)
 
 
 def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
@@ -503,33 +506,36 @@ def validate_manifest_v2(manifest: Mapping[str, object]) -> tuple[str, ...]:
         if manifest.get("data_state_hash") != actual_hash:
             errors.append("v2 data_state_hash does not match scientific_state")
 
-    identity = state.get("identity")
-    source_state = state.get("source")
-    ball_state = state.get("ball_state")
-    transform = state.get("transform")
+    def section(name: str) -> Mapping[str, object]:
+        try:
+            return _mapping(state.get(name), f"scientific_state.{name}")
+        except ValueError as exc:
+            errors.append(str(exc))
+            return {}
+
+    identity = section("identity")
+    source_state = section("source")
+    ball_state = section("ball_state")
+    transform = section("transform")
     expected_stop = (
         "Unobserved in the pinned corpus; retain source values and stop source-specific population "
         "qualification before eligibility membership or model masks with "
         "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED."
     )
-    if not isinstance(identity, Mapping) or any(
+    if any(
         identity.get(field) != manifest.get(field)
         for field in ("schema_id", "schema_version", "data_state_id", "data_state_version")
     ):
         errors.append("v2 scientific_state identity does not match manifest")
-    if not isinstance(source_state, Mapping) or any(
+    if any(
         source_state.get(field) != manifest.get(field)
         for field in ("source_id", "source_release_id", "source_release_hash")
     ):
         errors.append("v2 scientific_state source does not match manifest")
-    if (
-        not isinstance(ball_state, Mapping)
-        or ball_state.get("null_flag_finite_xy") != expected_stop
-    ):
+    if ball_state.get("null_flag_finite_xy") != expected_stop:
         errors.append("v2 nullable-ball population stop differs from its approved contract")
     if (
-        not isinstance(transform, Mapping)
-        or transform.get("transform_id") != "skillcorner_source_frame_even_10hz_to_5hz"
+        transform.get("transform_id") != "skillcorner_source_frame_even_10hz_to_5hz"
         or transform.get("transform_version") != "1.0.0"
     ):
         errors.append(
@@ -618,8 +624,11 @@ def canonical_ball_v2(value: object) -> dict[str, object] | None:
     if value is None:
         return None
     errors: set[str] = set()
-    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
+    if not isinstance(value, Mapping):
         raise ValueError("INVALID_SAMPLE_SCHEMA: ball_data must be an object or null")
+    typed_ball = cast(Mapping[object, object], value)
+    if not all(isinstance(key, str) for key in typed_ball):
+        raise ValueError("INVALID_SAMPLE_SCHEMA: ball_data keys must be strings")
     ball = cast(Mapping[str, object], value)
     expected_keys = {"x", "y", "z", "is_detected"}
     if set(ball) != expected_keys:

@@ -118,6 +118,13 @@ def test_v2_manifest_is_additive_and_keeps_sampling_transform_version() -> None:
         "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
     )
 
+    changed = copy.deepcopy(manifest)
+    changed_state = cast(dict[str, object], changed["scientific_state"])
+    changed_transform = cast(dict[str, object], changed_state["transform"])
+    changed_transform["transform_version"] = "2.0.0"
+    _rehash(changed)
+    assert validate_manifest_v2(changed)
+
 
 @pytest.mark.parametrize(
     ("ball", "expected", "codes"),
@@ -187,6 +194,63 @@ def test_v2_ball_state_table(
         assert set(codes).issubset(set(str(error.value).split(", ")))
     else:
         assert canonical_ball_v2(ball) == expected
+
+
+@pytest.mark.parametrize("flag_state", ("true", "false", "null", "missing", "invalid"))
+@pytest.mark.parametrize(
+    "coordinate_state",
+    (
+        "both_finite",
+        "x_only",
+        "y_only",
+        "both_null",
+        "missing_key",
+        "nonnumeric",
+        "nonfinite",
+    ),
+)
+def test_v2_flag_and_coordinate_cartesian_table(flag_state: str, coordinate_state: str) -> None:
+    flag_value: object = {
+        "true": True,
+        "false": False,
+        "null": None,
+        "invalid": "false",
+    }.get(flag_state)
+    ball: dict[str, object] = {"x": 1.0, "y": 2.0, "z": None}
+    if flag_state != "missing":
+        ball["is_detected"] = flag_value
+    if coordinate_state == "x_only":
+        ball["y"] = None
+    elif coordinate_state == "y_only":
+        ball["x"] = None
+    elif coordinate_state == "both_null":
+        ball.update(x=None, y=None)
+    elif coordinate_state == "missing_key":
+        del ball["x"]
+    elif coordinate_state == "nonnumeric":
+        ball["x"] = "1"
+    elif coordinate_state == "nonfinite":
+        ball["x"] = float("inf")
+
+    expected_codes = set()
+    if flag_state == "missing":
+        expected_codes.update(("INVALID_DETECTION_FLAG", "INVALID_SAMPLE_SCHEMA"))
+    elif flag_state == "invalid":
+        expected_codes.add("INVALID_DETECTION_FLAG")
+    if coordinate_state in {"missing_key", "nonnumeric"}:
+        expected_codes.add("INVALID_SAMPLE_SCHEMA")
+    elif coordinate_state == "nonfinite":
+        expected_codes.add("NONFINITE_COORDINATE")
+    if expected_codes:
+        with pytest.raises(ValueError) as error:
+            canonical_ball_v2(ball)
+        assert expected_codes.issubset(set(str(error.value).split(", ")))
+    else:
+        assert canonical_ball_v2(ball) == {
+            "x_m": ball["x"],
+            "y_m": ball["y"],
+            "is_detected": flag_value,
+        }
 
 
 def test_v2_iterator_preserves_unknown_flag_without_changing_v1() -> None:
