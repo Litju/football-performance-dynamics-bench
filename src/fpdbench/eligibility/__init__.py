@@ -2,6 +2,7 @@
 
 from fpdbench.eligibility.skillcorner import (
     BallPopulationQualificationStop,
+    BallPopulationQualificationV2,
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
@@ -15,6 +16,7 @@ from fpdbench.eligibility.skillcorner import (
 )
 
 __all__ = [
+    "BallPopulationQualificationV2",
     "BallPopulationQualificationStop",
     "EligibilityIssue",
     "PhaseInterval",

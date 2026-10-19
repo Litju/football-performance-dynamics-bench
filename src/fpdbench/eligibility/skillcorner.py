@@ -97,6 +97,17 @@ class WindowEligibilityResult:
     quality: Mapping[str, object]
 
 
+@dataclass(frozen=True, slots=True)
+class BallPopulationQualificationV2:
+    """Proof that the v2 source-wide nullable-ball stop was checked and cleared."""
+
+    source_release_hash: str
+    data_state_hash: str
+    checked_sample_count: int
+    checked_match_count: int
+    null_flag_finite_xy_count: int = 0
+
+
 class BallPopulationQualificationStop(ValueError):
     """Raised when a source-wide nullable-ball drift sentinel is observed."""
 
@@ -124,9 +135,12 @@ def load_manifest() -> dict[str, object]:
 
 def load_manifest_v2() -> dict[str, object]:
     value = json.loads(MANIFEST_V2_PATH.read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+    if not isinstance(value, dict):
         raise ValueError("v2 window eligibility manifest must be a JSON object")
-    return cast(dict[str, object], value)
+    typed_value = cast(dict[object, object], value)
+    if not all(isinstance(key, str) for key in typed_value):
+        raise ValueError("v2 window eligibility manifest must be a JSON object")
+    return cast(dict[str, object], typed_value)
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
@@ -320,14 +334,36 @@ def validate_manifest_v2(manifest: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(errors)
 
 
-def validate_ball_population_drift_v2(samples: Iterable[Mapping[str, object]]) -> None:
+def validate_ball_population_drift_v2(
+    samples: Iterable[Mapping[str, object]],
+) -> BallPopulationQualificationV2:
     """Stop v2 population qualification if any retained ball has null flag and finite XY."""
     manifest = load_data_state_manifest_v2()
     state_hash = manifest.get("data_state_hash")
     source = load_source_manifest()
     drift_count = 0
+    checked_sample_count = 0
+    available_matches_value = source.get("selected_source_matches")
+    if not isinstance(available_matches_value, list):
+        raise ValueError("pinned source authority does not define the complete 20-match population")
+    available_matches = cast(list[object], available_matches_value)
+    if len(available_matches) != 20:
+        raise ValueError("pinned source authority does not define the complete 20-match population")
+    expected_match_ids: set[str] = {str(match_id) for match_id in available_matches}
+    seen_match_ids: set[str] = set()
     for raw_sample in samples:
+        checked_sample_count += 1
         sample = _mapping(raw_sample, "v2 canonical sample")
+        match_id = sample.get("match_id")
+        if (
+            isinstance(match_id, bool)
+            or not isinstance(match_id, int)
+            or str(match_id) not in expected_match_ids
+        ):
+            raise ValueError(
+                "INVALID_SAMPLE_SCHEMA: v2 sample match is outside the pinned population"
+            )
+        seen_match_ids.add(str(match_id))
         if (
             sample.get("data_state_id") != "skillcorner_5hz_v2"
             or sample.get("data_state_hash") != state_hash
@@ -350,6 +386,12 @@ def validate_ball_population_drift_v2(samples: Iterable[Mapping[str, object]]) -
             drift_count += 1
     if drift_count:
         raise BallPopulationQualificationStop(drift_count)
+    return BallPopulationQualificationV2(
+        cast(str, source["source_release_hash"]),
+        cast(str, state_hash),
+        checked_sample_count,
+        len(seen_match_ids),
+    )
 
 
 def _issues(items: Iterable[EligibilityIssue]) -> tuple[EligibilityIssue, ...]:
@@ -958,9 +1000,7 @@ def _evaluate_skillcorner_window(
                             if x is not None and y is not None:
                                 valid_ball_positions += 1
                                 if detected is None:
-                                    raise BallPopulationQualificationStop(
-                                        BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED
-                                    )
+                                    raise BallPopulationQualificationStop(1)
                             elif x is not None or y is not None:
                                 warn(
                                     "BALL_COORDINATES_PARTIAL",
@@ -1526,6 +1566,7 @@ def evaluate_skillcorner_window(
 def evaluate_skillcorner_window_v2(
     samples: Iterable[Mapping[str, object] | None],
     *,
+    population_qualification: BallPopulationQualificationV2,
     history_intervals: int,
     future_intervals: int,
     match_metadata: Mapping[str, object],
@@ -1533,6 +1574,15 @@ def evaluate_skillcorner_window_v2(
     policy_manifest: Mapping[str, object] | None = None,
 ) -> WindowEligibilityResult:
     """Evaluate a candidate under nullable-ball v2 after the population drift gate."""
+    state = load_data_state_manifest_v2()
+    source = load_source_manifest()
+    if (
+        population_qualification.source_release_hash != source.get("source_release_hash")
+        or population_qualification.data_state_hash != state.get("data_state_hash")
+        or population_qualification.checked_match_count != 20
+        or population_qualification.null_flag_finite_xy_count != 0
+    ):
+        raise ValueError("v2 population drift gate is missing or bound to another source")
     return _evaluate_skillcorner_window(
         samples,
         history_intervals=history_intervals,

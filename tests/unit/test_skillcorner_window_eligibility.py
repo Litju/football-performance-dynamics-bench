@@ -10,6 +10,7 @@ from fpdbench.data_states.skillcorner import load_manifest_v2 as load_data_state
 from fpdbench.eligibility.skillcorner import (
     BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED,
     BallPopulationQualificationStop,
+    BallPopulationQualificationV2,
     EligibilityIssue,
     PhaseInterval,
     WindowEligibilityResult,
@@ -114,8 +115,18 @@ def _window(
 
 
 def _window_v2(samples: list[dict[str, object] | None] | None = None) -> WindowEligibilityResult:
+    support = samples if samples is not None else [_frame_v2(index) for index in range(41)]
+    gate_samples = [copy.deepcopy(sample) for sample in support if sample is not None]
+    seen_match_ids = {sample["match_id"] for sample in gate_samples}
+    for match_id in load_source_manifest()["selected_source_matches"]:
+        if match_id not in seen_match_ids:
+            extra = copy.deepcopy(gate_samples[0])
+            extra["match_id"] = match_id
+            gate_samples.append(extra)
+    qualification = validate_ball_population_drift_v2(gate_samples)
     return evaluate_skillcorner_window_v2(
-        samples if samples is not None else [_frame_v2(index) for index in range(41)],
+        support,
+        population_qualification=qualification,
         history_intervals=25,
         future_intervals=15,
         match_metadata=_metadata(),
@@ -198,6 +209,22 @@ def test_v2_accepts_39_of_41_and_keeps_false_positions() -> None:
     assert "BALL_DETECTION_UNKNOWN" in _warning_codes(result)
 
 
+def test_v2_all_false_finite_flags_are_known_but_not_called_extrapolated() -> None:
+    samples = [_frame_v2(index) for index in range(41)]
+    for sample in samples:
+        cast(dict[str, object], sample["ball"])["is_detected"] = False
+
+    result = _window_v2(samples)
+    ball = cast(dict[str, object], result.quality["ball_observations"])
+
+    assert result.eligible
+    assert result.quality["strata"]["ball_detection_exposure"] == "all_false_flag"
+    assert ball["flag_false_count"] == 41
+    assert ball["false_flag_position_count"] == 41
+    assert ball["detected_share_among_known_flags"] == 0.0
+    assert "extrapolated_position_count" not in ball
+
+
 def test_v2_rejects_38_of_41_and_requires_a_finite_origin() -> None:
     samples = [_frame_v2(index) for index in range(41)]
     for offset in (0, 1, 2):
@@ -275,6 +302,18 @@ def test_v2_null_flag_finite_xy_stops_population_and_window_qualification() -> N
 
     with pytest.raises(BallPopulationQualificationStop):
         _window_v2(samples)
+
+
+def test_v2_window_evaluator_requires_a_source_bound_population_gate() -> None:
+    with pytest.raises(ValueError, match="population drift gate"):
+        evaluate_skillcorner_window_v2(
+            [_frame_v2(index) for index in range(41)],
+            population_qualification=BallPopulationQualificationV2("0" * 64, "0" * 64, 41, 1),
+            history_intervals=25,
+            future_intervals=15,
+            match_metadata=_metadata(),
+            phase_intervals=[_phase(1, 100, 200)],
+        )
 
 
 @pytest.mark.parametrize(
