@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
@@ -12,12 +13,20 @@ from typing import cast
 from fpdbench.evaluation.metrics import ADE_METRIC_ID, FDE_METRIC_ID, XY_RMSE_METRIC_ID
 
 PROTOCOL_FILE = "prospective_skillcorner_protocol_v1.json"
+PROTOCOL_V2_FILE = "prospective_skillcorner_protocol_v2.json"
 PROTOCOL_SHA256 = "865601662f4462178eaf7e1049075668176a9bd35f3bf4b1b6b8aa370de1d26c"
+PROTOCOL_V2_SHA256 = "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e"
 EXPECTED_SOURCE_RELEASE_HASH = "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
 EXPECTED_SOURCE_POPULATION_HASH = "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
 EXPECTED_MEASUREMENT_STATE_HASH = "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
 EXPECTED_ELIGIBILITY_POLICY_HASH = (
     "f0e1186f765cc7ce19c95152d8d6eacc66382f7e7f5a9ad1aa11c88c8a12f70b"
+)
+EXPECTED_MEASUREMENT_STATE_V2_HASH = (
+    "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671"
+)
+EXPECTED_ELIGIBILITY_POLICY_V2_HASH = (
+    "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
 )
 
 _PROTOCOL_ID = "skillcorner.prospective_conditional_motion"
@@ -152,6 +161,98 @@ def load_prospective_protocol() -> dict[str, object]:
     resource = files(__package__).joinpath(PROTOCOL_FILE)
     value = json.loads(resource.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
     return _mapping(value, PROTOCOL_FILE)
+
+
+def load_prospective_protocol_v2() -> dict[str, object]:
+    """Load the explicit nullable-ball successor protocol authority."""
+    resource = files(__package__).joinpath(PROTOCOL_V2_FILE)
+    value = json.loads(resource.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+    return _mapping(value, PROTOCOL_V2_FILE)
+
+
+def _expected_prospective_protocol_v2() -> dict[str, object]:
+    protocol = copy.deepcopy(load_prospective_protocol())
+    _validate_protocol(protocol)
+    protocol["schema_version"] = "2.0.0"
+    protocol["protocol_version"] = "2.0.0"
+    state = _mapping(protocol["scientific_state"], "v1 scientific_state")
+    authorities = _mapping(state["authorities"], "v1 authorities")
+    authorities.update(
+        measurement_state_id="skillcorner_5hz_v2",
+        measurement_state_version="2.0.0",
+        measurement_state_hash=EXPECTED_MEASUREMENT_STATE_V2_HASH,
+        eligibility_policy_id="skillcorner_window_v2",
+        eligibility_policy_version="2.0.0",
+        eligibility_policy_hash=EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+    )
+    _mapping(state["window_population"], "v1 window_population")["eligibility_policy_id"] = (
+        "skillcorner_window_v2"
+    )
+    benchmarks = _list(state["benchmarks"], "v2 benchmarks")
+    for raw_benchmark in benchmarks:
+        benchmark = _mapping(raw_benchmark, "benchmark")
+        benchmark["benchmark_version"] = "2.0.0"
+        material = {key: value for key, value in benchmark.items() if key != "benchmark_sha256"}
+        benchmark["benchmark_sha256"] = _digest(material)
+    protocol["protocol_sha256"] = _digest(state)
+    if protocol["protocol_sha256"] != PROTOCOL_V2_SHA256:
+        raise ValueError("computed nullable-ball v2 protocol hash differs from its pin")
+    return protocol
+
+
+def validate_prospective_protocol_v2_document(
+    protocol: Mapping[str, object],
+    source_manifest: Mapping[str, object],
+    measurement_manifest: Mapping[str, object],
+    eligibility_manifest: Mapping[str, object],
+) -> None:
+    """Validate every v2 protocol field and its measurement/eligibility bindings."""
+    expected = _expected_prospective_protocol_v2()
+    document = _mapping(dict(protocol), "v2 protocol")
+    if document != expected:
+        raise ValueError("v2 protocol differs from its frozen successor contract")
+    state = _mapping(document["scientific_state"], "v2 scientific_state")
+    authorities = _mapping(state["authorities"], "v2 authorities")
+    expected_bindings = {
+        "source_release_id": source_manifest.get("source_id"),
+        "source_release_hash": source_manifest.get("source_release_hash"),
+        "source_population_hash": source_manifest.get("source_population_hash"),
+        "measurement_state_id": measurement_manifest.get("data_state_id"),
+        "measurement_state_version": measurement_manifest.get("data_state_version"),
+        "measurement_state_hash": measurement_manifest.get("data_state_hash"),
+        "eligibility_policy_id": eligibility_manifest.get("policy_id"),
+        "eligibility_policy_version": eligibility_manifest.get("policy_version"),
+        "eligibility_policy_hash": eligibility_manifest.get("policy_hash"),
+    }
+    for field, expected_value in expected_bindings.items():
+        _expect(authorities[field], expected_value, f"v2 {field}")
+    policy = _mapping(eligibility_manifest.get("scientific_policy"), "v2 eligibility policy")
+    quality = _mapping(policy.get("quality_strata"), "v2 quality strata")
+    analysis = _mapping(state["analysis"], "v2 analysis")
+    _expect(analysis["robustness_strata"], quality.get("dimensions"), "v2 robustness strata")
+
+
+def validate_prospective_protocol_v2(root: Path) -> tuple[str, ...]:
+    """Validate the v2 protocol against the checked-in successor authorities."""
+    try:
+        from fpdbench.data_states.skillcorner import validate_manifest_v2 as validate_state_v2
+        from fpdbench.eligibility.skillcorner import validate_manifest_v2 as validate_policy_v2
+
+        base = root / "src" / "fpdbench"
+        protocol = _read_json(
+            base / "benchmarks" / "conditional_multi_agent_motion_prediction" / PROTOCOL_V2_FILE
+        )
+        source = _read_json(base / "data_sources" / "skillcorner_open_data_v1.json")
+        measurement = _read_json(base / "data_states" / "skillcorner_5hz_v2.json")
+        eligibility = _read_json(base / "eligibility" / "skillcorner_window_v2.json")
+        state_errors = validate_state_v2(measurement)
+        policy_errors = validate_policy_v2(eligibility)
+        if state_errors or policy_errors:
+            raise ValueError("; ".join((*state_errors, *policy_errors)))
+        validate_prospective_protocol_v2_document(protocol, source, measurement, eligibility)
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return (f"prospective v2 protocol: {exc}",)
+    return ()
 
 
 def _validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
@@ -553,12 +654,19 @@ def validate_prospective_protocol(root: Path) -> tuple[str, ...]:
 
 __all__ = [
     "EXPECTED_ELIGIBILITY_POLICY_HASH",
+    "EXPECTED_ELIGIBILITY_POLICY_V2_HASH",
     "EXPECTED_MEASUREMENT_STATE_HASH",
+    "EXPECTED_MEASUREMENT_STATE_V2_HASH",
     "EXPECTED_SOURCE_POPULATION_HASH",
     "EXPECTED_SOURCE_RELEASE_HASH",
     "PROTOCOL_FILE",
     "PROTOCOL_SHA256",
+    "PROTOCOL_V2_FILE",
+    "PROTOCOL_V2_SHA256",
     "load_prospective_protocol",
+    "load_prospective_protocol_v2",
     "validate_prospective_protocol",
     "validate_prospective_protocol_document",
+    "validate_prospective_protocol_v2",
+    "validate_prospective_protocol_v2_document",
 ]

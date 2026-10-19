@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -14,18 +14,26 @@ from typing import cast
 from fpdbench.data_sources.skillcorner import canonical_bytes
 
 from .empirical_experiment_plan import (
+    PLAN_V2_SHA256,
     experiment_cell,
     load_empirical_experiment_plan,
+    load_empirical_experiment_plan_v2,
     lomo_held_out_match,
     protocol_split,
+    protocol_split_v2,
+    validate_empirical_experiment_plan_v2_document,
 )
 from .prospective_protocol import (
     EXPECTED_ELIGIBILITY_POLICY_HASH,
+    EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
     EXPECTED_MEASUREMENT_STATE_HASH,
+    EXPECTED_MEASUREMENT_STATE_V2_HASH,
     EXPECTED_SOURCE_POPULATION_HASH,
     EXPECTED_SOURCE_RELEASE_HASH,
     PROTOCOL_SHA256,
+    PROTOCOL_V2_SHA256,
     load_prospective_protocol,
+    load_prospective_protocol_v2,
 )
 
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -34,7 +42,10 @@ _PLAYER_ID = re.compile(r"[1-9][0-9]*\Z")
 _SCHEMA_ID = "fpdbench.prospective-evaluation-population"
 _SCHEMA_VERSION = "1.1.0"
 POPULATION_SCHEMA_FILE = "evaluation_population_authority_v1.schema.json"
+POPULATION_SCHEMA_V2_FILE = "evaluation_population_authority_v2.schema.json"
 _POPULATION_ID = "skillcorner.prospective.conditional_motion.population"
+_POPULATION_ID_V2 = "skillcorner.prospective.conditional_motion.population_v2"
+_SCHEMA_VERSION_V2 = "2.0.0"
 
 type XY = Sequence[float]
 type TruthXY = XY | None
@@ -97,6 +108,22 @@ def prospective_window_id(match_id: str, origin_sample_id: str) -> str:
     )
 
 
+def prospective_window_id_v2(match_id: str, origin_sample_id: str) -> str:
+    """Return the nullable-ball v2 identity for a match-scoped forecast origin."""
+    return _digest(
+        {
+            "schema_id": "fpdbench.prospective-window",
+            "schema_version": "2.0.0",
+            "match_id": match_id,
+            "origin_sample_id": origin_sample_id,
+            "source_release_hash": EXPECTED_SOURCE_RELEASE_HASH,
+            "measurement_state_hash": EXPECTED_MEASUREMENT_STATE_V2_HASH,
+            "eligibility_policy_hash": EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+            "protocol_sha256": PROTOCOL_V2_SHA256,
+        }
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class SceneMembership:
     scene_id: str
@@ -123,6 +150,40 @@ class MatchMembership:
 
 @dataclass(frozen=True, slots=True)
 class EvaluationPopulationAuthority:
+    candidate_window_count: int
+    eligible_window_count: int
+    candidate_origin_population_sha256: str
+    matches: tuple[MatchMembership, ...]
+    membership_sha256: str
+    manifest_sha256: str
+
+    def match_ids(self, role: str) -> tuple[str, ...]:
+        return tuple(match.match_id for match in self.matches if match.role == role)
+
+    def matches_for_role(self, role: str) -> tuple[MatchMembership, ...]:
+        return tuple(match for match in self.matches if match.role == role)
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationPopulationAuthorityV2:
+    population_id: str
+    source_release_id: str
+    source_release_version: str
+    source_release_hash: str
+    source_population_hash: str
+    measurement_state_id: str
+    measurement_state_version: str
+    measurement_state_hash: str
+    eligibility_policy_id: str
+    eligibility_policy_version: str
+    eligibility_policy_hash: str
+    protocol_id: str
+    protocol_version: str
+    protocol_sha256: str
+    plan_id: str
+    plan_version: str
+    plan_sha256: str
+    ball_null_flag_finite_xy_count: int
     candidate_window_count: int
     eligible_window_count: int
     candidate_origin_population_sha256: str
@@ -173,6 +234,20 @@ def _protocol_roles() -> tuple[tuple[str, tuple[str, ...]], ...]:
     return tuple(result)
 
 
+def _protocol_roles_v2() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    protocol = _mapping(load_prospective_protocol_v2(), "v2 protocol")
+    state = _mapping(protocol.get("scientific_state"), "v2 protocol scientific_state")
+    split = _mapping(state.get("split"), "v2 protocol split")
+    roles = _mapping(split.get("roles"), "v2 protocol match roles")
+    result: list[tuple[str, tuple[str, ...]]] = []
+    for role in ("training", "validation", "evaluation"):
+        ids = _list(roles.get(role), f"v2 protocol {role} match IDs")
+        if not all(isinstance(value, str) and value.isdecimal() for value in ids):
+            raise ValueError(f"v2 protocol {role} match IDs are invalid")
+        result.append((role, tuple(cast(str, value) for value in ids)))
+    return tuple(result)
+
+
 def validate_evaluation_population_authority_document(
     document: Mapping[str, object],
 ) -> EvaluationPopulationAuthority:
@@ -213,6 +288,21 @@ def validate_evaluation_population_authority_document(
         if value.get(field) != expected:
             raise ValueError(f"population authority {field} differs from its pinned authority")
 
+    expected_roles = tuple(
+        (role, match_id) for role, match_ids in _protocol_roles() for match_id in match_ids
+    )
+    return _validate_population_membership(
+        value, expected_roles=expected_roles, window_id_fn=prospective_window_id
+    )
+
+
+def _validate_population_membership(
+    value: Mapping[str, object],
+    *,
+    expected_roles: tuple[tuple[str, str], ...],
+    window_id_fn: Callable[[str, str], str],
+) -> EvaluationPopulationAuthority:
+    """Validate canonical match/window membership independently of authority version."""
     candidate_count = value.get("candidate_window_count")
     eligible_count = value.get("eligible_window_count")
     if (
@@ -229,9 +319,6 @@ def validate_evaluation_population_authority_document(
         value.get("candidate_origin_population_sha256"), "candidate origin population digest"
     )
     raw_matches = _list(value.get("matches"), "population matches")
-    expected_roles = tuple(
-        (role, match_id) for role, match_ids in _protocol_roles() for match_id in match_ids
-    )
     if len(raw_matches) != len(expected_roles):
         raise ValueError("population authority must contain every protocol match exactly once")
     matches: list[MatchMembership] = []
@@ -268,7 +355,7 @@ def validate_evaluation_population_authority_document(
             if prior_origin is not None and origin_key <= prior_origin:
                 raise ValueError("eligible windows must be unique and ordered by period and origin")
             prior_origin = origin_key
-            expected_window_id = prospective_window_id(cast(str, match_id), origin_id)
+            expected_window_id = window_id_fn(cast(str, match_id), origin_id)
             window_id = _sha256(window.get("window_id"), "window_id")
             if window_id != expected_window_id or window_id in seen_windows:
                 raise ValueError("window identity is invalid or duplicated")
@@ -357,6 +444,118 @@ def load_evaluation_population_authority(path: Path) -> EvaluationPopulationAuth
     )
 
 
+def validate_evaluation_population_authority_v2_document(
+    document: Mapping[str, object],
+) -> EvaluationPopulationAuthorityV2:
+    """Validate a v2 population's complete upstream bindings and all membership rows."""
+    value = _mapping(document, "v2 population authority")
+    plan = load_empirical_experiment_plan_v2()
+    validate_empirical_experiment_plan_v2_document(plan)
+    population_contract = _mapping(plan.get("population_authority"), "v2 population contract")
+    required_fields = {
+        "schema_id",
+        "schema_version",
+        "population_id",
+        "source_release_id",
+        "source_release_version",
+        "source_release_hash",
+        "source_population_hash",
+        "measurement_state_id",
+        "measurement_state_version",
+        "measurement_state_hash",
+        "eligibility_policy_id",
+        "eligibility_policy_version",
+        "eligibility_policy_hash",
+        "protocol_id",
+        "protocol_version",
+        "protocol_sha256",
+        "plan_id",
+        "plan_version",
+        "plan_sha256",
+        "ball_null_flag_finite_xy_count",
+        "candidate_window_count",
+        "eligible_window_count",
+        "candidate_origin_population_sha256",
+        "matches",
+        "membership_sha256",
+        "manifest_sha256",
+    }
+    _keys(value, required_fields, "v2 population authority")
+    expected_fields = (
+        ("schema_id", _SCHEMA_ID),
+        ("schema_version", _SCHEMA_VERSION_V2),
+        ("population_id", _POPULATION_ID_V2),
+        ("source_release_id", "skillcorner_open_data_v1"),
+        ("source_release_version", "1.0.0"),
+        ("source_release_hash", EXPECTED_SOURCE_RELEASE_HASH),
+        ("source_population_hash", EXPECTED_SOURCE_POPULATION_HASH),
+        ("measurement_state_id", "skillcorner_5hz_v2"),
+        ("measurement_state_version", "2.0.0"),
+        ("measurement_state_hash", EXPECTED_MEASUREMENT_STATE_V2_HASH),
+        ("eligibility_policy_id", "skillcorner_window_v2"),
+        ("eligibility_policy_version", "2.0.0"),
+        ("eligibility_policy_hash", EXPECTED_ELIGIBILITY_POLICY_V2_HASH),
+        ("protocol_id", "skillcorner.prospective_conditional_motion"),
+        ("protocol_version", "2.0.0"),
+        ("protocol_sha256", PROTOCOL_V2_SHA256),
+        ("plan_id", plan.get("plan_id")),
+        ("plan_version", "2.0.0"),
+        ("plan_sha256", plan.get("plan_sha256")),
+    )
+    for field, expected in expected_fields:
+        if value.get(field) != expected:
+            raise ValueError(f"v2 population authority {field} differs from its pinned authority")
+    drift_count = value.get("ball_null_flag_finite_xy_count")
+    if type(drift_count) is not int or drift_count < 0:
+        raise ValueError("v2 population drift-stop count must be a nonnegative integer")
+    if drift_count != population_contract.get("ball_null_flag_finite_xy_count"):
+        raise ValueError(
+            "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED: population authority is not qualified"
+        )
+
+    base = _validate_population_membership(
+        value,
+        expected_roles=tuple(
+            (role, match_id) for role, match_ids in _protocol_roles_v2() for match_id in match_ids
+        ),
+        window_id_fn=prospective_window_id_v2,
+    )
+    return EvaluationPopulationAuthorityV2(
+        _POPULATION_ID_V2,
+        "skillcorner_open_data_v1",
+        "1.0.0",
+        EXPECTED_SOURCE_RELEASE_HASH,
+        EXPECTED_SOURCE_POPULATION_HASH,
+        "skillcorner_5hz_v2",
+        "2.0.0",
+        EXPECTED_MEASUREMENT_STATE_V2_HASH,
+        "skillcorner_window_v2",
+        "2.0.0",
+        EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+        "skillcorner.prospective_conditional_motion",
+        "2.0.0",
+        PROTOCOL_V2_SHA256,
+        cast(str, plan["plan_id"]),
+        "2.0.0",
+        cast(str, plan["plan_sha256"]),
+        0,
+        base.candidate_window_count,
+        base.eligible_window_count,
+        base.candidate_origin_population_sha256,
+        base.matches,
+        base.membership_sha256,
+        base.manifest_sha256,
+    )
+
+
+def load_evaluation_population_authority_v2(path: Path) -> EvaluationPopulationAuthorityV2:
+    """Load and validate only an explicitly v2 restricted population manifest."""
+    document = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+    return validate_evaluation_population_authority_v2_document(
+        _mapping(document, "v2 population authority")
+    )
+
+
 def validate_evaluation_population_schema(root: Path) -> tuple[str, ...]:
     """Validate the checked-in JSON Schema used for restricted population instances."""
     path = (
@@ -415,6 +614,109 @@ def validate_evaluation_population_schema(root: Path) -> tuple[str, ...]:
             return ("prospective population JSON Schema differs from its frozen contract",)
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         return (f"prospective population JSON Schema: {exc}",)
+    return ()
+
+
+def validate_evaluation_population_schema_v2(root: Path) -> tuple[str, ...]:
+    """Validate both v2 schemas against their raw-byte hashes in the v2 plan."""
+    from .empirical_experiment_plan import validate_empirical_experiment_plan_v2
+
+    errors = list(validate_empirical_experiment_plan_v2(root))
+    if errors:
+        return tuple(errors)
+    base = root / "src" / "fpdbench" / "benchmarks" / "conditional_multi_agent_motion_prediction"
+    population_path = base / POPULATION_SCHEMA_V2_FILE
+    result_path = base / "prospective_experiment_result_v2.schema.json"
+    try:
+        plan = _mapping(
+            json.loads((base / "empirical_experiment_plan_v2.json").read_text(encoding="utf-8")),
+            "v2 experiment plan",
+        )
+        population_contract = _mapping(plan.get("population_authority"), "v2 population contract")
+        result_contract = _mapping(plan.get("result_manifest_schema"), "v2 result contract")
+        population_schema = _mapping(
+            json.loads(
+                population_path.read_text(encoding="utf-8"),
+                object_pairs_hook=_unique_object,
+            ),
+            population_path.name,
+        )
+        result_schema = _mapping(
+            json.loads(result_path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object),
+            result_path.name,
+        )
+        population_properties = _mapping(
+            population_schema.get("properties"), "v2 population schema properties"
+        )
+        population_required = [
+            "schema_id",
+            "schema_version",
+            "population_id",
+            "source_release_id",
+            "source_release_version",
+            "source_release_hash",
+            "source_population_hash",
+            "measurement_state_id",
+            "measurement_state_version",
+            "measurement_state_hash",
+            "eligibility_policy_id",
+            "eligibility_policy_version",
+            "eligibility_policy_hash",
+            "protocol_id",
+            "protocol_version",
+            "protocol_sha256",
+            "plan_id",
+            "plan_version",
+            "plan_sha256",
+            "ball_null_flag_finite_xy_count",
+            "candidate_window_count",
+            "eligible_window_count",
+            "candidate_origin_population_sha256",
+            "matches",
+            "membership_sha256",
+            "manifest_sha256",
+        ]
+        population_matches = _mapping(
+            population_properties.get("matches"), "v2 population matches schema"
+        )
+        result_properties = _mapping(result_schema.get("properties"), "v2 result schema properties")
+        result_required = _list(result_contract.get("required_fields"), "v2 result required fields")
+        result_schema_hash = hashlib.sha256(result_path.read_bytes()).hexdigest()
+        if (
+            population_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+            or population_schema.get("$id") != f"{_SCHEMA_ID}/2.0.0"
+            or population_contract.get("schema_file") != population_path.name
+            or population_contract.get("schema_sha256")
+            != hashlib.sha256(population_path.read_bytes()).hexdigest()
+            or population_schema.get("additionalProperties") is not False
+            or population_schema.get("required") != population_required
+            or population_properties.get("schema_id") != {"const": _SCHEMA_ID}
+            or population_properties.get("schema_version") != {"const": "2.0.0"}
+            or population_properties.get("population_id") != {"const": _POPULATION_ID_V2}
+            or population_properties.get("plan_sha256") != {"$ref": "#/$defs/sha256"}
+            or population_properties.get("manifest_sha256") != {"$ref": "#/$defs/sha256"}
+            or population_properties.get("ball_null_flag_finite_xy_count") != {"const": 0}
+            or population_matches.get("minItems") != 20
+            or population_matches.get("maxItems") != 20
+            or result_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+            or result_schema.get("$id") != "fpdbench.prospective-experiment-result/2.0.0"
+            or result_contract.get("schema_file") != result_path.name
+            or result_contract.get("schema_sha256") != result_schema_hash
+            or result_schema.get("additionalProperties") is not False
+            or result_schema.get("required") != result_required
+            or result_properties.get("schema_id")
+            != {"const": "fpdbench.prospective-experiment-result"}
+            or result_properties.get("schema_version") != {"const": "2.0.0"}
+            or result_properties.get("plan_sha256") != {"$ref": "#/$defs/sha256"}
+            or result_properties.get("population_authority_sha256") != {"$ref": "#/$defs/sha256"}
+        ):
+            return ("v2 population or result JSON Schema differs from its frozen plan contract",)
+        if "const" in _mapping(population_properties["plan_sha256"], "population plan hash schema"):
+            return ("v2 population schema cannot contain the downstream plan hash",)
+        if "const" in _mapping(result_properties["plan_sha256"], "result plan hash schema"):
+            return ("v2 result schema cannot contain the downstream plan hash",)
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return (f"v2 population/result JSON Schema: {exc}",)
     return ()
 
 
@@ -729,6 +1031,104 @@ def validate_prospective_result_document(
         raise ValueError("result canonical manifest SHA-256 mismatch")
 
 
+def validate_prospective_result_document_v2(
+    document: Mapping[str, object],
+    population: EvaluationPopulationAuthorityV2,
+) -> None:
+    """Validate every v2 authority binding and apply the frozen result semantics."""
+    value = _mapping(document, "v2 result manifest")
+    plan = load_empirical_experiment_plan_v2()
+    validate_empirical_experiment_plan_v2_document(plan)
+    contract = _mapping(plan.get("result_manifest_schema"), "v2 result contract")
+    required = _list(contract.get("required_fields"), "v2 result fields")
+    _keys(value, set(cast(list[str], required)), "v2 result manifest")
+    expected_bindings: dict[str, object] = {
+        "schema_id": "fpdbench.prospective-experiment-result",
+        "schema_version": "2.0.0",
+        "source_release_id": population.source_release_id,
+        "source_release_version": population.source_release_version,
+        "source_release_hash": population.source_release_hash,
+        "source_population_hash": population.source_population_hash,
+        "measurement_state_id": population.measurement_state_id,
+        "measurement_state_version": population.measurement_state_version,
+        "measurement_state_hash": population.measurement_state_hash,
+        "eligibility_policy_id": population.eligibility_policy_id,
+        "eligibility_policy_version": population.eligibility_policy_version,
+        "eligibility_policy_hash": population.eligibility_policy_hash,
+        "protocol_id": population.protocol_id,
+        "protocol_version": population.protocol_version,
+        "protocol_sha256": population.protocol_sha256,
+        "plan_id": population.plan_id,
+        "plan_version": population.plan_version,
+        "plan_sha256": population.plan_sha256,
+        "population_id": population.population_id,
+        "population_schema_id": _SCHEMA_ID,
+        "population_schema_version": _SCHEMA_VERSION_V2,
+        "population_authority_sha256": population.manifest_sha256,
+    }
+    for field, expected in expected_bindings.items():
+        if value.get(field) != expected:
+            raise ValueError(f"v2 result {field} differs from its bound authority")
+    if (
+        population.source_release_hash != EXPECTED_SOURCE_RELEASE_HASH
+        or population.source_population_hash != EXPECTED_SOURCE_POPULATION_HASH
+        or population.measurement_state_hash != EXPECTED_MEASUREMENT_STATE_V2_HASH
+        or population.eligibility_policy_hash != EXPECTED_ELIGIBILITY_POLICY_V2_HASH
+        or population.protocol_sha256 != PROTOCOL_V2_SHA256
+        or population.plan_sha256 != PLAN_V2_SHA256
+        or population.ball_null_flag_finite_xy_count != 0
+    ):
+        raise ValueError("v2 result population is not bound to the qualified authority chain")
+    if value["manifest_sha256"] != _digest(
+        {key: item for key, item in value.items() if key != "manifest_sha256"}
+    ):
+        raise ValueError("v2 result canonical manifest SHA-256 mismatch")
+
+    v2_roles = _mapping(protocol_split_v2()["roles"], "v2 match roles")
+    for role in ("training", "validation", "evaluation"):
+        if list(population.match_ids(role)) != v2_roles[role]:
+            raise ValueError("v2 population roles differ from the successor protocol")
+
+    # Run the shared metric/run checks after validating every v2 identity above.
+    v1_plan = load_empirical_experiment_plan()
+    v1_protocol = load_prospective_protocol()
+    v1_fields = _list(
+        _mapping(v1_plan.get("result_manifest_schema"), "v1 result contract").get(
+            "required_fields"
+        ),
+        "v1 result fields",
+    )
+    semantic_value = {field: value[field] for field in cast(list[str], v1_fields)}
+    semantic_value.update(
+        schema_version="1.1.0",
+        plan_id=v1_plan["plan_id"],
+        plan_version=v1_plan["plan_version"],
+        plan_sha256=v1_plan["plan_sha256"],
+        protocol_id=v1_protocol["protocol_id"],
+        protocol_version=v1_protocol["protocol_version"],
+        protocol_sha256=v1_protocol["protocol_sha256"],
+    )
+    semantic_value["manifest_sha256"] = _digest(
+        {key: item for key, item in semantic_value.items() if key != "manifest_sha256"}
+    )
+    validate_prospective_result_document(
+        semantic_value,
+        cast(EvaluationPopulationAuthority, population),
+    )
+
+
+def load_prospective_result_v2(
+    path: Path, population: EvaluationPopulationAuthorityV2
+) -> dict[str, object]:
+    """Read duplicate-key-safe restricted v2 result JSON and validate before use."""
+    value = _mapping(
+        json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object),
+        "v2 result manifest",
+    )
+    validate_prospective_result_document_v2(value, population)
+    return dict(value)
+
+
 def load_prospective_result(
     path: Path, population: EvaluationPopulationAuthority
 ) -> dict[str, object]:
@@ -743,20 +1143,28 @@ def load_prospective_result(
 
 __all__ = [
     "EvaluationPopulationAuthority",
+    "EvaluationPopulationAuthorityV2",
     "EvaluationPopulationOutput",
     "MatchMembership",
     "POPULATION_SCHEMA_FILE",
+    "POPULATION_SCHEMA_V2_FILE",
     "PopulationBoundScene",
     "PopulationBoundWindow",
     "SceneMembership",
     "WindowMembership",
     "load_prospective_result",
+    "load_prospective_result_v2",
     "validate_prospective_result_document",
+    "validate_prospective_result_document_v2",
     "load_evaluation_population_authority",
+    "load_evaluation_population_authority_v2",
     "prospective_window_id",
+    "prospective_window_id_v2",
     "truth_mask_sha256",
     "truth_sha256",
     "validate_evaluation_population_authority_document",
+    "validate_evaluation_population_authority_v2_document",
     "validate_evaluation_population_schema",
+    "validate_evaluation_population_schema_v2",
     "validate_population_bound_evaluation",
 ]

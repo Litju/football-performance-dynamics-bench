@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from collections.abc import Mapping
@@ -9,10 +10,21 @@ from importlib.resources import files
 from pathlib import Path
 from typing import cast
 
-from .prospective_protocol import PROTOCOL_SHA256, load_prospective_protocol
+from .prospective_protocol import (
+    EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+    EXPECTED_MEASUREMENT_STATE_V2_HASH,
+    EXPECTED_SOURCE_POPULATION_HASH,
+    EXPECTED_SOURCE_RELEASE_HASH,
+    PROTOCOL_SHA256,
+    PROTOCOL_V2_SHA256,
+    load_prospective_protocol,
+    load_prospective_protocol_v2,
+)
 
 PLAN_FILE = "empirical_experiment_plan_v1.json"
+PLAN_V2_FILE = "empirical_experiment_plan_v2.json"
 PLAN_SHA256 = "0446649e1ad049880cf6f8a76b4f3e03421d8bd7a1f7a2c562b5770461527775"
+PLAN_V2_SHA256 = "12db6cf4da3018cd467cf468ebcbe07369208f8a4dc83a063579b7b781453203"
 _PLAN_ID = "skillcorner.prospective_conditional_motion.execution"
 _PLAN_VERSION = "1.1.0"
 _REGIMES = ("history_only", "future_ball", "future_opponent_plus_ball")
@@ -329,6 +341,214 @@ def validate_empirical_experiment_plan(root: Path) -> tuple[str, ...]:
     return ()
 
 
+def load_empirical_experiment_plan_v2() -> dict[str, object]:
+    """Load the explicit nullable-ball successor execution plan."""
+    value = json.loads(
+        files(__package__).joinpath(PLAN_V2_FILE).read_text(encoding="utf-8"),
+        object_pairs_hook=_unique_object,
+    )
+    return cast(dict[str, object], _mapping(value, PLAN_V2_FILE))
+
+
+def _expected_empirical_experiment_plan_v2(
+    population_schema_bytes: bytes,
+    result_schema_bytes: bytes,
+) -> dict[str, object]:
+    plan = copy.deepcopy(load_empirical_experiment_plan())
+    validate_empirical_experiment_plan_document(plan)
+    protocol = load_prospective_protocol_v2()
+    if protocol.get("protocol_sha256") != PROTOCOL_V2_SHA256:
+        raise ValueError("v2 experiment plan requires the exact successor protocol")
+    population_schema = _mapping(
+        json.loads(population_schema_bytes, object_pairs_hook=_unique_object),
+        "v2 population schema",
+    )
+    result_schema = _mapping(
+        json.loads(result_schema_bytes, object_pairs_hook=_unique_object),
+        "v2 result schema",
+    )
+
+    plan.update(schema_version="2.0.0", plan_version="2.0.0", protocol_version="2.0.0")
+    plan["protocol_sha256"] = PROTOCOL_V2_SHA256
+    population = cast(
+        dict[str, object], _mapping(plan.get("population_authority"), "population_authority")
+    )
+    population.update(
+        schema_version="2.0.0",
+        schema_file="evaluation_population_authority_v2.schema.json",
+        schema_sha256=hashlib.sha256(population_schema_bytes).hexdigest(),
+        source_release_id="skillcorner_open_data_v1",
+        source_release_version="1.0.0",
+        source_release_hash=EXPECTED_SOURCE_RELEASE_HASH,
+        source_population_hash=EXPECTED_SOURCE_POPULATION_HASH,
+        measurement_state_id="skillcorner_5hz_v2",
+        measurement_state_version="2.0.0",
+        measurement_state_hash=EXPECTED_MEASUREMENT_STATE_V2_HASH,
+        eligibility_policy_id="skillcorner_window_v2",
+        eligibility_policy_version="2.0.0",
+        eligibility_policy_hash=EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+        protocol_id="skillcorner.prospective_conditional_motion",
+        protocol_version="2.0.0",
+        protocol_sha256=PROTOCOL_V2_SHA256,
+        plan_id=_PLAN_ID,
+        plan_version="2.0.0",
+        ball_null_flag_finite_xy_count=0,
+        ball_drift_stop_code="BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED",
+    )
+    result_binding = cast(
+        dict[str, object], _mapping(plan.get("result_manifest_schema"), "result manifest schema")
+    )
+    result_binding.update(
+        schema_version="2.0.0",
+        schema_file="prospective_experiment_result_v2.schema.json",
+        schema_sha256=hashlib.sha256(result_schema_bytes).hexdigest(),
+        required_fields=result_schema.get("required"),
+    )
+    field_types = cast(
+        dict[str, object], _mapping(result_binding.get("field_types"), "result field_types")
+    )
+    field_types.update(
+        source_measurement_eligibility_population_bindings=(
+            "exact successor IDs, versions, and SHA-256 values in this authority and the "
+            "restricted v2 population manifest"
+        ),
+        plan_and_protocol_hashes=(
+            "the exact v2 plan/protocol IDs, versions, and SHA-256 values in this authority"
+        ),
+    )
+    result_binding["semantic_validator"] = (
+        "evaluation_population.validate_prospective_result_document_v2; mandatory before "
+        "consuming any v2 result; JSON Schema alone is insufficient"
+    )
+    result_binding["aggregate_identity_fields"] = [
+        "source_release_hash",
+        "source_population_hash",
+        "measurement_state_hash",
+        "eligibility_policy_hash",
+        "protocol_sha256",
+        "plan_sha256",
+        "population_authority_sha256",
+        "cell_id",
+        "seed_ids",
+        "match_ids",
+    ]
+    constraints = cast(
+        dict[str, object], _mapping(plan.get("plan_constraints"), "plan_constraints")
+    )
+    constraints.update(
+        protocol_sha256_must_remain=PROTOCOL_V2_SHA256,
+        source_release_hash_must_remain=EXPECTED_SOURCE_RELEASE_HASH,
+        source_population_hash_must_remain=EXPECTED_SOURCE_POPULATION_HASH,
+        measurement_state_hash_must_remain=EXPECTED_MEASUREMENT_STATE_V2_HASH,
+        eligibility_policy_hash_must_remain=EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+        ball_null_flag_finite_xy_stop_must_remain=("BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"),
+    )
+    plan["plan_sha256"] = _digest(
+        {key: value for key, value in plan.items() if key != "plan_sha256"}
+    )
+    if plan["plan_sha256"] != PLAN_V2_SHA256:
+        raise ValueError("computed nullable-ball v2 plan hash differs from its pin")
+    if population_schema.get("$id") != "fpdbench.prospective-evaluation-population/2.0.0":
+        raise ValueError("v2 population schema identity mismatch")
+    if result_schema.get("$id") != "fpdbench.prospective-experiment-result/2.0.0":
+        raise ValueError("v2 result schema identity mismatch")
+    return plan
+
+
+def validate_empirical_experiment_plan_v2_document(
+    document: Mapping[str, object],
+    protocol: Mapping[str, object] | None = None,
+    *,
+    population_schema_bytes: bytes | None = None,
+    result_schema_bytes: bytes | None = None,
+) -> None:
+    """Validate the v2 plan and its exact, acyclic schema-byte bindings."""
+    population_bytes = (
+        population_schema_bytes
+        if population_schema_bytes is not None
+        else files(__package__)
+        .joinpath("evaluation_population_authority_v2.schema.json")
+        .read_bytes()
+    )
+    result_bytes = (
+        result_schema_bytes
+        if result_schema_bytes is not None
+        else files(__package__)
+        .joinpath("prospective_experiment_result_v2.schema.json")
+        .read_bytes()
+    )
+    expected = _expected_empirical_experiment_plan_v2(population_bytes, result_bytes)
+    plan = _mapping(dict(document), "v2 experiment plan")
+    if plan != expected:
+        raise ValueError("v2 experiment plan differs from its frozen execution contract")
+    protocol_document = _mapping(protocol or load_prospective_protocol_v2(), "v2 protocol")
+    if (
+        protocol_document.get("protocol_id") != "skillcorner.prospective_conditional_motion"
+        or protocol_document.get("protocol_version") != "2.0.0"
+        or protocol_document.get("protocol_sha256") != PROTOCOL_V2_SHA256
+    ):
+        raise ValueError("v2 experiment plan does not bind the exact successor protocol")
+
+
+def validate_empirical_experiment_plan_v2(root: Path) -> tuple[str, ...]:
+    """Validate v2 plan identity, frozen factors, and schema bytes in the source tree."""
+    try:
+        base = (
+            root / "src" / "fpdbench" / "benchmarks" / "conditional_multi_agent_motion_prediction"
+        )
+        plan_text = (base / PLAN_V2_FILE).read_text(encoding="utf-8")
+        plan = _mapping(
+            json.loads(plan_text, object_pairs_hook=_unique_object),
+            PLAN_V2_FILE,
+        )
+        protocol_text = (base / "prospective_skillcorner_protocol_v2.json").read_text(
+            encoding="utf-8"
+        )
+        protocol = _mapping(
+            json.loads(protocol_text, object_pairs_hook=_unique_object),
+            "v2 protocol",
+        )
+        population_schema_bytes = (
+            base / "evaluation_population_authority_v2.schema.json"
+        ).read_bytes()
+        result_schema_bytes = (base / "prospective_experiment_result_v2.schema.json").read_bytes()
+        validate_empirical_experiment_plan_v2_document(
+            plan,
+            protocol,
+            population_schema_bytes=population_schema_bytes,
+            result_schema_bytes=result_schema_bytes,
+        )
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return (f"prospective v2 experiment plan: {exc}",)
+    return ()
+
+
+def experiment_cell_v2(cell_id: str) -> Mapping[str, object]:
+    """Resolve one exact cell from the v2 execution plan."""
+    plan = load_empirical_experiment_plan_v2()
+    validate_empirical_experiment_plan_v2_document(plan)
+    cells = _list(_mapping(plan["factorial"], "v2 factorial")["cells"], "cells")
+    for item in cells:
+        cell = _mapping(item, "cell")
+        if cell.get("cell_id") == cell_id:
+            return cell
+    raise ValueError("unknown v2 frozen experiment cell")
+
+
+def protocol_split_v2() -> Mapping[str, object]:
+    state = _mapping(load_prospective_protocol_v2()["scientific_state"], "v2 scientific state")
+    return _mapping(state["split"], "v2 split")
+
+
+def lomo_held_out_match_v2(fold_id: str) -> str:
+    folds = _list(_mapping(protocol_split_v2()["lomo"], "v2 LOMO")["folds"], "folds")
+    for item in folds:
+        fold = _mapping(item, "fold")
+        if fold.get("fold_id") == fold_id:
+            return cast(str, fold["held_out_match"])
+    raise ValueError("unknown v2 frozen LOMO fold")
+
+
 def experiment_cell(cell_id: str) -> Mapping[str, object]:
     """Resolve only an exact frozen factorial row."""
     plan = load_empirical_experiment_plan()
@@ -357,8 +577,16 @@ def lomo_held_out_match(fold_id: str) -> str:
 
 __all__ = [
     "PLAN_FILE",
+    "PLAN_V2_FILE",
     "PLAN_SHA256",
+    "PLAN_V2_SHA256",
+    "experiment_cell_v2",
     "load_empirical_experiment_plan",
+    "load_empirical_experiment_plan_v2",
+    "lomo_held_out_match_v2",
+    "protocol_split_v2",
     "validate_empirical_experiment_plan",
     "validate_empirical_experiment_plan_document",
+    "validate_empirical_experiment_plan_v2",
+    "validate_empirical_experiment_plan_v2_document",
 ]

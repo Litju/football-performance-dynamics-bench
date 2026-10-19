@@ -1,0 +1,471 @@
+{
+  "schema_id": "fpdbench.prospective-experiment-plan",
+  "schema_version": "2.0.0",
+  "plan_id": "skillcorner.prospective_conditional_motion.execution",
+  "plan_version": "2.0.0",
+  "plan_sha256": "12db6cf4da3018cd467cf468ebcbe07369208f8a4dc83a063579b7b781453203",
+  "protocol_id": "skillcorner.prospective_conditional_motion",
+  "protocol_version": "2.0.0",
+  "protocol_sha256": "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e",
+  "factorial": {
+    "information_regimes": [
+      "history_only",
+      "future_ball",
+      "future_opponent_plus_ball"
+    ],
+    "target_representations": [
+      "absolute_xy",
+      "origin_relative_displacement"
+    ],
+    "model_classes": [
+      {
+        "class_id": "origin_persistence_v1",
+        "role": "deterministic_baseline",
+        "requires_training": false,
+        "regime_invariant": true,
+        "definition": "Repeat the target player's observed origin XY for all 15 future samples; output zero displacement for the displacement target."
+      },
+      {
+        "class_id": "constant_velocity_1s_v1",
+        "role": "deterministic_baseline",
+        "requires_training": false,
+        "regime_invariant": true,
+        "definition": "Fit an unweighted per-coordinate least-squares line to all finite target-player XY observations among the six history samples at offsets -1.0 through 0.0 seconds; extrapolate at 0.2 through 3.0 seconds. If fewer than two distinct-time samples are finite, use origin persistence. Convert predictions to origin-relative displacement by subtracting origin XY."
+      },
+      {
+        "class_id": "per_target_context_deepsets_mlp_v1",
+        "role": "primary_learned_model",
+        "requires_training": true,
+        "regime_invariant": false,
+        "architecture": {
+          "history_player_encoder": "shared across both teams and players: Linear(78,32), ReLU, Linear(32,16), ReLU; mean-pool encoded player tracks separately by team",
+          "future_opponent_encoder": "Linear(45,32), ReLU, Linear(32,16), ReLU; encode and mean-pool every opponent track observed during the 15-sample horizon, including substitutes",
+          "prediction_head": "Linear(input_dim,128), ReLU, Dropout(0.1), Linear(128,128), ReLU, Dropout(0.1), Linear(128,30)",
+          "input_dimensions": {
+            "history_only": 215,
+            "future_ball": 260,
+            "future_opponent_plus_ball": 276
+          },
+          "output": "15 future XY pairs in metres; absolute coordinates or per-player origin-relative displacement as named by the cell",
+          "initialization": "PyTorch 2.6.0 default Linear initialization",
+          "coordinates": "finite XY in metres; missing pairs are filled with (0,0) and accompanied by a zero presence mask; no pitch normalization",
+          "identities": "provider IDs are used only to group and order tracks; IDs are never numeric features or joined across matches",
+          "time_features": "26 fixed history offsets [-5.0,-4.8,...,0.0] seconds and home=+1/away=-1"
+        },
+        "training": {
+          "framework": "PyTorch 2.6.0+cpu",
+          "python": "3.12.8",
+          "numpy": "2.2.4",
+          "optimizer": "AdamW",
+          "learning_rate": 0.001,
+          "betas": [
+            0.9,
+            0.999
+          ],
+          "epsilon": 1e-08,
+          "weight_decay": 0.0001,
+          "batch_size_directed_scenes": 128,
+          "batch_sampling": "with replacement: uniformly sample a fit-role match, then uniformly sample an eligible window with at least one scoreable directed scene, then uniformly sample one scoreable directed scene; each scene loss is its mean Euclidean error over all finite target/time pairs",
+          "loss": "masked physical XY ADE in metres; use the locked origin-target truth mask only",
+          "scheduler": "none",
+          "gradient_clipping": "none",
+          "determinism": "CPU only; seed Python, NumPy, and PyTorch; deterministic algorithms enabled; one intra-op and one inter-op thread; disable backend benchmarking"
+        }
+      }
+    ],
+    "cells": [
+      {
+        "cell_id": "origin_persistence_v1|history_only|absolute_xy",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "origin_persistence_v1|future_ball|absolute_xy",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "origin_persistence_v1|history_only|origin_relative_displacement",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "origin_persistence_v1|future_ball|origin_relative_displacement",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement",
+        "model_class_id": "origin_persistence_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|history_only|absolute_xy",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|future_ball|absolute_xy",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|history_only|origin_relative_displacement",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|future_ball|origin_relative_displacement",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement",
+        "model_class_id": "constant_velocity_1s_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement"
+      },
+      {
+        "cell_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement",
+        "model_class_id": "per_target_context_deepsets_mlp_v1",
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement"
+      }
+    ],
+    "primary_model_class_id": "per_target_context_deepsets_mlp_v1"
+  },
+  "seeds": {
+    "stochastic_seed_ids": [
+      1729,
+      2718,
+      31415
+    ],
+    "shared_across_comparable_cells": true,
+    "deterministic_baseline_seed": null,
+    "final_fit_count": 18,
+    "lomo_fit_count": 216,
+    "total_learned_fits": 234
+  },
+  "selection": {
+    "fit_role": "training",
+    "validation_match_ids_from_protocol": true,
+    "metric": "equal mean of the four validation-match physical XY ADE values in metres",
+    "direction": "minimize",
+    "checkpoint_tie_break": "earliest step; strict numeric inequality is an improvement",
+    "validation_cadence_optimizer_steps": 100,
+    "initial_validation_step": 100,
+    "maximum_optimizer_steps": 5000,
+    "early_stopping_patience_validation_checks": 10,
+    "minimum_improvement_m": 0.0,
+    "hyperparameter_search": "none",
+    "evaluation_or_lomo_used_for_checkpoint_selection": false
+  },
+  "compute_budget": {
+    "worker": "one x86_64 CPU core, 16 GiB memory, CPU-only",
+    "per_fit_initial_cpu_core_hours": 1.0,
+    "per_fit_retry_cpu_core_hours": 0.25,
+    "per_fit_maximum_optimizer_steps": 5000,
+    "maximum_infrastructure_retries_per_fit": 1,
+    "campaign_training_cpu_core_hours": 292.5,
+    "campaign_preparation_scoring_cpu_core_hours": 19.5,
+    "campaign_total_cpu_core_hours": 312.0,
+    "campaign_wall_clock_hours": 336,
+    "overrun_policy": "stop at the first per-fit or campaign ceiling; never extend after observing a result"
+  },
+  "failure_policy": {
+    "retry_only_for": [
+      "external worker interruption before atomic output commit"
+    ],
+    "retry_from_scratch_with_same_seed_and_configuration": true,
+    "no_retry_for": [
+      "non-finite loss or prediction",
+      "out of memory",
+      "validation match without a score",
+      "invalid population manifest",
+      "nondeterministic runtime",
+      "optimizer-step or compute ceiling reached",
+      "any evaluation-stage failure"
+    ],
+    "failed_cells_may_be_dropped": false,
+    "partial_contrast_summary_allowed": false,
+    "evaluation_pass_count": 1,
+    "evaluation_retries": 0
+  },
+  "execution_order": [
+    "verify the frozen protocol, this plan, the runtime fingerprint, and the restricted population authority before opening any scoring path",
+    "run each deterministic baseline on validation windows in model-class, target, regime, then canonical match order",
+    "fit final-role learned cells in target, regime, seed order using the 12 protocol training matches",
+    "fit LOMO cells in protocol fold, target, regime, seed order; the held-out match is never used for selection",
+    "atomically freeze all 234 learned checkpoint manifests and verify the complete cell/seed/fold set",
+    "score all 12 deterministic baseline cells and all learned LOMO/evaluation outputs once; use the protected population gate before every score",
+    "write per-match result manifests, then descriptive aggregates and the four preregistered contrasts"
+  ],
+  "stopping_rules": [
+    "stop a fit at 10 consecutive non-improving validation checks, 5000 optimizer steps, or its compute ceiling, whichever comes first",
+    "stop the campaign at 312 CPU-core-hours or 336 wall-clock hours",
+    "a missing learned cell, seed, fold, evaluation match, or population identity leaves the campaign incomplete; do not drop it or report the four-match mean",
+    "no added cells, seeds, retries, steps, features, or budget after any model or evaluation result is observed"
+  ],
+  "primary_contrasts": [
+    {
+      "contrast_id": "C1_ABSOLUTE_XY_FUTURE_BALL",
+      "target_representation": "absolute_xy",
+      "control_regime": "history_only",
+      "context_regime": "future_ball",
+      "direction": "control ADE minus context ADE"
+    },
+    {
+      "contrast_id": "C1_DISPLACEMENT_FUTURE_BALL",
+      "target_representation": "origin_relative_displacement",
+      "control_regime": "history_only",
+      "context_regime": "future_ball",
+      "direction": "control ADE minus context ADE"
+    },
+    {
+      "contrast_id": "C2_ABSOLUTE_XY_FUTURE_OPPONENT",
+      "target_representation": "absolute_xy",
+      "control_regime": "future_ball",
+      "context_regime": "future_opponent_plus_ball",
+      "direction": "control ADE minus context ADE"
+    },
+    {
+      "contrast_id": "C2_DISPLACEMENT_FUTURE_OPPONENT",
+      "target_representation": "origin_relative_displacement",
+      "control_regime": "future_ball",
+      "context_regime": "future_opponent_plus_ball",
+      "direction": "control ADE minus context ADE"
+    }
+  ],
+  "contrast_reporting": {
+    "model_class_id": "per_target_context_deepsets_mlp_v1",
+    "seed_aggregation": "average the three seed ADE values within each match before contrasts",
+    "match_population": "all four protocol evaluation matches",
+    "summary": "report all four match-level control-minus-context values and their equal-match mean only when all four pairs are scoreable",
+    "positive_means": "lower ADE with added realized context",
+    "inferential_claims": "none; no p-values, confidence intervals, multiplicity adjustment, or significance claims",
+    "other_metrics_and_models": "descriptive/exploratory only"
+  },
+  "population_authority": {
+    "schema_id": "fpdbench.prospective-evaluation-population",
+    "schema_version": "2.0.0",
+    "schema_file": "evaluation_population_authority_v2.schema.json",
+    "schema_sha256": "a50cb41dfe9ece7cfb900677501dd4b6f77b18dce8e61ec738f997984548daaa",
+    "artifact_storage": "restricted authorized runtime storage; never commit the artifact, row-level identities, truth hashes, or payload rows",
+    "required_before_training_or_scoring": true,
+    "match_roles": "all 20 matches and the exact protocol role assignment",
+    "coverage": "all candidate origins enumerated in canonical sample order; retain every and only window accepted by the pinned eligibility policy",
+    "score_gate": "exact ordered window, origin, home/away player IDs, target truth digest, target truth-mask digest, role, and population digest equality",
+    "missing_or_invalid_authority": "fail closed before training, validation selection, LOMO scoring, or evaluation scoring",
+    "truth_identity_contract": {
+      "absolute_xy_truth_sha256": "representation-tagged absolute physical XY metre panel",
+      "displacement_truth_sha256": "representation-tagged per-player origin-relative displacement metre panel",
+      "qualification": "The protected population qualification blocker must independently verify both sealed panels describe identical physical truth using observed nonzero per-player origin XY; masks and ordered membership must be identical",
+      "scorer_binding": "output target_representation must equal the exact frozen cell; validation uses all four validation matches, LOMO uses exactly the protocol fold held-out training match, evaluation uses all four evaluation matches"
+    },
+    "source_release_id": "skillcorner_open_data_v1",
+    "source_release_version": "1.0.0",
+    "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+    "source_population_hash": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4",
+    "measurement_state_id": "skillcorner_5hz_v2",
+    "measurement_state_version": "2.0.0",
+    "measurement_state_hash": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671",
+    "eligibility_policy_id": "skillcorner_window_v2",
+    "eligibility_policy_version": "2.0.0",
+    "eligibility_policy_hash": "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581",
+    "protocol_id": "skillcorner.prospective_conditional_motion",
+    "protocol_version": "2.0.0",
+    "protocol_sha256": "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e",
+    "plan_id": "skillcorner.prospective_conditional_motion.execution",
+    "plan_version": "2.0.0",
+    "ball_null_flag_finite_xy_count": 0,
+    "ball_drift_stop_code": "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"
+  },
+  "result_manifest_schema": {
+    "schema_id": "fpdbench.prospective-experiment-result",
+    "schema_version": "2.0.0",
+    "schema_file": "prospective_experiment_result_v2.schema.json",
+    "schema_sha256": "7af53134a5de14d843c31479f195efb9077cc64ceb96130e10401653a100fa25",
+    "required_fields": [
+      "schema_id",
+      "schema_version",
+      "plan_id",
+      "plan_version",
+      "plan_sha256",
+      "protocol_id",
+      "protocol_version",
+      "protocol_sha256",
+      "source_release_id",
+      "source_release_version",
+      "source_release_hash",
+      "source_population_hash",
+      "measurement_state_id",
+      "measurement_state_version",
+      "measurement_state_hash",
+      "eligibility_policy_id",
+      "eligibility_policy_version",
+      "eligibility_policy_hash",
+      "population_id",
+      "population_schema_id",
+      "population_schema_version",
+      "run_id",
+      "cell_id",
+      "model_class_id",
+      "information_regime",
+      "target_representation",
+      "fit_role",
+      "lomo_fold_id",
+      "held_out_match_id",
+      "seed",
+      "train_match_ids",
+      "validation_match_ids",
+      "population_authority_sha256",
+      "configuration_sha256",
+      "environment_sha256",
+      "checkpoint_sha256",
+      "selected_step",
+      "stopping_reason",
+      "status",
+      "output_artifacts",
+      "metrics",
+      "manifest_sha256"
+    ],
+    "run_id_format": "<cell_id>|<fit_role>|<fold_id-or-final>|<seed-or-deterministic>",
+    "field_types": {
+      "schema_id_schema_version": "constant schema ID and version",
+      "plan_and_protocol_hashes": "the exact v2 plan/protocol IDs, versions, and SHA-256 values in this authority",
+      "run_id_cell_id_model_class_id": "nonempty strings; cell_id and model_class_id must match one frozen matrix row",
+      "information_regime_target_representation": "one frozen regime and target value from the matrix cell",
+      "fit_role": "final_train | lomo | baseline",
+      "lomo_fold_id_held_out_match_id": "protocol fold identity and held-out training match for lomo; null otherwise",
+      "seed": "one frozen integer seed for learned fits; null for deterministic baselines",
+      "train_match_ids_validation_match_ids": "ordered protocol training matches for final fits, all except held-out for LOMO, empty for baseline; validation always exact protocol validation matches",
+      "population_authority_sha256_configuration_sha256_environment_sha256": "lowercase SHA-256 strings",
+      "checkpoint_sha256": "lowercase SHA-256 for a learned checkpoint; null for a deterministic baseline or failed fit",
+      "selected_step": "completed learned checkpoint: multiple of 100 from 100 through 5000; null for baseline or unsuccessful result",
+      "stopping_reason": "nonempty fixed-rule reason",
+      "status": "one value from status_values",
+      "output_artifacts": "unique artifact IDs, lowercase SHA-256, output or diagnostic relation",
+      "metrics": "array of match-scoped ADE/FDE/XY-RMSE finite values with metres as unit",
+      "manifest_sha256": "SHA-256 of canonical manifest fields excluding manifest_sha256",
+      "source_measurement_eligibility_population_bindings": "exact successor IDs, versions, and SHA-256 values in this authority and the restricted v2 population manifest"
+    },
+    "status_values": [
+      "completed",
+      "failed_infrastructure",
+      "failed_model",
+      "failed_validation",
+      "incomplete"
+    ],
+    "metric_ids": [
+      "ade_m",
+      "fde_m",
+      "xy_rmse_m"
+    ],
+    "metric_unit": "metres",
+    "aggregate_identity_fields": [
+      "source_release_hash",
+      "source_population_hash",
+      "measurement_state_hash",
+      "eligibility_policy_hash",
+      "protocol_sha256",
+      "plan_sha256",
+      "population_authority_sha256",
+      "cell_id",
+      "seed_ids",
+      "match_ids"
+    ],
+    "semantic_validator": "evaluation_population.validate_prospective_result_document_v2; mandatory before consuming any v2 result; JSON Schema alone is insufficient",
+    "completed_metric_scopes": {
+      "final_train": "all four validation and all four evaluation matches",
+      "lomo": "all four validation matches and exactly the fold held-out match",
+      "baseline": "all four validation, all four evaluation, and all twelve training matches as descriptive LOMO controls"
+    },
+    "unsuccessful_results": "no metrics, checkpoint or selected step; output/diagnostic artifacts may record failures",
+    "stopping_reasons_by_status": {
+      "completed": [
+        "baseline_complete",
+        "early_stopping",
+        "maximum_optimizer_steps",
+        "compute_ceiling"
+      ],
+      "failed_infrastructure": [
+        "external_worker_interruption"
+      ],
+      "failed_model": [
+        "nonfinite_model",
+        "out_of_memory",
+        "nondeterministic_runtime"
+      ],
+      "failed_validation": [
+        "invalid_population",
+        "missing_validation_score",
+        "evaluation_failure"
+      ],
+      "incomplete": [
+        "campaign_incomplete"
+      ]
+    }
+  },
+  "plan_constraints": {
+    "no_training_or_empirical_runs_performed_by_freeze": true,
+    "private_qualification_truth_used": false,
+    "skillcorner_row_level_data_committed": false,
+    "protocol_sha256_must_remain": "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e",
+    "source_release_hash_must_remain": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+    "source_population_hash_must_remain": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4",
+    "measurement_state_hash_must_remain": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671",
+    "eligibility_policy_hash_must_remain": "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581",
+    "ball_null_flag_finite_xy_stop_must_remain": "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"
+  }
+}

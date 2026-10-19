@@ -1,0 +1,464 @@
+{
+  "schema_id": "fpdbench.prospective-benchmark-protocol",
+  "schema_version": "2.0.0",
+  "protocol_id": "skillcorner.prospective_conditional_motion",
+  "protocol_version": "2.0.0",
+  "protocol_sha256": "9d0b0fcc5cb072dda8f4f6b6418d4455dc86bef521e8f711a0f4cd2a2f30df3e",
+  "scientific_state": {
+    "identity": {
+      "research_question_id": "skillcorner.prospective.conditional_motion.context_ablation",
+      "research_question": "On the pinned 20-match SkillCorner population, how does access to realized future ball and opponent trajectories change three-second multi-agent player-position error, for absolute pitch XY and origin-relative displacement targets?",
+      "research_question_sha256": "13216f33dcc10ba0a2b2da381485632526911a33d34717bff58c9661d464915b"
+    },
+    "authorities": {
+      "source_release_id": "skillcorner_open_data_v1",
+      "source_release_version": "1.0.0",
+      "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+      "source_population_hash": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4",
+      "measurement_state_id": "skillcorner_5hz_v2",
+      "measurement_state_version": "2.0.0",
+      "measurement_state_hash": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671",
+      "eligibility_policy_id": "skillcorner_window_v2",
+      "eligibility_policy_version": "2.0.0",
+      "eligibility_policy_hash": "b200e0dffa8a04d465496ee45aae90c25d20c08a9c9a5cb62433441094956581"
+    },
+    "benchmarks": [
+      {
+        "benchmark_id": "skillcorner.prospective.conditional_motion.absolute_xy",
+        "benchmark_version": "2.0.0",
+        "target_representation": "absolute_xy",
+        "target_frame": "provider pitch-centered XY",
+        "target_units": "metres",
+        "historical_relation": "new prospective identity; not a version, alias, or repaired membership of a historical reconstructed benchmark",
+        "benchmark_sha256": "dd485bf237ac60a231d3732cea7003921eddbcf0f576853c33310b5ac757bbe1"
+      },
+      {
+        "benchmark_id": "skillcorner.prospective.conditional_motion.origin_relative_displacement",
+        "benchmark_version": "2.0.0",
+        "target_representation": "origin_relative_displacement",
+        "target_frame": "per-player XY delta from the exact observed forecast-origin position",
+        "target_units": "metres",
+        "historical_relation": "new prospective identity; not a version, alias, or repaired membership of a historical reconstructed benchmark",
+        "benchmark_sha256": "d70bb03604cb393576ecaa267390c7f410a1e36c237e25f84280494b1f38130a"
+      }
+    ],
+    "time_grid": {
+      "frequency_hz": 5,
+      "sample_interval_seconds": 0.2,
+      "history_seconds": 5,
+      "history_intervals": 25,
+      "history_samples_including_origin": 26,
+      "origin_samples": 1,
+      "origin_index_in_support": 25,
+      "forecast_horizon_seconds": 3,
+      "future_intervals": 15,
+      "future_samples_excluding_origin": 15,
+      "total_support_samples": 41,
+      "history_offsets_intervals": [
+        -25,
+        0
+      ],
+      "future_offsets_intervals": [
+        1,
+        15
+      ],
+      "origin_is_last_history_sample": true,
+      "future_context_is_ex_post_realized": true
+    },
+    "window_population": {
+      "origin_stride_canonical_samples": 1,
+      "origin_candidates": "every canonical 5 Hz sample with the complete 41-sample support",
+      "eligibility_policy_id": "skillcorner_window_v2",
+      "eligibility_history_intervals": 25,
+      "eligibility_future_intervals": 15,
+      "support_must_stay_within_one_period": true,
+      "eligible_population_rule": "retain every candidate passing the pinned eligibility policy; no outcome- or model-dependent subsampling",
+      "window_counts_claimed": false
+    },
+    "information_regimes": [
+      {
+        "regime_id": "history_only",
+        "model_visible_features": [
+          "history.target_team.xy_m",
+          "history.target_team.observation_mask",
+          "history.opponent_team.xy_m",
+          "history.opponent_team.observation_mask",
+          "history.ball.xy_m",
+          "history.ball.observation_mask",
+          "relative_time_offsets_s",
+          "target_team.home_away_side"
+        ],
+        "future_context_features": []
+      },
+      {
+        "regime_id": "future_ball",
+        "model_visible_features": [
+          "history.target_team.xy_m",
+          "history.target_team.observation_mask",
+          "history.opponent_team.xy_m",
+          "history.opponent_team.observation_mask",
+          "history.ball.xy_m",
+          "history.ball.observation_mask",
+          "relative_time_offsets_s",
+          "target_team.home_away_side",
+          "future.ball.xy_m",
+          "future.ball.observation_mask"
+        ],
+        "future_context_features": [
+          "future.ball.xy_m",
+          "future.ball.observation_mask"
+        ]
+      },
+      {
+        "regime_id": "future_opponent_plus_ball",
+        "model_visible_features": [
+          "history.target_team.xy_m",
+          "history.target_team.observation_mask",
+          "history.opponent_team.xy_m",
+          "history.opponent_team.observation_mask",
+          "history.ball.xy_m",
+          "history.ball.observation_mask",
+          "relative_time_offsets_s",
+          "target_team.home_away_side",
+          "future.ball.xy_m",
+          "future.ball.observation_mask",
+          "future.opponent_team.xy_m",
+          "future.opponent_team.observation_mask"
+        ],
+        "future_context_features": [
+          "future.ball.xy_m",
+          "future.ball.observation_mask",
+          "future.opponent_team.xy_m",
+          "future.opponent_team.observation_mask"
+        ]
+      }
+    ],
+    "forbidden_model_information": [
+      "future.target_team.xy_m",
+      "future target positions or target-derived features",
+      "future eligibility decisions or reason codes",
+      "future phase/event/possession annotations",
+      "future quality-audit fields or strata",
+      "future target masks or target membership",
+      "future target is_detected flags",
+      "numeric match, team, or player identifiers as learned features",
+      "absolute match clock, file identity, or row order",
+      "cross-match player identity joins"
+    ],
+    "target_panel": {
+      "directed_scenes_per_physical_window": [
+        "home_target_team",
+        "away_target_team"
+      ],
+      "target_entity_source": "player records with finite XY in the forecast-origin sample",
+      "target_entity_order": "ascending provider player_id within match and team",
+      "target_cardinality": "variable and fixed per directed scene from the origin sample; no fixed eleven-player shape or cap",
+      "minimum_target_cardinality_claimed": false,
+      "identity_scope": "match-scoped provider player_id only; no cross-match athlete identity or ID embedding",
+      "continuity": "keep each origin target ID in its origin order for the full 15-step output; never stitch IDs",
+      "absolute_xy": "predict provider pitch-centered x/y directly in metres, without normalization, rotation, or attack-direction transformation",
+      "origin_relative_displacement": "predict future x/y minus the same target player's finite origin x/y, in metres; reconstruct physical XY by adding that origin position",
+      "target_truth_mask": "one null XY pair only when that origin target is absent or either source coordinate is null/nonfinite at that future sample",
+      "extrapolated_truth": "finite source XY with is_detected=false remains a scored target; retain its source-quality stratum",
+      "substitution": "target membership stays fixed from the origin sample; a departing target is null-masked only when its source position is absent or invalid, and later entrants are never added",
+      "imputation": "none; no forward fill, interpolation, or replacement target",
+      "prediction_mask": "none; each model must emit finite XY predictions for every origin target at every future sample",
+      "mask_use": "evaluation only; never a model input"
+    },
+    "split": {
+      "protocol_id": "skillcorner.prospective.match_roles_lomo",
+      "protocol_version": "1.0.0",
+      "population_match_ids": [
+        "1874553",
+        "1886347",
+        "1899585",
+        "1925299",
+        "1927964",
+        "1953632",
+        "1959846",
+        "1986691",
+        "1996435",
+        "1996436",
+        "2006229",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2010085",
+        "2011166",
+        "2013725",
+        "2015213",
+        "2016236",
+        "2017461"
+      ],
+      "role_assignment_algorithm": "rank matches by ascending SHA-256 of UTF-8 'FPDBench prospective/v1/match/' + decimal match_id; assign first 12 to training, next 4 to validation, last 4 to evaluation; sort IDs ascending within each role",
+      "roles": {
+        "training": [
+          "1886347",
+          "1899585",
+          "1927964",
+          "1959846",
+          "1986691",
+          "1996436",
+          "2006363",
+          "2007448",
+          "2007721",
+          "2011166",
+          "2013725",
+          "2016236"
+        ],
+        "validation": [
+          "1953632",
+          "1996435",
+          "2015213",
+          "2017461"
+        ],
+        "evaluation": [
+          "1874553",
+          "1925299",
+          "2006229",
+          "2010085"
+        ]
+      },
+      "role_assignment_sha256": "923dc2721a05620716f23c3b4cb1814e73485f80052f00c5334ccce666b99d94",
+      "lomo": {
+        "fold_count": 12,
+        "fold_order": "training match IDs ascending",
+        "folds": [
+          {
+            "fold_id": "fold-01",
+            "held_out_match": "1886347"
+          },
+          {
+            "fold_id": "fold-02",
+            "held_out_match": "1899585"
+          },
+          {
+            "fold_id": "fold-03",
+            "held_out_match": "1927964"
+          },
+          {
+            "fold_id": "fold-04",
+            "held_out_match": "1959846"
+          },
+          {
+            "fold_id": "fold-05",
+            "held_out_match": "1986691"
+          },
+          {
+            "fold_id": "fold-06",
+            "held_out_match": "1996436"
+          },
+          {
+            "fold_id": "fold-07",
+            "held_out_match": "2006363"
+          },
+          {
+            "fold_id": "fold-08",
+            "held_out_match": "2007448"
+          },
+          {
+            "fold_id": "fold-09",
+            "held_out_match": "2007721"
+          },
+          {
+            "fold_id": "fold-10",
+            "held_out_match": "2011166"
+          },
+          {
+            "fold_id": "fold-11",
+            "held_out_match": "2013725"
+          },
+          {
+            "fold_id": "fold-12",
+            "held_out_match": "2016236"
+          }
+        ],
+        "training_membership_rule": "all training-role matches except that fold's held-out match",
+        "validation_and_evaluation_matches_in_training_folds": false,
+        "use": "descriptive match-held-out generalization only; LOMO scores do not select a model or tune a result",
+        "uncertainty": "do not report iid standard errors, confidence intervals, or hypothesis tests across these overlapping training folds"
+      },
+      "lomo_assignment_sha256": "8eba816cd1521aea8156c0da21b10321a29476f41ffe4b089382d0b9de4d9240",
+      "split_sha256": "63c517001ce505525b48cf6a49ab48ed336ddf32c2d6ea24cd2ba950feff3a32",
+      "cross_match_leakage_rule": "all windows, both directed scenes, and all derived rows from a physical match inherit exactly one role or one LOMO fold",
+      "historical_private_qualification_reused": false,
+      "historical_private_match_id": "J03WMX"
+    },
+    "evaluation": {
+      "evaluation_population": "all eligible windows in the four fixed evaluation-role matches",
+      "evaluator_id": "skillcorner.prospective.masked_physical_xy",
+      "evaluator_version": "2.0.0",
+      "coordinate_units": "metres",
+      "xy_scale_m": [
+        1.0,
+        1.0
+      ],
+      "primary_metric": {
+        "metric_id": "trajectory.ade_m.v1",
+        "unit": "m",
+        "formula": "mean Euclidean XY error across valid target-player by future-sample pairs within one directed scene"
+      },
+      "secondary_metrics": [
+        {
+          "metric_id": "trajectory.fde_m.v1",
+          "unit": "m",
+          "formula": "mean Euclidean XY error at the fifteenth future sample over target players with valid truth there"
+        },
+        {
+          "metric_id": "trajectory.xy_rmse_m.v1",
+          "unit": "m",
+          "formula": "square root of mean squared x/y scalar residual over valid target-player by future-sample pairs"
+        }
+      ],
+      "scene_scoreability": "a directed scene is scoreable only if at least one origin target has valid truth at future sample 15; use the same scoreable scene population for all three metrics",
+      "truth_mask_denominator": "finite source XY pairs for origin target IDs only; is_detected=false counts as finite truth per Linear issue 437",
+      "null_and_error_rules": {
+        "invalid_or_missing_prediction": "fail the model cell; never drop a model-specific row",
+        "no_valid_final_target_in_scene": "null scene metric with reason NO_FINAL_TARGET; exclude that scene from every metric and count it",
+        "no_scoreable_scene_in_match": "null match metric; retain the match and report no four-match descriptive mean or contrast summary if any evaluation match lacks a score",
+        "constant_truth": "valid for ADE/FDE/XY-RMSE; no SRE or calibrated reward is produced",
+        "partial_xy_pair": "error; missingness is represented only by a null XY pair",
+        "no_scoreable_scene_in_window": "null window metric; retain and count the window, but exclude it from the within-match mean"
+      },
+      "aggregation_order": [
+        "compute each metric over valid target-player/time labels within each directed scene",
+        "average scoreable home/away directed scenes equally within each physical window; exclude every NO_FINAL_TARGET scene from every metric and count it",
+        "average eligible physical windows with at least one scoreable scene equally within each match; retain and count windows with no scoreable scene",
+        "average the four evaluation-match scores equally only when every evaluation match has a score; otherwise the population metric is null"
+      ],
+      "metric_contract_sha256": "978209bfb9c504687b5911a945639a34ff0b59973bad72ae1019c43569f1d858"
+    },
+    "analysis": {
+      "primary_model_class": "the single model class labeled primary in Linear issue 339, with its exact identity frozen before training",
+      "planned_directional_contrasts": [
+        {
+          "benchmark_id": "skillcorner.prospective.conditional_motion.absolute_xy",
+          "control_regime": "history_only",
+          "context_regime": "future_ball",
+          "metric_id": "trajectory.ade_m.v1",
+          "contrast_id": "C1_ABSOLUTE_XY_FUTURE_BALL",
+          "directional_expectation": "context ADE is lower than control ADE"
+        },
+        {
+          "benchmark_id": "skillcorner.prospective.conditional_motion.origin_relative_displacement",
+          "control_regime": "history_only",
+          "context_regime": "future_ball",
+          "metric_id": "trajectory.ade_m.v1",
+          "contrast_id": "C1_DISPLACEMENT_FUTURE_BALL",
+          "directional_expectation": "context ADE is lower than control ADE"
+        },
+        {
+          "benchmark_id": "skillcorner.prospective.conditional_motion.absolute_xy",
+          "control_regime": "future_ball",
+          "context_regime": "future_opponent_plus_ball",
+          "metric_id": "trajectory.ade_m.v1",
+          "contrast_id": "C2_ABSOLUTE_XY_FUTURE_OPPONENT",
+          "directional_expectation": "context ADE is lower than control ADE"
+        },
+        {
+          "benchmark_id": "skillcorner.prospective.conditional_motion.origin_relative_displacement",
+          "control_regime": "future_ball",
+          "context_regime": "future_opponent_plus_ball",
+          "metric_id": "trajectory.ade_m.v1",
+          "contrast_id": "C2_DISPLACEMENT_FUTURE_OPPONENT",
+          "directional_expectation": "context ADE is lower than control ADE"
+        }
+      ],
+      "confirmatory_scope": "none; the four preregistered directional ADE contrasts are descriptive and carry no significance claims",
+      "match_level_contrast": "within each evaluation match, control ADE minus context ADE; positive means lower error with the added future context",
+      "directional_contrast_reporting": "report all four match-level control-minus-context ADE differences and their equal-match mean as descriptive values; no p-values, confidence intervals, multiplicity corrections, or significance claims",
+      "uncertainty": {
+        "independent_unit": "physical_match",
+        "method": "descriptive match-level directional ADE contrasts; no inferential tests",
+        "confidence_interval": "none",
+        "multiplicity": "not applicable; no hypothesis tests or significance claims",
+        "missing_match": "do not drop a match; if any evaluation match lacks a required cell or score, the across-match contrast summary is not estimable",
+        "lomo_inference": "not estimable because LOMO training sets overlap"
+      },
+      "robustness_strata": [
+        "player_detection_exposure",
+        "ball_detection_exposure",
+        "player_completeness",
+        "ball_completeness",
+        "temporal_continuity",
+        "identity_transition_exposure",
+        "source_quality_uncertainty",
+        "play_context"
+      ],
+      "robustness_reporting": "descriptive only, retain the Linear issue 437 stratum definitions and thresholds; report match and valid-label counts; no post hoc bins or confirmatory tests",
+      "exploratory_analyses": [
+        "secondary FDE and XY-RMSE contrasts",
+        "model-class comparisons outside the Linear issue 339 primary model class",
+        "interactions, horizon-specific slices, and robustness-stratum comparisons"
+      ],
+      "team_plausibility_metrics": "not part of this protocol; Linear issue 439 owns any later decision"
+    },
+    "selection_and_execution": {
+      "final_fit_role": "training",
+      "lomo_fit_role": "training, leaving one training match out per fold",
+      "validation_usage": "checkpoint selection and early stopping only, plus only the hyperparameter choices expressly frozen in Linear issue 339",
+      "selection_metric": "equal mean of the four validation-match ADE values",
+      "selection_direction": "minimize",
+      "checkpoint_tie_break": "earliest training step",
+      "evaluation_usage": "one final evaluation after feature, model, selection, and run identities are frozen; never for model selection, early stopping, retries, or threshold changes",
+      "seed_policy": {
+        "seed_list_and_exact_count_owner": "Linear issue 339",
+        "minimum_distinct_seeds_per_stochastic_cell": 3,
+        "same_seed_ids_across_comparable_cells": true,
+        "seed_schedule_frozen_before_training": true,
+        "seed_changes_after_observing_results": false,
+        "aggregation": "average seed results within each match before descriptive match-level contrasts",
+        "seeds_are_generalization_units": false
+      },
+      "early_stopping": {
+        "monitor": "validation equal-match mean ADE",
+        "direction": "minimize",
+        "patience_and_maximum_steps_owner": "Linear issue 339",
+        "evaluation_or_lomo_score_may_stop_training": false
+      },
+      "compute_budget": {
+        "exact_per_run_and_campaign_ceilings_owner": "Linear issue 339",
+        "ceilings_frozen_before_training": true,
+        "extend_budget_after_observing_results": false
+      },
+      "failure_and_retry": {
+        "exact_retry_count_owner": "Linear issue 339",
+        "retry_configuration_must_be_identical": true,
+        "failed_cells_may_be_dropped": false,
+        "failure_recovery_may_change_scientific_choices": false
+      },
+      "stopping_conditions": [
+        "stop at the fixed Linear issue 339 run or campaign compute ceiling",
+        "stop a run only at the Linear issue 339 fixed early-stopping or maximum-step rule",
+        "do not add cells, seeds, retries, or training time in response to outcomes",
+        "a missing primary cell leaves the descriptive contrast set incomplete; do not report a four-match summary"
+      ]
+    },
+    "delegations_and_gates": {
+      "issue_339": {
+        "owns_before_any_training": [
+          "exact executable experiment matrix and one primary model-class identity",
+          "exact seed IDs and seed count",
+          "per-run and campaign compute ceilings",
+          "early-stopping patience and maximum steps",
+          "failure and retry count",
+          "run order and result manifest schema"
+        ],
+        "may_not_change": [
+          "the Linear issue 336 benchmark identities, targets, regimes, match roles, LOMO assignments, metrics, planned directional contrasts, or descriptive-only analysis policy"
+        ]
+      },
+      "issue_439": {
+        "owns": "any later secondary team-coherence or team-plausibility metric decision",
+        "included_in_this_lock": false
+      },
+      "pretraining_requirements": [
+        "Linear issue 336 independent scientific review accepted and issue complete",
+        "Linear issue 339 complete with every delegated decision frozen before outcomes"
+      ],
+      "training_authorized_by_this_protocol_alone": false,
+      "scientific_choices_changeable_after_first_model_outcome": false,
+      "payload_rows_or_row_level_derivatives_committed": false
+    }
+  }
+}
