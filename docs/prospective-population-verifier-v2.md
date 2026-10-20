@@ -81,6 +81,26 @@ per-match counts; stop status; and mismatch paths with expected/actual value has
 Canonical report bytes include `report_sha256`, computed over the report without
 that field. Reports have no runtime timestamp and do not emit a qualification PASS.
 
+## PR #20 synthetic integration
+
+The independent implementation was frozen at commit
+`69bb56903c035c8e052609b2656769ed14a1c115` before generating producer outputs from
+PR #20 HEAD `6644dba8c945ca86be72b54792db30cbe488e5d0`. The integration used only
+synthetic 10 Hz inputs and compared the five emitted wire artifacts. The verifier
+reconciled 60 candidates, 60 eligible windows, 860 census slots, and 60 scoreable
+windows with **zero mismatches**. Each synthetic match had 86 raw frames, 43
+retained samples, 43 diagnostic grid slots, and three complete-support candidates.
+
+The producer fingerprint independently recomputed from the pinned package files
+matched the receipt: 79 `.py`/`.json` files, SHA-256
+`153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4`. The
+hash-bound comparison report is [`prospective-population-verifier-v2-reconciliation.json`](prospective-population-verifier-v2-reconciliation.json),
+with report SHA-256 `a5389934bcc5cf1ff7f8d7bdf7927e1de8ce90ab45ec6ecfb168884e9b75e1a3` and
+file SHA-256 `5f634b3b3c0ea21f5ae38f8019571ab1455628216df91adaf079525475c1ecd4`.
+It records `RECONCILED`, `authoritative: false`, and
+`qualification_status: NOT_QUALIFIED`. The producer receipt itself remains
+`UNQUALIFIED` and says `independent_verification: NOT_PERFORMED`.
+
 ## Independence and limits
 
 The verifier imports only Python standard-library modules. It does not import or
