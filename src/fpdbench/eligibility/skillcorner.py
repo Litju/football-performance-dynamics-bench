@@ -551,7 +551,7 @@ def _active_roster(
     return teams, appearances, complete and len(teams) == len(player_values)
 
 
-def _period_ranges(
+def skillcorner_period_ranges(
     metadata: Mapping[str, object],
 ) -> tuple[dict[int, tuple[int, int]], tuple[EligibilityIssue, ...]]:
     result: dict[int, tuple[int, int]] = {}
@@ -701,7 +701,7 @@ def _evaluate_skillcorner_window(
             "PLAYER_APPEARANCE_METADATA_UNKNOWN",
             "active-player denominator or transitions are incomplete",
         )
-    period_bounds, period_bound_issues = _period_ranges(match_metadata)
+    period_bounds, period_bound_issues = skillcorner_period_ranges(match_metadata)
     exclusions.extend(period_bound_issues)
     phase_intervals_by_period: dict[int, list[tuple[int, int]]] = {}
     for interval in phase_intervals:

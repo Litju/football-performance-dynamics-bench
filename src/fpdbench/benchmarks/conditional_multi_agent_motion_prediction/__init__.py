@@ -117,6 +117,12 @@ from .origin_relative_displacement_prediction import (
     raw_evaluator_hash,
     raw_evaluator_scientific_state,
 )
+from .population_producer_v2 import (
+    IncompletePopulationV2,
+    PopulationMatchInputV2,
+    PopulationVerificationSubmissionV2,
+    produce_population_draft_v2,
+)
 from .prospective_evaluator import (
     DIRECTED_SCENES_PER_WINDOW,
     EVALUATION_MATCH_IDS,
@@ -136,6 +142,10 @@ from .prospective_protocol import (
 )
 
 __all__ = [
+    "IncompletePopulationV2",
+    "PopulationMatchInputV2",
+    "PopulationVerificationSubmissionV2",
+    "produce_population_draft_v2",
     "ABSOLUTE_POSITION_BENCHMARK",
     "DISPLACEMENT_BENCHMARK",
     "DISPLACEMENT_GENERATED_CALIBRATION",

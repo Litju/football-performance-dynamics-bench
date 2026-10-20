@@ -1,6 +1,6 @@
-# RES-501 v2 acceptance reconciliation and verifier handoff
+# Linear issue 501 v2 acceptance reconciliation and verifier handoff
 
-This is an additive acceptance-contract proposal for RES-501; preserve its original v1
+This is an additive acceptance-contract proposal for Linear issue 501; preserve its original v1
 description and earlier FAIL receipts as historical evidence. This document does not
 edit Linear, approve a merge, or qualify a population.
 
@@ -11,13 +11,14 @@ Replace the **active** v1 policy 1.1.0 and population 1.1.0 requirements with
 `fpdbench.prospective-evaluation-population` 2.0.0, population identity
 `skillcorner.prospective.conditional_motion.population_v2`.
 Replace the active v1 measurement/protocol/plan bindings with the following
-immutable authorities from reviewed RES-531 HEAD
+immutable authorities from reviewed Linear issue 531 HEAD
 `666578e0d4e6475724755ab38e8c4c565e0eadf2`.
 Do not rewrite v1 JSON, original issue history or the historical qualification FAIL.
 
 | Authority | SHA-256 |
 | --- | --- |
 | Source release (unchanged) | e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07 |
+| Source population (unchanged) | e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4 |
 | Measurement v2 | 1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671 |
 | Eligibility v2 | ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11 |
 | Protocol v2 | 3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f |
@@ -96,7 +97,10 @@ Main protection: enforce_admins=true, strict up-to-date checks
 `quality` and `public-reproducibility` (GitHub Actions app 15368);
 required approving count=0, no required code owners/last-push approval;
 force pushes and deletions disabled; no additional rulesets returned.
-There are **no APPROVED events** on these PRs. User-required review/authorization
+PR #18 has no review threads. PR #19 has six unresolved threads (three marked
+outdated); the latest exact-head COMMENT accepts the scoped repair, but those
+threads still need deliberate disposition. Conversation resolution is not required
+by current protection. There are **no APPROVED events** on these PRs. User-required review/authorization
 gates still apply even though the configured minimum approval count is zero.
 
 Sequence: deliberate integration of #18's scientific provenance first; then check
@@ -107,8 +111,95 @@ and rerun CI/review. Their historical POSIX storage gate is not a Windows receip
 writer and must not be reused as one. The new producer branch is stacked directly
 on reviewed #19, excludes #16/#17/#18, and must be reviewed against that base.
 
-Sources: [RES-501](https://linear.app/alignerr-cmj/issue/RES-501),
-[RES-520](https://linear.app/alignerr-cmj/issue/RES-520),
-[RES-531](https://linear.app/alignerr-cmj/issue/RES-531),
+Sources: [Linear issue 501](https://linear.app/alignerr-cmj/issue/fe554f95-1ae8-406c-9dd7-a73d91711e51),
+[Linear issue 520](https://linear.app/alignerr-cmj/issue/9e3a0b17-9211-4469-b39b-ef266134f707),
+[Linear issue 531](https://github.com/Litju/football-performance-dynamics-bench/pull/19),
 [PR #18](https://github.com/Litju/football-performance-dynamics-bench/pull/18),
 [PR #19](https://github.com/Litju/football-performance-dynamics-bench/pull/19).
+
+## Independent verification interface (separately tasked work)
+
+Call `produce_population_draft_v2(inputs, input_kind="synthetic")` from
+`fpdbench.benchmarks.conditional_multi_agent_motion_prediction.population_producer_v2`.
+There is no source download, filesystem input/output command, real-data switch,
+qualified token, verifier implementation or automatic empirical activation.
+
+`PopulationMatchInputV2` is frozen and contains match_id plus immutable bytes for:
+metadata JSON, complete tracking JSONL, and normalized phase-interval JSON
+(array of exact integer period/frame_start/frame_end objects). The normalization
+boundary is deliberately explicit: this is **not** byte-qualified source CSV.
+The future authorized adapter must independently bind normalization to the exact
+pinned phase CSV and account for index/events files, even when unused as features.
+
+The frozen `PopulationVerificationSubmissionV2` contains four byte payloads:
+
+| Field | Canonical content / verification responsibility |
+| --- | --- |
+| manifest_json | Existing population 2.0.0 schema; structural validation only |
+| candidates_jsonl | One row per candidate in canonical order: match_id, origin_sample_id, complete public diagnostic, canonical diagnostic SHA-256 |
+| truth_jsonl | One row per retained window/scene: identity, origin player IDs/XY, both 15-slot truth panels, common Boolean mask, representation digests, scoreability and NO_FINAL_TARGET reason |
+| receipt_json | Versioned input SHA-256/size snapshots, canonical retained-sample digest/count, producer code digest/version, full source-wide scan counts, per-match accounting and output digests |
+
+All serialized objects use existing sorted-key compact UTF-8 canonical JSON.
+JSONL has one LF after **every** row. `candidate_origin_population_sha256`
+hashes the canonical JSON array of every {match_id, origin_sample_id}, including
+excluded and missing-origin candidates. `eligibility_result_sha256` hashes
+the complete dataclass diagnostic, including UNQUALIFIED status. Existing
+representation-tagged truth and mask hash functions specify the wire hashes;
+their legacy serialization version labels remain unchanged. Input snapshots
+are domain-separated by named field in the receipt. The receipt self-digest
+hashes its canonical object with only receipt_sha256 omitted.
+
+The same immutable truth/membership bundle applies to every regime and model;
+the producer accepts no model/regime/masking parameter. Target masks and quality
+are restricted verification data, never model-visible features. No predictions
+or metrics are computed.
+
+An incomplete required match raises `IncompletePopulationV2`, carries an immutable
+INCOMPLETE diagnostic receipt, and returns no manifest/submission. Eligible but
+unscoreable windows remain in eligible counts. Scoreability is determined before
+qualification, using final-slot truth only. Malformed/partial input or drift raises
+before any usable submission. All submissions remain UNQUALIFIED and all existing
+empirical gates stay closed. A caller can construct bytes or hashes; that proves
+nothing about authenticity. This first interface does **not** accept a verifier's
+PASS or authenticate signatures.
+
+Assign the second verifier to a different engineering task. It must:
+
+1. Read the owner-approved specification and immutable authorities directly.
+   Do not import/call this producer, its private helpers, the production candidate
+   evaluator, its period-bound helper, or its eligibility logic to derive expected
+   outcomes. Shared JSON/hash wire serialization and immutable authority documents
+   are acceptable; self-consistency comparisons alone are insufficient.
+2. Build a separate raw-source parser, period-grid enumerator, phase/player/ball/
+   temporal eligibility implementation and physical-truth derivation. Reconcile
+   exact input bytes and exhaustive source coverage before trusting any output.
+3. Compare candidate-by-candidate decisions/exclusions/warnings, ordered membership,
+   input/retained counts, exact role assignment, fixed panels, every physical value,
+   displacement arithmetic including nonzero anchors, common masks, final-slot
+   scoreability and all canonical digests. Verify the global drift gate over all
+   retained source samples, not only eligible support.
+4. Return a separate restricted mismatch report and provenance receipt binding its
+   independently authored code/version, all input hashes, producer outputs and the
+   exact population manifest. Design protected receipt authentication separately;
+   do not make a caller-provided PASS sufficient to enable scoring.
+5. Exercise the synthetic raw-frame generator in
+   `tests/unit/test_population_producer_v2.py::synthetic_sources` and its adversarial
+   transformations. These fixtures build raw frames without producer eligibility
+   calls. The current tests are producer tests, **not** a second verifier.
+
+Required adversarial verifier cases include a missing/duplicate match, shuffled
+match input, missing origin with unchanged grid count, exact 39/41 versus 38/41,
+missing origin ball, source drift outside all candidate windows, malformed/duplicate/
+nonfinite JSON, pointer-only payload, period boundaries, partial future XY, finite
+false detections, replacement players, a scene without final truth, a required
+match with eligible but no scoreable windows, swapped player order, altered role,
+one-axis truth edits, nonzero-origin displacement edits, model-dependent masks,
+and a fully rehashed fabricated receipt/membership. Last cases must still fail
+independent source comparison even when structural validators accept them.
+
+Before authorized real qualification: integrate/review #18 then #19 deliberately,
+review this producer, separately implement/review the verifier, add a Windows-native
+restricted-storage/ACL and immutable write adapter, verify all pinned source bytes
+and LFS payloads, obtain explicit real-source execution authorization, and reconcile
+both exhaustive runs. Publish only approved non-reconstructive closeout aggregates.
