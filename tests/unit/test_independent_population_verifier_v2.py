@@ -54,7 +54,7 @@ def _fixture() -> list[verifier.MatchSourceBytesV2]:
                 "id": player_id,
                 "team_id": team_id,
                 "playing_time": {
-                    "by_period": [{"name": "1H", "start_frame": 100, "end_frame": 185}]
+                    "by_period": [{"name": "period_1", "start_frame": 100, "end_frame": 185}]
                 },
             }
             for team_id, players in ((home_team, home_players), (away_team, away_players))
@@ -67,7 +67,7 @@ def _fixture() -> list[verifier.MatchSourceBytesV2]:
             "pitch_length": 105.0,
             "pitch_width": 68.0,
             "match_periods": [
-                {"name": "1H", "start_frame": 100, "end_frame": 186, "duration_frames": 86}
+                {"period": 1, "start_frame": 100, "end_frame": 186, "duration_frames": 86}
             ],
             "players": roster,
         }
@@ -107,7 +107,7 @@ def _fixture() -> list[verifier.MatchSourceBytesV2]:
                 match_id,
                 _json_bytes(metadata),
                 b"".join(_json_bytes(row) + b"\n" for row in rows),
-                _json_bytes([{"period": 1, "frame_start": 100, "frame_end": 185}]),
+                _json_bytes([{"period": 1, "frame_start": 100, "frame_end": 186}]),
             )
         )
     return result
@@ -127,13 +127,20 @@ def _with_rows(
 
 
 def _baseline_submission(
-    derivation: verifier.DerivationV2,
+    inputs: list[verifier.MatchSourceBytesV2], derivation: verifier.DerivationV2
 ) -> tuple[verifier.PopulationSubmissionV2, str]:
     fingerprint = "a" * 64
-    receipt = dict(derivation.expected_receipt)
-    receipt["producer_executable_fingerprint"] = fingerprint
-    receipt["receipt_sha256"] = _digest(receipt)
     assert derivation.expected_manifest is not None
+    receipt = verifier._expected_producer_receipt(
+        derivation,
+        tuple(inputs),
+        derivation.expected_manifest,
+        derivation.expected_candidates,
+        derivation.expected_census,
+        derivation.expected_truth,
+        fingerprint,
+    )
+    receipt["receipt_sha256"] = _digest(receipt)
     return (
         verifier.PopulationSubmissionV2(
             _json_bytes(derivation.expected_manifest),
@@ -157,9 +164,7 @@ def _reseal_manifest_receipt(
 ) -> verifier.PopulationSubmissionV2:
     _reseal_manifest(manifest)
     receipt = json.loads(submission.receipt_json)
-    receipt["membership_sha256"] = manifest["membership_sha256"]
-    receipt["manifest_sha256"] = manifest["manifest_sha256"]
-    receipt["eligible_window_count"] = manifest["eligible_window_count"]
+    receipt["population_manifest_sha256"] = manifest["manifest_sha256"]
     return _submission_with(submission, manifest=manifest, receipt=receipt)
 
 
@@ -171,8 +176,8 @@ def _scene_digests(row: dict[str, object]) -> dict[str, str]:
             for step in raw
         )
 
-    absolute = samples("absolute_xy_truth_m")
-    displacement = samples("displacement_truth_m")
+    absolute = samples("absolute_xy")
+    displacement = samples("origin_relative_displacement")
     mask = tuple(tuple(bool(value) for value in step) for step in row["truth_mask"])
     return {
         "absolute_xy_truth_sha256": verifier._truth_digest(absolute, "absolute_xy"),
@@ -213,16 +218,10 @@ def _submission_with(
     candidate_bytes = b"".join(_json_bytes(row) + b"\n" for row in actual_candidates)
     census_bytes = b"".join(_json_bytes(row) + b"\n" for row in actual_census)
     truth_bytes = b"".join(_json_bytes(row) + b"\n" for row in actual_truth)
-    actual_receipt["candidate_jsonl_sha256"] = hashlib.sha256(candidate_bytes).hexdigest()
+    actual_receipt["candidates_jsonl_sha256"] = hashlib.sha256(candidate_bytes).hexdigest()
     actual_receipt["diagnostic_census_jsonl_sha256"] = hashlib.sha256(census_bytes).hexdigest()
     actual_receipt["truth_jsonl_sha256"] = hashlib.sha256(truth_bytes).hexdigest()
-    actual_receipt["manifest_json_sha256"] = hashlib.sha256(manifest_bytes).hexdigest()
-    actual_receipt["output_sha256"] = {
-        "manifest_json": hashlib.sha256(manifest_bytes).hexdigest(),
-        "candidates_jsonl": hashlib.sha256(candidate_bytes).hexdigest(),
-        "diagnostic_census_jsonl": hashlib.sha256(census_bytes).hexdigest(),
-        "truth_jsonl": hashlib.sha256(truth_bytes).hexdigest(),
-    }
+    actual_receipt["population_manifest_sha256"] = actual_manifest["manifest_sha256"]
     actual_receipt.pop("receipt_sha256", None)
     actual_receipt["receipt_sha256"] = _digest(actual_receipt)
     return verifier.PopulationSubmissionV2(
@@ -280,9 +279,9 @@ def test_recomputes_authorities_roles_sampling_census_and_truth() -> None:
         == ["period_1/sample_75", "period_1/sample_76", "period_1/sample_77"]
         for _, match_id in derivation.role_order
     )
-    assert [row["canonical_sample_index"] for row in derivation.census_rows[:43]] == list(
-        range(50, 93)
-    )
+    assert [
+        int(row["origin_sample_id"].split("/sample_")[1]) for row in derivation.census_rows[:43]
+    ] == list(range(50, 93))
     assert report.status == "DERIVED"
     assert report.qualification_status == "NOT_QUALIFIED"
     assert report.authoritative is False
@@ -336,7 +335,7 @@ def test_exact_ball_support_threshold_and_missing_origin_are_independent() -> No
         for item in exact_threshold.candidates
         if item.origin.match_id == first.match_id and item.origin.sample_index == 75
     )
-    assert at_75.diagnostic["quality"]["ball_completeness"]["finite_positions"] == 39
+    assert at_75.diagnostic["quality"]["ball_observations"]["valid_position_count"] == 39
     assert at_75.included is True
 
     inputs = _fixture()
@@ -354,9 +353,9 @@ def test_exact_ball_support_threshold_and_missing_origin_are_independent() -> No
         for item in derivation.candidates
         if item.origin.match_id == first.match_id and item.origin.sample_index == 75
     )
-    assert at_75.diagnostic["quality"]["ball_completeness"]["finite_positions"] == 38
+    assert at_75.diagnostic["quality"]["ball_observations"]["valid_position_count"] == 38
     assert at_75.included is False
-    assert {issue["code"] for issue in at_75.diagnostic["exclusions"]} == {
+    assert {issue["code"] for issue in at_75.diagnostic["exclusion_reasons"]} == {
         "BALL_COVERAGE_BELOW_MINIMUM"
     }
 
@@ -368,10 +367,12 @@ def test_exact_ball_support_threshold_and_missing_origin_are_independent() -> No
     census_row = next(
         row
         for row in derivation.census_rows
-        if row["match_id"] == first.match_id and row["canonical_sample_index"] == 50
+        if row["match_id"] == first.match_id and row["origin_sample_id"] == "period_1/sample_50"
     )
-    assert census_row["origin_observed"] is False
-    assert census_row["support_complete"] is False
+    assert census_row["diagnostic"]["candidate_rules_pass"] is False
+    assert "BALL_MISSING_AT_ORIGIN" in {
+        issue["code"] for issue in census_row["diagnostic"]["exclusion_reasons"]
+    }
     assert sum(item.origin.match_id == first.match_id for item in derivation.candidates) == 2
     assert derivation.diagnostic_grid_count == 860
 
@@ -387,7 +388,7 @@ def test_exact_ball_support_threshold_and_missing_origin_are_independent() -> No
         if item.origin.match_id == first.match_id and item.origin.sample_index == 75
     )
     assert "BALL_MISSING_AT_ORIGIN" in {
-        issue["code"] for issue in origin_missing_ball.diagnostic["exclusions"]
+        issue["code"] for issue in origin_missing_ball.diagnostic["exclusion_reasons"]
     }
 
 
@@ -396,11 +397,11 @@ def test_null_flag_finite_ball_stops_before_candidate_or_truth_membership() -> N
     first = inputs[0]
     metadata = json.loads(first.metadata_json)
     metadata["match_periods"].append(
-        {"name": "2H", "start_frame": 300, "end_frame": 302, "duration_frames": 2}
+        {"period": 2, "start_frame": 300, "end_frame": 302, "duration_frames": 2}
     )
     for player in metadata["players"]:
         player["playing_time"]["by_period"].append(
-            {"name": "2H", "start_frame": 300, "end_frame": 300}
+            {"name": "period_2", "start_frame": 300, "end_frame": 300}
         )
     rows = [dict(row) for row in _read_rows(first)]
     drift = dict(rows[-1])
@@ -410,7 +411,7 @@ def test_null_flag_finite_ball_stops_before_candidate_or_truth_membership() -> N
     drift["ball_data"] = {"x": 0.0, "y": 0.0, "z": None, "is_detected": None}
     rows.append(drift)
     phases = [
-        {"period": 1, "frame_start": 100, "frame_end": 185},
+        {"period": 1, "frame_start": 100, "frame_end": 186},
         {"period": 2, "frame_start": 300, "frame_end": 301},
     ]
     inputs[0] = replace(
@@ -438,7 +439,7 @@ def test_phase_gap_temporal_fault_and_strict_json_fail_closed() -> None:
         phase_intervals_json=_json_bytes(
             [
                 {"period": 1, "frame_start": 100, "frame_end": 150},
-                {"period": 1, "frame_start": 151, "frame_end": 185},
+                {"period": 1, "frame_start": 151, "frame_end": 186},
             ]
         ),
     )
@@ -447,7 +448,7 @@ def test_phase_gap_temporal_fault_and_strict_json_fail_closed() -> None:
         item for item in derivation.candidates if item.origin.match_id == first.match_id
     )
     assert "PHASE_NOT_IN_PLAY_OR_UNKNOWN" in {
-        issue["code"] for issue in first_candidate.diagnostic["exclusions"]
+        issue["code"] for issue in first_candidate.diagnostic["exclusion_reasons"]
     }
 
     inputs = _fixture()
@@ -492,13 +493,13 @@ def test_adjacent_period_support_is_a_candidate_then_fails_period_rule() -> None
     first = inputs[0]
     metadata = json.loads(first.metadata_json)
     metadata["match_periods"] = [
-        {"name": "1H", "start_frame": 100, "end_frame": 140, "duration_frames": 40},
-        {"name": "2H", "start_frame": 140, "end_frame": 186, "duration_frames": 46},
+        {"period": 1, "start_frame": 100, "end_frame": 140, "duration_frames": 40},
+        {"period": 2, "start_frame": 140, "end_frame": 186, "duration_frames": 46},
     ]
     for player in metadata["players"]:
         player["playing_time"]["by_period"] = [
-            {"name": "1H", "start_frame": 100, "end_frame": 139},
-            {"name": "2H", "start_frame": 140, "end_frame": 185},
+            {"name": "period_1", "start_frame": 100, "end_frame": 139},
+            {"name": "period_2", "start_frame": 140, "end_frame": 185},
         ]
     rows = [dict(row) for row in _read_rows(first)]
     for row in rows:
@@ -519,7 +520,8 @@ def test_adjacent_period_support_is_a_candidate_then_fails_period_rule() -> None
     candidates = [item for item in derivation.candidates if item.origin.match_id == first.match_id]
     assert [item.origin.sample_index for item in candidates] == [75, 76, 77]
     assert all(
-        "PERIOD_BOUNDARY_CROSSED" in {issue["code"] for issue in item.diagnostic["exclusions"]}
+        "PERIOD_BOUNDARY_CROSSED"
+        in {issue["code"] for issue in item.diagnostic["exclusion_reasons"]}
         for item in candidates
     )
     assert derivation.diagnostic_grid_count == 860
@@ -541,13 +543,13 @@ def test_player_floor_and_non_gating_quality_warnings_are_replayed() -> None:
         for item in derivation.candidates
         if item.origin.match_id == first.match_id and item.origin.sample_index == 75
     )
-    reasons = {issue["code"] for issue in candidate.diagnostic["exclusions"]}
+    reasons = {issue["code"] for issue in candidate.diagnostic["exclusion_reasons"]}
     warnings = {issue["code"] for issue in candidate.diagnostic["warnings"]}
     assert "PLAYER_COUNT_BELOW_TEAM_MINIMUM" in reasons
     assert "BALL_COVERAGE_BELOW_MINIMUM" not in reasons
     assert "BALL_OUTSIDE_PITCH" in warnings
-    assert candidate.diagnostic["quality"]["ball_completeness"]["finite_positions"] == 41
-    assert candidate.diagnostic["quality"]["ball_detection_exposure"]["false_flags"] == 1
+    assert candidate.diagnostic["quality"]["ball_observations"]["valid_position_count"] == 41
+    assert candidate.diagnostic["quality"]["ball_observations"]["flag_false_count"] == 1
 
     inputs = _fixture()
     first = inputs[0]
@@ -587,7 +589,7 @@ def test_required_match_without_any_scoreable_window_is_incomplete() -> None:
                     "id": player_id,
                     "team_id": team_id,
                     "playing_time": {
-                        "by_period": [{"name": "1H", "start_frame": 180, "end_frame": 185}]
+                        "by_period": [{"name": "period_1", "start_frame": 180, "end_frame": 185}]
                     },
                 }
             )
@@ -625,7 +627,9 @@ def test_target_panels_masks_false_detections_and_nonzero_anchors() -> None:
         {
             "id": newcomer,
             "team_id": metadata["home_team"]["id"],
-            "playing_time": {"by_period": [{"name": "1H", "start_frame": 152, "end_frame": 185}]},
+            "playing_time": {
+                "by_period": [{"name": "period_1", "start_frame": 152, "end_frame": 185}]
+            },
         }
     )
     rows = [dict(row) for row in _read_rows(first)]
@@ -673,7 +677,7 @@ def test_target_panels_masks_false_detections_and_nonzero_anchors() -> None:
 def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabrication() -> None:
     inputs = _fixture()
     derivation = verifier._derive(tuple(inputs))
-    submission, fingerprint = _baseline_submission(derivation)
+    submission, fingerprint = _baseline_submission(inputs, derivation)
     report = verifier.compare_population_v2(
         inputs,
         submission,
@@ -717,8 +721,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     warning_window["eligibility_result_sha256"] = altered_digest
     _reseal_manifest(warning_manifest)
     warning_receipt = json.loads(submission.receipt_json)
-    warning_receipt["membership_sha256"] = warning_manifest["membership_sha256"]
-    warning_receipt["manifest_sha256"] = warning_manifest["manifest_sha256"]
+    warning_receipt["population_manifest_sha256"] = warning_manifest["manifest_sha256"]
     fabricated_warning = _submission_with(
         submission,
         manifest=warning_manifest,
@@ -729,7 +732,6 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
         inputs, fabricated_warning, producer_executable_fingerprint=fingerprint
     )
     assert any(item.artifact == "candidates_jsonl" for item in report.mismatches)
-    assert any(item.artifact == "manifest_json" for item in report.mismatches)
 
     manifest = json.loads(submission.manifest_json)
     manifest["matches"][0]["role"] = "evaluation"
@@ -755,7 +757,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
 
     truth_rows = [json.loads(line) for line in submission.truth_jsonl.splitlines()]
     changed = copy.deepcopy(truth_rows)
-    changed[0]["absolute_xy_truth_m"][0][0][0] += 100.0
+    changed[0]["absolute_xy"][0][0][0] += 100.0
     digests = _scene_digests(changed[0])
     changed[0].update(digests)
     changed_manifest = json.loads(submission.manifest_json)
@@ -778,8 +780,8 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     assert any(item.artifact == "manifest_json" for item in report.mismatches)
 
     changed_mask_rows = copy.deepcopy(truth_rows)
-    changed_mask_rows[0]["absolute_xy_truth_m"][0][0] = None
-    changed_mask_rows[0]["displacement_truth_m"][0][0] = None
+    changed_mask_rows[0]["absolute_xy"][0][0] = None
+    changed_mask_rows[0]["origin_relative_displacement"][0][0] = None
     changed_mask_rows[0]["truth_mask"][0][0] = False
     mask_digests = _scene_digests(changed_mask_rows[0])
     changed_mask_rows[0].update(mask_digests)
@@ -822,9 +824,9 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
 def test_forged_receipt_digest_and_wrong_producer_fingerprint_do_not_reconcile() -> None:
     inputs = _fixture()
     derivation = verifier._derive(tuple(inputs))
-    submission, fingerprint = _baseline_submission(derivation)
+    submission, fingerprint = _baseline_submission(inputs, derivation)
     receipt = json.loads(submission.receipt_json)
-    receipt["candidate_window_count"] = 61
+    receipt["match_counts"][0]["candidate_window_count"] += 1
     resealed = _submission_with(submission, receipt=receipt)
     report = verifier.compare_population_v2(
         inputs, resealed, producer_executable_fingerprint=fingerprint

@@ -44,6 +44,8 @@ rules then use the fixed offsets -25 through +15, 39/41 finite ball XY coverage,
 finite origin ball XY, seven finite players per team per support sample, verified
 period bounds, continuous positive phase coverage across every 10 Hz frame in the
 support span, and the frozen coordinate, temporal, warning, and quality rules.
+Every census slot receives its own independently calculated diagnostic, including
+missing-source support slots; only complete-support rows enter candidate membership.
 The null-detection/finite-ball-XY scan covers every retained sample in every input
 before candidate enumeration. Any occurrence returns `STOPPED` with
 `BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED` and no candidate, membership, or truth
@@ -67,7 +69,8 @@ all manifest/candidate/truth/output digests, input and retained-sample snapshots
 source-wide scan counts, the producer package fingerprint, and the receipt
 self-digest. It compares values against the independent replay, so resealing a
 fabricated manifest or receipt cannot make changed membership, players, truth, or
-masks reconcile.
+masks reconcile. Issue codes, order, and sample indices are compared; message prose
+is treated as presentation text.
 
 `AuditReportV2` contains no source rows or truth panels. It records SHA-256 and byte
 length snapshots for the authority documents, inputs, retained samples, and
