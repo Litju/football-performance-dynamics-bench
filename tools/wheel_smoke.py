@@ -62,6 +62,9 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     validate_empirical_experiment_plan_document,
     validate_empirical_experiment_plan_v2_document,
 )
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    independent_population_verifier_v2,
+)
 from fpdbench.evaluation import (
     ABSOLUTE_POSITION_HISTORICAL_SCORER,
     RAW_DISPLACEMENT_EVALUATOR_CONFIGURATION,
@@ -192,6 +195,10 @@ validate_empirical_experiment_plan_v2_document(plan_v2)
 assert plan_v2["plan_sha256"] == (
     "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62"
 )
+independent_audit = independent_population_verifier_v2.derive_synthetic_population_v2([])
+assert independent_audit.status == "INVALID_INPUT"
+assert independent_audit.qualification_status == "NOT_QUALIFIED"
+assert independent_audit.authoritative is False
 versioned_files = (
     "data_states/skillcorner_5hz_v2.json",
     "eligibility/skillcorner_window_v2.json",
