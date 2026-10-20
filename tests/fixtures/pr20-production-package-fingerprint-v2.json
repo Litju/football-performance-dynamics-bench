@@ -1,0 +1,325 @@
+{
+  "files": [
+    {
+      "path": "__init__.py",
+      "sha256": "b55254285027b7ce846f9ea8b152f44d7b049647d880c8561d4c8da6989ce329"
+    },
+    {
+      "path": "__main__.py",
+      "sha256": "08303fd5e539f62577eb0591968e387693667da3731c5b927ef6dbfb81ca0a12"
+    },
+    {
+      "path": "benchmarks/__init__.py",
+      "sha256": "42b3a701af0687fffc44999a5a78bb12918721d106415fd77f5785b44da0ee44"
+    },
+    {
+      "path": "benchmarks/base.py",
+      "sha256": "247083c83d8614360e457ac41178eb5c2aaebfd4c1361855d8ae0af837f5d077"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/__init__.py",
+      "sha256": "c28472d4d6b997bb213cc8fe845f245cc819c77592c0b0ebb185895ca0e797b7"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/absolute_position_prediction.py",
+      "sha256": "afaed83c441a9f4aa5544f6ae76255688764fde60d9d839fa849b7bc3743658b"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/displacement_reconstruction.py",
+      "sha256": "38c8bbee1e38830ac38549ffc35284c5e80173b39c3ad650fdc0f822c121056d"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan.py",
+      "sha256": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v1.json",
+      "sha256": "636b50ee1f4c1c218d6d9f9348da695e9250502039629d304ef42c313d9eccc3"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v2.json",
+      "sha256": "f094f0397c09c58035aeaf3d6ee5445bafe36c51ee2a07a711fba94a92973e15"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/evaluation_population.py",
+      "sha256": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v1.schema.json",
+      "sha256": "13cc71c618972cd2614b29ed1028172866bd68de7bf1df61058523c1cc2b8cde"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json",
+      "sha256": "27da86b7355c311a65c68ab9b2bd3ae86e27779ed48641c23181ffe2f9adc224"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/forecast_origin.py",
+      "sha256": "36a24765530e38849a3919f68c5a157eef92ff8e34e03ec802d46bdbe42881e7"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/geometry.py",
+      "sha256": "959e0cf0d81e024b0ab66d876d1fbae4132d4121fc52615b1615809c6c377eb6"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/information.py",
+      "sha256": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/origin_relative_displacement_prediction.py",
+      "sha256": "d3eb3f83b45d89cd55db7497feb60610c204463a37b79f84f254a0d6021fca66"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/population_producer_v2.py",
+      "sha256": "90a1e32e22dd32f1c5ddabbce0c31a191767beacc315b7e6a599d0d53e1f80b0"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_evaluator.py",
+      "sha256": "5f4dd14c9e919aebfd9d9f5d31a32750e6ef56c16603a2de95ca8567f5cdb4ff"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v1.schema.json",
+      "sha256": "7c81ea13d5c8accdeb1e900217abbfd7c84409955fd49388dea0eaaac49ae527"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json",
+      "sha256": "d0d7dbf4a14cade66d1e0ce7282441d8f035a68de8a192ad8e4d70210be18f7f"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_protocol.py",
+      "sha256": "7c8aac440aa5920cf59a486643a81072b976eb7797fa525d669e59c015f41ae2"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v1.json",
+      "sha256": "34c43661edb44f656d6b1b064b79886044935cf1f2df6cc395b3ed0ef330fd3c"
+    },
+    {
+      "path": "benchmarks/conditional_multi_agent_motion_prediction/prospective_skillcorner_protocol_v2.json",
+      "sha256": "6e0ddd6dd0718d6f039cde5ef2f94c99089cfe30ba322d0daa4a27b2af2a3100"
+    },
+    {
+      "path": "benchmarks/multimodal_state_estimation/__init__.py",
+      "sha256": "dee6adeec7459d4357b7820e813eba2ce429be58acb8d145a17d8ca90a9691ff"
+    },
+    {
+      "path": "benchmarks/multimodal_state_estimation/multimodal_sensor_state_reconstruction.py",
+      "sha256": "e3fd8cd950788845efa7a7d0d43bc415395ffe48d805662594c63f7e326dbe83"
+    },
+    {
+      "path": "benchmarks/registry.py",
+      "sha256": "0a68f17212ac5a99eea87fb5bd56e56157e8b0d1e744c5aca3b6906e2e9f2e10"
+    },
+    {
+      "path": "benchmarks/transition_graph.py",
+      "sha256": "401ed1f0f5fd54119d9e8f5f1c1b5e9ae3f2567140811aab171107b94e4f2aa5"
+    },
+    {
+      "path": "benchmarks/transitions.py",
+      "sha256": "052a1bae0c428f72d4ffcca113644b687a3d706c93c6f99026ce1bca9da71230"
+    },
+    {
+      "path": "benchmarks/workload_performance_state/__init__.py",
+      "sha256": "b33b9a4af7a83995a9ae28f9dd10824654547cb0748adb1cd55744b9ff481c8a"
+    },
+    {
+      "path": "benchmarks/workload_performance_state/signed_tangential_acceleration_estimation.py",
+      "sha256": "d0c3a75e410a6d9e2b12fab2a96f81b5fbcf32b51678df163ae196e0a000fb09"
+    },
+    {
+      "path": "benchmarks/workload_performance_state/whole_session_performance_state.py",
+      "sha256": "9a58a26632a28ac1c2b81548cebc33a302b94db4095368851e02838d52dfbafe"
+    },
+    {
+      "path": "cli.py",
+      "sha256": "aa2423365956f744a525996d83d535ca4d4293aec209d311b872d53dfbea3b04"
+    },
+    {
+      "path": "data/__init__.py",
+      "sha256": "f64288bc9043127974a3812d665f743aad14000b48ab382ba3fc49c7985780f9"
+    },
+    {
+      "path": "data/descriptors.py",
+      "sha256": "1bf9a76cf44b484c6727aa57045f2a964a5fc4bf86ea7d0bdfd4b7f3d5a68c04"
+    },
+    {
+      "path": "data_sources/__init__.py",
+      "sha256": "4950dc0c73948763fa9f99b7d432d89247531b51101a945c3e0772a31c21db53"
+    },
+    {
+      "path": "data_sources/skillcorner.py",
+      "sha256": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b"
+    },
+    {
+      "path": "data_sources/skillcorner_croissant_rai_draft.json",
+      "sha256": "0d1f9b0c6c8b3e171621dd078367b146cdb8e607f50277807c67882f8f6cd11f"
+    },
+    {
+      "path": "data_sources/skillcorner_croissant_rai_status.json",
+      "sha256": "435ed2879131ace3a3d1dfc9c9616618f34de1a1c33d2fad893582032f13d492"
+    },
+    {
+      "path": "data_sources/skillcorner_open_data_v1.json",
+      "sha256": "938cded522ee08f5de539976752fde51b2e858709574f3f63380bd72dd1af7fc"
+    },
+    {
+      "path": "data_states/__init__.py",
+      "sha256": "757967c62f2213681ea4badb45f02d77471fdcf5b8b63b96ad0d5bd92ad13476"
+    },
+    {
+      "path": "data_states/skillcorner.py",
+      "sha256": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66"
+    },
+    {
+      "path": "data_states/skillcorner_5hz_v1.json",
+      "sha256": "e8380ea517ba71058186ac7f30f86a1d2854007081db7534801d6164c9f87b56"
+    },
+    {
+      "path": "data_states/skillcorner_5hz_v2.json",
+      "sha256": "b23fee5040b1b55756ddb2891270c3041355d0e73d2ec90347c759d184b121b4"
+    },
+    {
+      "path": "eligibility/__init__.py",
+      "sha256": "e0df14fa7a24c8abebac85e901b32e66c0e11bf96aa5eb04e8e6757b26db601b"
+    },
+    {
+      "path": "eligibility/skillcorner.py",
+      "sha256": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5"
+    },
+    {
+      "path": "eligibility/skillcorner_window_v1.json",
+      "sha256": "303169a799568020cc5c458025fa759b403d9031348ce78cd383ae59e4caf698"
+    },
+    {
+      "path": "eligibility/skillcorner_window_v2.json",
+      "sha256": "7f767c34bdf15acf56e196a8875ad2379091a1e7c11307582bf6fb2ebe68c8cd"
+    },
+    {
+      "path": "evaluation/__init__.py",
+      "sha256": "0e6514887493bf128e7055ad68538c90951b2318f0d61a3fd938324fc940e88a"
+    },
+    {
+      "path": "evaluation/absolute_xy_calibration_lock.json",
+      "sha256": "f3b4155899c5d8e9632e9cab7a25e471411c62c4a9a7489c58c1edb16180ce94"
+    },
+    {
+      "path": "evaluation/calibration/__init__.py",
+      "sha256": "afc267f6f5b50148ef55f26c1cd7c5ffe1dd75ec620ac6cc68467770302aac7a"
+    },
+    {
+      "path": "evaluation/calibration/piecewise_linear.py",
+      "sha256": "127ef6ae1004e45fafe869ef0970fc63f4e708adfea07b725111acb79f970f01"
+    },
+    {
+      "path": "evaluation/configuration.py",
+      "sha256": "e818b87935641bd22b5831638ecb615405ab51cae904fd467a191a89c2ed1193"
+    },
+    {
+      "path": "evaluation/displacement.py",
+      "sha256": "1668f30d1d04dc32d2969c71dc0899d168d35f0aaa88e0be3a79bc47c56bd2fe"
+    },
+    {
+      "path": "evaluation/evaluators.py",
+      "sha256": "700f6fb8c806f4a0850712b8fb42b12c4876a7c0f1948a4d417c9721e0af377e"
+    },
+    {
+      "path": "evaluation/metrics/__init__.py",
+      "sha256": "2f56d1e8fd0875d6b05c1eb7d5c69fd298e46a478d087f49f8ab0516c93c9a03"
+    },
+    {
+      "path": "evaluation/metrics/relative_error.py",
+      "sha256": "4d161dbe22ee41c7979d1c4894e80d176daf12a55fefc6545cfc0f1c379e56b6"
+    },
+    {
+      "path": "evaluation/metrics/trajectory.py",
+      "sha256": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+    },
+    {
+      "path": "evaluation/scorers.py",
+      "sha256": "e5d4437aaaa839b052f2141a529fd18d18fab5cd1601cb2533c9327fe2bcf9c4"
+    },
+    {
+      "path": "experiments/__init__.py",
+      "sha256": "8875089b2834a1cf1186c01d28bcc2a56ae11d5e4c6fd9066308155810bbdeb7"
+    },
+    {
+      "path": "experiments/manifests.py",
+      "sha256": "28eff99c376378210a471f137181d567855c041a0f9d0b95b8cb3e6deb1b54bc"
+    },
+    {
+      "path": "experiments/provenance.py",
+      "sha256": "c54486cf2a4359d0727ef257cc07369700c008360e89494bd4b2ab5ede95b87f"
+    },
+    {
+      "path": "experiments/results.py",
+      "sha256": "839f8a6ab2e4f42f17e0f5f550a81cffd3ddb2aaeec6eea113da4a68d59727e4"
+    },
+    {
+      "path": "experiments/uncertainty.py",
+      "sha256": "49748101287920bbe8b9e1f5b4cedbb8863915f7f8238da89da47b057c9f0306"
+    },
+    {
+      "path": "models/__init__.py",
+      "sha256": "4906d1366e22f9935cb6a4853dbe3f15f0519eb1e440431259e7ef055056891f"
+    },
+    {
+      "path": "protocols.py",
+      "sha256": "82d09dc8d709a8af4107484bd519def7f352c11acb7c0fa32ff058d4d65739dc"
+    },
+    {
+      "path": "provenance/__init__.py",
+      "sha256": "cffc08411152fcd1ed9805cb8cd1e40db378fa911025f578b528d4303b76320a"
+    },
+    {
+      "path": "provenance/aliases.py",
+      "sha256": "a6ce94470175961fe84093ffed6261b9be22e343872aab83784f628906941d23"
+    },
+    {
+      "path": "provenance/evidence_inventory.py",
+      "sha256": "6673151b75b460e18c4b6bce01ca5a1e0d33d7ef95874eb7715b0a1d84451d66"
+    },
+    {
+      "path": "provenance/evidence_resolution.py",
+      "sha256": "e9715c4e1bb0bb53c724e2c48d6dcfd91a3f37190b9bf5298394431915c084c5"
+    },
+    {
+      "path": "provenance/registry_digest.py",
+      "sha256": "b219f484d993ce737d7ec2e0ec87c66507c5347a5027a3636532eeb86794758a"
+    },
+    {
+      "path": "provenance/scientific_lock.py",
+      "sha256": "d6ca25dd463fd1241dba94c0eaba4f1de4fb83fcd26a65b3823559c61a801b3a"
+    },
+    {
+      "path": "reproducibility.py",
+      "sha256": "2634e25ecfbe8b0dffcc6e37a20bcd0579535f5cb6ad59b9b12d96bb6e7705a1"
+    },
+    {
+      "path": "schemas/__init__.py",
+      "sha256": "2692d6ec4cf10dafdf045f20eb229ebf4bcc53d49728e34d2490d9807fec5b69"
+    },
+    {
+      "path": "unknown.py",
+      "sha256": "229749bdf959300fd2067d84b22c74a361d478a68ea455240b014b5e6d7d832f"
+    },
+    {
+      "path": "validation/__init__.py",
+      "sha256": "9f286376126f9fd5d049cac074e33e8c38782b328c53102f8728cefc5ea9f92d"
+    },
+    {
+      "path": "validation/artifacts.py",
+      "sha256": "f84998223db69db0525ec5ddff568d47a88f732c867bd1d3438174e8de431a89"
+    },
+    {
+      "path": "validation/naming.py",
+      "sha256": "952b9bfca7e89ae58e900fc5a660c6d8399358757aa052f046badd29c7422efc"
+    },
+    {
+      "path": "validation/repository.py",
+      "sha256": "302c240f935501f8b2364c724ab37a6d67fd9a203cc48294d8081d7799585689"
+    }
+  ],
+  "hash_algorithm": "sha256",
+  "package": "fpdbench",
+  "schema_id": "fpdbench.production-package-fingerprint",
+  "schema_version": "1.0.0",
+  "sha256": "153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4"
+}

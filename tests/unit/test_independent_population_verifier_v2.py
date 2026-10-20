@@ -15,6 +15,12 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
     independent_population_verifier_v2 as verifier,
 )
 
+_PRODUCER_FINGERPRINT = json.loads(
+    (Path(__file__).parents[1] / "fixtures/pr20-production-package-fingerprint-v2.json").read_text(
+        encoding="utf-8"
+    )
+)
+
 
 def _json_bytes(value: object) -> bytes:
     return json.dumps(
@@ -128,8 +134,8 @@ def _with_rows(
 
 def _baseline_submission(
     inputs: list[verifier.MatchSourceBytesV2], derivation: verifier.DerivationV2
-) -> tuple[verifier.PopulationSubmissionV2, str]:
-    fingerprint = "a" * 64
+) -> verifier.PopulationSubmissionV2:
+    fingerprint = copy.deepcopy(_PRODUCER_FINGERPRINT)
     assert derivation.expected_manifest is not None
     receipt = verifier._expected_producer_receipt(
         derivation,
@@ -141,15 +147,12 @@ def _baseline_submission(
         fingerprint,
     )
     receipt["receipt_sha256"] = _digest(receipt)
-    return (
-        verifier.PopulationSubmissionV2(
-            _json_bytes(derivation.expected_manifest),
-            derivation.expected_candidates,
-            derivation.expected_census,
-            derivation.expected_truth,
-            _json_bytes(receipt),
-        ),
-        fingerprint,
+    return verifier.PopulationSubmissionV2(
+        _json_bytes(derivation.expected_manifest),
+        derivation.expected_candidates,
+        derivation.expected_census,
+        derivation.expected_truth,
+        _json_bytes(receipt),
     )
 
 
@@ -488,6 +491,54 @@ def test_sampling_uses_absolute_even_frames_and_preserves_gaps() -> None:
     assert sum(item.origin.match_id == first.match_id for item in gap_result.candidates) == 1
 
 
+@pytest.mark.parametrize("frame", [101, 102])
+def test_parser_requires_exact_raw_frame_keys_on_both_parities(frame: int) -> None:
+    source = _fixture()[0]
+    rows = [dict(row) for row in _read_rows(source)]
+    rows[frame - 100]["unexpected"] = None
+    with pytest.raises(ValueError, match="source schema"):
+        verifier._parse_match(_with_rows(source, rows))
+
+
+def test_parser_validates_nested_source_fields_on_even_frames_only() -> None:
+    source = _fixture()[0]
+    rows = [dict(row) for row in _read_rows(source)]
+    malformed_nested = {
+        "player_data": [{"player_id": 1, "extra": True}],
+        "ball_data": {"unexpected": True},
+        "possession": {"unexpected": True},
+    }
+    odd_rows = [dict(row) for row in rows]
+    odd_rows[1].update(malformed_nested)
+    odd_context = verifier._parse_match(_with_rows(source, odd_rows))
+    baseline_context = verifier._parse_match(source)
+    assert odd_context.retained_samples_sha256 == baseline_context.retained_samples_sha256
+    assert odd_context.raw_source_frames == baseline_context.raw_source_frames == 86
+
+    even_rows = [dict(row) for row in rows]
+    even_rows[2].update(malformed_nested)
+    with pytest.raises(ValueError):
+        verifier._parse_match(_with_rows(source, even_rows))
+
+
+@pytest.mark.parametrize("malformation", ["extra_key", "duplicate", "unknown_identity"])
+def test_parser_rejects_malformed_retained_player_schema_and_identity(
+    malformation: str,
+) -> None:
+    source = _fixture()[0]
+    rows = [dict(row) for row in _read_rows(source)]
+    players = [dict(player) for player in rows[2]["player_data"]]
+    if malformation == "extra_key":
+        players[0]["extra"] = True
+    elif malformation == "duplicate":
+        players.append(dict(players[0]))
+    else:
+        players[0]["player_id"] = 999_999
+    rows[2]["player_data"] = players
+    with pytest.raises(ValueError):
+        verifier._parse_match(_with_rows(source, rows))
+
+
 def test_adjacent_period_support_is_a_candidate_then_fails_period_rule() -> None:
     inputs = _fixture()
     first = inputs[0]
@@ -559,6 +610,52 @@ def test_player_floor_and_non_gating_quality_warnings_are_replayed() -> None:
         [replace(first, tracking_jsonl=raw), *inputs[1:]]
     )
     assert report.status == "INVALID_INPUT"
+
+
+def test_diagnostic_occurrences_keep_indices_multiplicity_and_order() -> None:
+    inputs = _fixture()
+    source = inputs[0]
+    rows = [dict(row) for row in _read_rows(source)]
+    rows[50]["player_data"][0]["x"] = None
+    rows[50]["player_data"][1]["y"] = None
+    rows[50]["ball_data"] = {"x": None, "y": 2.0, "z": None, "is_detected": None}
+    rows[52]["ball_data"] = None
+    rows[54]["player_data"] = rows[54]["player_data"][1:]
+    rows[54]["ball_data"] = {"x": None, "y": None, "z": None, "is_detected": False}
+    rows[56]["ball_data"] = {"x": None, "y": None, "z": None, "is_detected": True}
+    phases = [
+        {"period": 1, "frame_start": 100, "frame_end": 150},
+        {"period": 1, "frame_start": 151, "frame_end": 186},
+    ]
+    inputs[0] = replace(
+        source,
+        tracking_jsonl=b"".join(_json_bytes(row) + b"\n" for row in rows),
+        phase_intervals_json=_json_bytes(phases),
+    )
+
+    derivation = verifier._derive(tuple(inputs))
+    diagnostic = next(
+        item.diagnostic
+        for item in derivation.candidates
+        if item.origin.match_id == source.match_id and item.origin.sample_index == 75
+    )
+    warnings = [(item["code"], item["sample_index"]) for item in diagnostic["warnings"]]
+    exclusions = [(item["code"], item["sample_index"]) for item in diagnostic["exclusion_reasons"]]
+
+    assert warnings.count(("PLAYER_COORDINATES_MISSING", 75)) == 2
+    assert ("BALL_DETECTION_UNKNOWN", 75) in warnings
+    assert ("BALL_COORDINATES_PARTIAL", 75) in warnings
+    assert ("BALL_OBJECT_ABSENT", 76) in warnings
+    assert ("BALL_COORDINATES_MISSING", 77) in warnings
+    assert ("PLAYER_OBSERVATION_MISSING", 77) in warnings
+    assert exclusions.count(("PHASE_NOT_IN_PLAY_OR_UNKNOWN", 75)) == 1
+    assert exclusions.count(("PLAYER_COUNT_BELOW_TEAM_MINIMUM", 77)) == 1
+    assert warnings == sorted(
+        warnings, key=lambda item: (-1 if item[1] is None else item[1], item[0])
+    )
+    assert exclusions == sorted(
+        exclusions, key=lambda item: (-1 if item[1] is None else item[1], item[0])
+    )
 
 
 def test_required_match_without_any_scoreable_window_is_incomplete() -> None:
@@ -677,12 +774,11 @@ def test_target_panels_masks_false_detections_and_nonzero_anchors() -> None:
 def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabrication() -> None:
     inputs = _fixture()
     derivation = verifier._derive(tuple(inputs))
-    submission, fingerprint = _baseline_submission(inputs, derivation)
+    submission = _baseline_submission(inputs, derivation)
     report = verifier.compare_population_v2(
         inputs,
         submission,
-        producer_revision="6644dba8c945ca86be72b54792db30cbe488e5d0",
-        producer_executable_fingerprint=fingerprint,
+        producer_revision=verifier.PRODUCER_REVISION,
     )
     assert report.status == "RECONCILED"
     assert not report.mismatches
@@ -692,14 +788,14 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     candidate_rows = [json.loads(line) for line in submission.candidates_jsonl.splitlines()]
     reordered = _submission_with(submission, candidates=list(reversed(candidate_rows)))
     report = verifier.compare_population_v2(
-        inputs, reordered, producer_executable_fingerprint=fingerprint
+        inputs, reordered, producer_revision=verifier.PRODUCER_REVISION
     )
     assert report.status == "MISMATCH"
     assert any(item.artifact == "candidates_jsonl" for item in report.mismatches)
 
     omitted = _submission_with(submission, candidates=candidate_rows[:-1])
     report = verifier.compare_population_v2(
-        inputs, omitted, producer_executable_fingerprint=fingerprint
+        inputs, omitted, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.path.endswith("/length") for item in report.mismatches)
 
@@ -729,7 +825,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
         receipt=warning_receipt,
     )
     report = verifier.compare_population_v2(
-        inputs, fabricated_warning, producer_executable_fingerprint=fingerprint
+        inputs, fabricated_warning, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "candidates_jsonl" for item in report.mismatches)
 
@@ -737,7 +833,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     manifest["matches"][0]["role"] = "evaluation"
     fabricated = _reseal_manifest_receipt(submission, manifest)
     report = verifier.compare_population_v2(
-        inputs, fabricated, producer_executable_fingerprint=fingerprint
+        inputs, fabricated, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "manifest_json" for item in report.mismatches)
     assert any(item.artifact == "receipt_json" for item in report.mismatches)
@@ -751,7 +847,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     )
     forged_panel = _reseal_manifest_receipt(submission, altered_players)
     report = verifier.compare_population_v2(
-        inputs, forged_panel, producer_executable_fingerprint=fingerprint
+        inputs, forged_panel, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any("player_ids" in item.path for item in report.mismatches)
 
@@ -774,7 +870,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     changed_submission = _reseal_manifest_receipt(submission, changed_manifest)
     fabricated_truth = _submission_with(changed_submission, truth=changed)
     report = verifier.compare_population_v2(
-        inputs, fabricated_truth, producer_executable_fingerprint=fingerprint
+        inputs, fabricated_truth, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "truth_jsonl" for item in report.mismatches)
     assert any(item.artifact == "manifest_json" for item in report.mismatches)
@@ -805,7 +901,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     mask_submission = _reseal_manifest_receipt(submission, mask_manifest)
     fabricated_mask = _submission_with(mask_submission, truth=changed_mask_rows)
     report = verifier.compare_population_v2(
-        inputs, fabricated_mask, producer_executable_fingerprint=fingerprint
+        inputs, fabricated_mask, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "truth_jsonl" for item in report.mismatches)
     assert any("truth_mask_sha256" in item.path for item in report.mismatches)
@@ -816,7 +912,7 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
     forged_membership["eligible_window_count"] = 59
     membership_submission = _reseal_manifest_receipt(submission, forged_membership)
     report = verifier.compare_population_v2(
-        inputs, membership_submission, producer_executable_fingerprint=fingerprint
+        inputs, membership_submission, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "manifest_json" for item in report.mismatches)
 
@@ -824,20 +920,57 @@ def test_read_only_comparator_detects_reordering_missing_rows_and_rehashed_fabri
 def test_forged_receipt_digest_and_wrong_producer_fingerprint_do_not_reconcile() -> None:
     inputs = _fixture()
     derivation = verifier._derive(tuple(inputs))
-    submission, fingerprint = _baseline_submission(inputs, derivation)
+    submission = _baseline_submission(inputs, derivation)
     receipt = json.loads(submission.receipt_json)
     receipt["match_counts"][0]["candidate_window_count"] += 1
     resealed = _submission_with(submission, receipt=receipt)
     report = verifier.compare_population_v2(
-        inputs, resealed, producer_executable_fingerprint=fingerprint
+        inputs, resealed, producer_revision=verifier.PRODUCER_REVISION
     )
     assert any(item.artifact == "receipt_json" for item in report.mismatches)
 
-    wrong_fingerprint = "b" * 64
-    report = verifier.compare_population_v2(
-        inputs, submission, producer_executable_fingerprint=wrong_fingerprint
+    forged_fingerprint = copy.deepcopy(_PRODUCER_FINGERPRINT)
+    forged_fingerprint["files"].pop()
+    forged_fingerprint["sha256"] = _digest(
+        {key: value for key, value in forged_fingerprint.items() if key != "sha256"}
     )
-    assert any(item.path.endswith("producer_executable_fingerprint") for item in report.mismatches)
+    forged_receipt = json.loads(submission.receipt_json)
+    forged_receipt["producer_executable_fingerprint"] = forged_fingerprint
+    forged_submission = _submission_with(submission, receipt=forged_receipt)
+    report = verifier.compare_population_v2(
+        inputs, forged_submission, producer_revision=verifier.PRODUCER_REVISION
+    )
+    assert report.status == "MISMATCH"
+    assert any(item.artifact == "provenance" for item in report.mismatches)
+
+    wrong_revision = verifier.compare_population_v2(inputs, submission, producer_revision="a" * 40)
+    assert wrong_revision.status == "MISMATCH"
+    assert any(item.path.endswith("producer_revision") for item in wrong_revision.mismatches)
+
+
+def test_pinned_producer_fingerprint_rejects_forged_altered_and_incomplete_inventories() -> None:
+    assert verifier._producer_fingerprint_is_verified(
+        verifier.PRODUCER_REVISION, _PRODUCER_FINGERPRINT
+    )
+    assert not verifier._producer_fingerprint_is_verified("a" * 40, _PRODUCER_FINGERPRINT)
+
+    altered = copy.deepcopy(_PRODUCER_FINGERPRINT)
+    altered["files"][0]["sha256"] = "b" * 64
+    altered["sha256"] = _digest({key: value for key, value in altered.items() if key != "sha256"})
+    assert not verifier._producer_fingerprint_is_verified(verifier.PRODUCER_REVISION, altered)
+
+    incomplete = copy.deepcopy(_PRODUCER_FINGERPRINT)
+    incomplete["files"].pop()
+    incomplete["sha256"] = _digest(
+        {key: value for key, value in incomplete.items() if key != "sha256"}
+    )
+    assert not verifier._producer_fingerprint_is_verified(verifier.PRODUCER_REVISION, incomplete)
+
+    self_hash_mismatch = copy.deepcopy(_PRODUCER_FINGERPRINT)
+    self_hash_mismatch["files"][0]["sha256"] = "c" * 64
+    assert not verifier._producer_fingerprint_is_verified(
+        verifier.PRODUCER_REVISION, self_hash_mismatch
+    )
 
 
 def test_shuffled_inputs_preserve_canonical_order_and_missing_match_fails_closed() -> None:

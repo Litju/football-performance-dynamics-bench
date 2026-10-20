@@ -31,6 +31,10 @@ PLAN_HASH = "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62"
 POPULATION_SCHEMA_HASH = "27da86b7355c311a65c68ab9b2bd3ae86e27779ed48641c23181ffe2f9adc224"
 RESULT_SCHEMA_HASH = "d0d7dbf4a14cade66d1e0ce7282441d8f035a68de8a192ad8e4d70210be18f7f"
 DRIFT_STOP_CODE = "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED"
+PRODUCER_REVISION = "6644dba8c945ca86be72b54792db30cbe488e5d0"
+# Commits the complete sorted path/SHA-256 inventory of the 79 package files at PRODUCER_REVISION.
+PRODUCER_FINGERPRINT_SHA256 = "153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4"
+PRODUCER_FINGERPRINT_FILE_COUNT = 79
 
 _ROOT = Path(__file__).parents[2]
 _SOURCE_AUTHORITY = _ROOT / "data_sources" / "skillcorner_open_data_v1.json"
@@ -417,6 +421,57 @@ def _digest(value: object) -> str:
     return _digest_bytes(canonical_bytes(value))
 
 
+def _producer_fingerprint_is_verified(revision: object, value: object) -> bool:
+    if revision != PRODUCER_REVISION:
+        return False
+    try:
+        fingerprint = _object(value, "producer package fingerprint")
+        if set(fingerprint) != {
+            "schema_id",
+            "schema_version",
+            "package",
+            "hash_algorithm",
+            "files",
+            "sha256",
+        } or (
+            fingerprint.get("schema_id") != "fpdbench.production-package-fingerprint"
+            or fingerprint.get("schema_version") != "1.0.0"
+            or fingerprint.get("package") != "fpdbench"
+            or fingerprint.get("hash_algorithm") != "sha256"
+        ):
+            return False
+        files = _array(fingerprint.get("files"), "producer package files")
+        if len(files) != PRODUCER_FINGERPRINT_FILE_COUNT:
+            return False
+        paths: list[str] = []
+        for raw_file in files:
+            file = _object(raw_file, "producer package file")
+            if set(file) != {"path", "sha256"}:
+                return False
+            path = file.get("path")
+            digest = file.get("sha256")
+            if (
+                not isinstance(path, str)
+                or path.startswith("/")
+                or "\\" in path
+                or any(part in {"", ".", ".."} for part in path.split("/"))
+                or not path.endswith((".py", ".json"))
+                or not isinstance(digest, str)
+                or _SHA256.fullmatch(digest) is None
+            ):
+                return False
+            paths.append(path)
+        if paths != sorted(set(paths)):
+            return False
+        payload = {key: item for key, item in fingerprint.items() if key != "sha256"}
+        return (
+            fingerprint.get("sha256") == PRODUCER_FINGERPRINT_SHA256
+            and _digest(payload) == PRODUCER_FINGERPRINT_SHA256
+        )
+    except (TypeError, ValueError):
+        return False
+
+
 def _strict_object(pairs: list[tuple[str, object]]) -> JsonObject:
     result: JsonObject = {}
     for key, value in pairs:
@@ -674,7 +729,7 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
             "home" if team_id == home_id else "away" if team_id == away_id else None
         )
         if player_id in roster_ids or team is None:
-            identity_conflict = True
+            raise _InputError("roster player identity is duplicate or outside the match teams")
         roster_ids.add(player_id)
         playing = row.get("playing_time")
         playing_object = (
@@ -740,37 +795,51 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
     ] = []
     roster_by_id = {item.player_id: item for item in roster}
     for record in records:
-        if not {"frame", "timestamp", "period", "player_data", "ball_data", "possession"} <= set(
-            record
-        ):
-            raise _InputError("tracking row omits a required field")
+        if set(record) != {
+            "frame",
+            "timestamp",
+            "period",
+            "player_data",
+            "ball_data",
+            "possession",
+            "image_corners_projection",
+        }:
+            raise _InputError("tracking row fields differ from the frozen source schema")
         frame = _integer(record.get("frame"), "tracking frame")
         period_raw = record.get("period")
         period = None if period_raw is None else _integer(period_raw, "tracking period", minimum=1)
         if period is not None and period not in {1, 2}:
             raise _InputError("tracking period must be 1, 2, or null")
         timestamp = _timestamp(record.get("timestamp"))
+        if frame % 2:
+            continue
         player_rows = _array(record.get("player_data"), "player_data")
         players: list[PlayerObservation] = []
+        observed_player_ids: set[int] = set()
         for raw_player in player_rows:
             player = _object(raw_player, "player observation")
-            if not {"player_id", "x", "y", "is_detected"} <= set(player):
-                raise _InputError("player observation omits a required field")
+            if set(player) != {"player_id", "x", "y", "is_detected"}:
+                raise _InputError("player observation fields differ from the frozen source schema")
             player_id = _integer(player.get("player_id"), "observed player ID", minimum=1)
+            if player_id in observed_player_ids:
+                raise _InputError("duplicate retained player identity")
+            observed_player_ids.add(player_id)
+            roster_player = roster_by_id.get(player_id)
+            if roster_player is None:
+                raise _InputError("retained player identity is absent from the match roster")
             x = _number(player.get("x"), "player x", nullable=True)
             y = _number(player.get("y"), "player y", nullable=True)
             detected = player.get("is_detected")
             if not isinstance(detected, bool):
                 raise _InputError("player is_detected must be Boolean")
-            roster_player = roster_by_id.get(player_id)
             players.append(
                 PlayerObservation(
                     player_id,
                     x,
                     y,
                     detected,
-                    None if roster_player is None else roster_player.team_id,
-                    None if roster_player is None else roster_player.team,
+                    roster_player.team_id,
+                    roster_player.team,
                 )
             )
         ball_raw = record.get("ball_data")
@@ -805,11 +874,10 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
             possession = PossessionObservation(cast(str | None, group_raw), possession_player)
         parsed_rows.append((frame, period, timestamp, tuple(players), ball, possession))
 
-    # Sampling uses the absolute source-frame parity; period boundaries do not reset it.
+    # Sampling uses absolute source-frame parity; nested data is retained-frame-only.
     samples = tuple(
         CanonicalSample(frame, frame // 2, period, timestamp, players, ball, possession)
         for frame, period, timestamp, players, ball, possession in parsed_rows
-        if frame % 2 == 0
     )
     retained_rows: list[JsonObject] = []
     for sample in samples:
@@ -862,6 +930,7 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
             }
         )
     retained_samples_sha256 = _digest(retained_rows)
+    even_source_frames = sum(cast(int, row["frame"]) % 2 == 0 for row in records)
     return MatchContext(
         source.match_id,
         home_id,
@@ -874,9 +943,9 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
         identity_conflict,
         tuple(phases),
         samples,
-        len(parsed_rows),
-        sum(row[0] % 2 == 0 for row in parsed_rows),
-        sum(row[0] % 2 == 1 for row in parsed_rows),
+        len(records),
+        even_source_frames,
+        len(records) - even_source_frames,
         retained_samples_sha256,
     )
 
@@ -941,8 +1010,14 @@ def _displacement_speed(left: XY, right: XY) -> float:
     return math.hypot(right[0] - left[0], right[1] - left[1]) / 0.2
 
 
-def _issue_dict(codes: set[str]) -> list[JsonObject]:
-    return [{"code": code, "sample_index": None} for code in sorted(codes)]
+def _issue_dict(issues: list[tuple[str, int | None]]) -> list[JsonObject]:
+    return [
+        {"code": code, "sample_index": sample_index}
+        for code, sample_index in sorted(
+            issues,
+            key=lambda item: (-1 if item[1] is None else item[1], item[0]),
+        )
+    ]
 
 
 def _ratio(numerator: int, denominator: int | None) -> float | None:
@@ -965,39 +1040,41 @@ def _ball_state(ball: BallObservation | None) -> tuple[str, str]:
 
 
 def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
-    exclusions: set[str] = set()
-    warnings: set[str] = {"SOURCE_QUALITY_UNKNOWN"}
+    exclusions: list[tuple[str, int | None]] = []
+    warnings: list[tuple[str, int | None]] = [("SOURCE_QUALITY_UNKNOWN", None)]
+
+    def exclude(code: str, sample_index: int | None = None) -> None:
+        exclusions.append((code, sample_index))
+
+    def warn(code: str, sample_index: int | None = None) -> None:
+        warnings.append((code, sample_index))
+
     support = slot.support
     roster_by_id = context.roster_by_id
     if len(support) != 41:
-        exclusions.add("WINDOW_SUPPORT_LENGTH_MISMATCH")
+        exclude("WINDOW_SUPPORT_LENGTH_MISMATCH")
     if not slot.support_complete:
-        exclusions.add("TEMPORAL_GAP")
+        exclude("TEMPORAL_GAP")
 
     expected_indices = range(slot.sample_index - 25, slot.sample_index + 16)
     present_samples = [sample for sample in support if sample is not None]
-    present_periods = {sample.period for sample in present_samples if sample.period is not None}
-    if any(sample.period is None for sample in present_samples):
-        exclusions.add("PERIOD_BOUNDS_MISSING")
-    if len(present_periods) > 1:
-        exclusions.add("PERIOD_BOUNDARY_CROSSED")
     for sample, expected_index in zip(support, expected_indices, strict=True):
         if sample is None:
             continue
+        sample_index = sample.canonical_sample_index
         if (
             sample.canonical_sample_index != expected_index
             or sample.source_frame != expected_index * 2
         ):
-            exclusions.add("CANONICAL_FRAME_MISMATCH")
+            exclude("CANONICAL_FRAME_MISMATCH", sample_index)
         if sample.period is None:
+            exclude("INVALID_SAMPLE_SCHEMA", sample_index)
             continue
         bounds = [item for item in context.periods if item.period == sample.period]
         if not bounds:
-            exclusions.add("PERIOD_BOUNDS_MISSING")
+            exclude("PERIOD_BOUNDS_MISSING", sample_index)
         elif not bounds[0].start_frame <= sample.source_frame < bounds[0].end_frame:
-            exclusions.add("OUTSIDE_PERIOD_BOUNDS")
-    if present_periods and slot.period not in present_periods:
-        exclusions.add("OUTSIDE_PERIOD_BOUNDS")
+            exclude("OUTSIDE_PERIOD_BOUNDS", sample_index)
 
     continuous_intervals = 0
     identity_comparison_intervals = 0
@@ -1022,7 +1099,8 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             if (left is None) != (right is None):
                 observed_identity_change_intervals += 1
             continue
-        identity_comparison_intervals += 1
+        if left.period is not None and left.period == right.period:
+            identity_comparison_intervals += 1
         left_ids = observed_player_ids[offset]
         right_ids = observed_player_ids[offset + 1]
         if left_ids is not None and right_ids is not None and left_ids != right_ids:
@@ -1034,25 +1112,27 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             if left_active != right_active:
                 active_roster_transition_intervals += 1
                 changed_active_player_ids += len(left_active ^ right_active)
-                warnings.add("IDENTITY_TRANSITION_EXPOSURE")
-        if left.period is None or right.period is None or left.period != right.period:
-            exclusions.add("PERIOD_BOUNDARY_CROSSED")
+                warn("IDENTITY_TRANSITION_EXPOSURE", right.canonical_sample_index)
+        if left.period is not None and right.period is not None and left.period != right.period:
+            exclude("PERIOD_BOUNDARY_CROSSED", right.canonical_sample_index)
+            continue
+        if left.period is None or right.period is None:
             continue
         if (
             right.canonical_sample_index != left.canonical_sample_index + 1
             or right.source_frame != left.source_frame + 2
         ):
-            exclusions.add("TEMPORAL_GAP")
+            exclude("TEMPORAL_GAP", right.canonical_sample_index)
             continue
         if left.timestamp_deciseconds is None or right.timestamp_deciseconds is None:
-            exclusions.add("TIMESTAMP_MISSING")
             continue
         if right.timestamp_deciseconds - left.timestamp_deciseconds != 2:
-            exclusions.add("TIMESTAMP_DISCONTINUITY")
+            exclude("TIMESTAMP_DISCONTINUITY", right.canonical_sample_index)
             continue
         continuous_intervals += 1
-    if any(sample is not None and sample.timestamp_deciseconds is None for sample in support):
-        exclusions.add("TIMESTAMP_MISSING")
+    for sample in present_samples:
+        if sample.timestamp_deciseconds is None:
+            exclude("TIMESTAMP_MISSING", sample.canonical_sample_index)
 
     phase_denominator: int | None = None
     phase_covered = 0
@@ -1061,6 +1141,7 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
         first_frame = observed[0].source_frame
         last_frame = observed[-1].source_frame
         phase_denominator = last_frame - first_frame + 1
+        first_uncovered_frame: int | None = None
         for frame in range(first_frame, last_frame + 1):
             frame_period = next(
                 (
@@ -1072,8 +1153,18 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             )
             if frame_period is not None and _covered(context, frame_period, frame):
                 phase_covered += 1
+            elif first_uncovered_frame is None:
+                first_uncovered_frame = frame
         if phase_covered != phase_denominator:
-            exclusions.add("PHASE_NOT_IN_PLAY_OR_UNKNOWN")
+            sample_index = next(
+                (
+                    sample.canonical_sample_index
+                    for sample in observed
+                    if sample.source_frame == first_uncovered_frame
+                ),
+                None,
+            )
+            exclude("PHASE_NOT_IN_PLAY_OR_UNKNOWN", sample_index)
 
     flag_states = (
         "true",
@@ -1114,12 +1205,13 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             cross_tab[flag][coordinate] += 1
             continue
         ball = sample.ball
+        sample_index = sample.canonical_sample_index
         coordinate, flag = _ball_state(ball)
         flag_counts[flag] += 1
         cross_tab[flag][coordinate] += 1
         if ball is None:
             ball_absent_count += 1
-            warnings.add("BALL_OBJECT_ABSENT")
+            warn("BALL_OBJECT_ABSENT", sample_index)
             finite_ball_points.append(None)
             continue
         if ball.detected is True:
@@ -1128,13 +1220,13 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             ball_false_count += 1
         else:
             ball_null_count += 1
-            warnings.add("BALL_DETECTION_UNKNOWN")
+            warn("BALL_DETECTION_UNKNOWN", sample_index)
         if ball.xy is None:
             finite_ball_points.append(None)
             if ball.x is None and ball.y is None:
-                warnings.add("BALL_COORDINATES_MISSING")
+                warn("BALL_COORDINATES_MISSING", sample_index)
             else:
-                warnings.add("BALL_COORDINATES_PARTIAL")
+                warn("BALL_COORDINATES_PARTIAL", sample_index)
             continue
         point = ball.xy
         finite_ball_points.append(point)
@@ -1150,14 +1242,17 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             finite_ball_has_null_flag = True
         if not _within_pitch(point[0], point[1], context.pitch_length_m, context.pitch_width_m):
             ball_outside_count += 1
-            warnings.add("BALL_OUTSIDE_PITCH")
+            warn("BALL_OUTSIDE_PITCH", sample_index)
         if abs(point[0]) > 2 * context.pitch_length_m or abs(point[1]) > 2 * context.pitch_width_m:
-            exclusions.add("COORDINATE_IMPLAUSIBLE")
+            exclude("COORDINATE_IMPLAUSIBLE", sample_index)
     if ball_finite_count < 39:
-        exclusions.add("BALL_COVERAGE_BELOW_MINIMUM")
+        exclude("BALL_COVERAGE_BELOW_MINIMUM")
     origin_sample = support[25]
     if origin_sample is None or origin_sample.ball is None or origin_sample.ball.xy is None:
-        exclusions.add("BALL_MISSING_AT_ORIGIN")
+        exclude(
+            "BALL_MISSING_AT_ORIGIN",
+            None if origin_sample is None else origin_sample.canonical_sample_index,
+        )
     ball_pair_denominator = 0
     for left_sample, right_sample, left, right in zip(
         support[:-1], support[1:], finite_ball_points[:-1], finite_ball_points[1:], strict=True
@@ -1177,7 +1272,7 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
         ball_pair_denominator += 1
         if _displacement_speed(left, right) > 50:
             ball_outlier_count += 1
-            warnings.add("BALL_DISPLACEMENT_OUTLIER")
+            warn("BALL_DISPLACEMENT_OUTLIER", right_sample.canonical_sample_index)
 
     player_detection = Counter[str]()
     player_records = 0
@@ -1195,25 +1290,26 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
         if sample is None:
             observed_points.append(None)
             continue
+        sample_index = sample.canonical_sample_index
         if active is None:
             unknown_roster_samples += 1
         observed_ids = {player.player_id for player in sample.players}
         if active is not None and active - observed_ids:
             missing_active_count += len(active - observed_ids)
-            warnings.add("PLAYER_OBSERVATION_MISSING")
+            warn("PLAYER_OBSERVATION_MISSING", sample_index)
         if not context.roster_complete:
-            warnings.add("PLAYER_APPEARANCE_METADATA_UNKNOWN")
+            warn("PLAYER_APPEARANCE_METADATA_UNKNOWN", sample_index)
         per_team: dict[str, set[int]] = {"home": set(), "away": set()}
         points: dict[int, XY | None] = {}
         if len(observed_ids) != len(sample.players):
-            exclusions.add("DUPLICATE_PLAYER_ID")
+            exclude("DUPLICATE_PLAYER_ID", sample_index)
         for player in sample.players:
             player_records += 1
             point = player.xy
             points[player.player_id] = point
             if point is None:
                 player_null_coordinate_count += 1
-                warnings.add("PLAYER_COORDINATES_MISSING")
+                warn("PLAYER_COORDINATES_MISSING", sample_index)
             else:
                 player_finite_count += 1
                 player_detection["detected" if player.detected else "extrapolated"] += 1
@@ -1221,26 +1317,25 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
                     point[0], point[1], context.pitch_length_m, context.pitch_width_m
                 ):
                     player_outside_count += 1
-                    warnings.add("PLAYER_POSITION_OUTSIDE_PITCH")
+                    warn("PLAYER_POSITION_OUTSIDE_PITCH", sample_index)
                 if abs(point[0]) > context.pitch_length_m or abs(point[1]) > context.pitch_width_m:
-                    exclusions.add("COORDINATE_IMPLAUSIBLE")
+                    exclude("COORDINATE_IMPLAUSIBLE", sample_index)
             roster_player = roster_by_id.get(player.player_id)
             if roster_player is None or roster_player.team is None:
-                exclusions.add("PLAYER_TEAM_IDENTITY_CONFLICT")
+                exclude("PLAYER_TEAM_IDENTITY_CONFLICT", sample_index)
                 continue
             if active is not None and player.player_id not in active:
-                warnings.add("PLAYER_OUTSIDE_APPEARANCE")
+                warn("PLAYER_OUTSIDE_APPEARANCE", sample_index)
                 continue
             if point is not None:
                 per_team[roster_player.team].add(player.player_id)
                 if slot.support_complete and context.roster_complete and active is not None:
                     active_finite_count += 1
-        for team_name in ("home", "away"):
-            if len(per_team[team_name]) < 7:
-                exclusions.add("PLAYER_COUNT_BELOW_TEAM_MINIMUM")
+        if len(per_team["home"]) < 7 or len(per_team["away"]) < 7:
+            exclude("PLAYER_COUNT_BELOW_TEAM_MINIMUM", sample_index)
         observed_points.append(points)
     if context.roster_identity_conflict:
-        exclusions.add("PLAYER_TEAM_IDENTITY_CONFLICT")
+        exclude("PLAYER_TEAM_IDENTITY_CONFLICT")
     if slot.support_complete and context.roster_complete:
         expected_active_count = sum(len(active or ()) for active in active_sets)
     for left_sample, right_sample, left_points, right_points in zip(
@@ -1265,7 +1360,7 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
                 player_pair_denominator += 1
                 if _displacement_speed(left, right) > 12:
                     player_outlier_count += 1
-                    warnings.add("PLAYER_DISPLACEMENT_OUTLIER")
+                    warn("PLAYER_DISPLACEMENT_OUTLIER", right_sample.canonical_sample_index)
 
     possession_counts = Counter[str]()
     possession_player_unobserved = 0
@@ -1276,7 +1371,7 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
         possession = sample.possession
         if possession is None or possession.group is None:
             possession_counts["unknown"] += 1
-            warnings.add("POSSESSION_CONTEXT_UNKNOWN")
+            warn("POSSESSION_CONTEXT_UNKNOWN", sample.canonical_sample_index)
             continue
         if possession.group == "home team":
             possession_counts["home"] += 1
@@ -1286,7 +1381,7 @@ def _assess_grid_slot(context: MatchContext, slot: GridOriginV2) -> JsonObject:
             player.player_id for player in sample.players
         }:
             possession_player_unobserved += 1
-            warnings.add("POSSESSION_PLAYER_UNOBSERVED")
+            warn("POSSESSION_PLAYER_UNOBSERVED", sample.canonical_sample_index)
     possession_counts["invalid"] += 0
     possession_classified = sum(possession_counts.values())
 
@@ -2318,7 +2413,7 @@ def _report(
     submission: PopulationSubmissionV2 | None,
     *,
     producer_revision: str | None,
-    producer_executable_fingerprint: object | None,
+    verified_producer_fingerprint_sha256: str | None,
     derivation: DerivationV2 | None,
     mismatches: tuple[MismatchV2, ...] = (),
 ) -> AuditReportV2:
@@ -2331,17 +2426,6 @@ def _report(
         else ()
     )
     artifact_snapshot = _submission_snapshots(submission)
-    if isinstance(producer_executable_fingerprint, dict):
-        fingerprint_sha256 = cast(JsonObject, producer_executable_fingerprint).get("sha256")
-        producer_fingerprint_summary = (
-            fingerprint_sha256 if isinstance(fingerprint_sha256, str) else None
-        )
-    else:
-        producer_fingerprint_summary = (
-            producer_executable_fingerprint
-            if isinstance(producer_executable_fingerprint, str)
-            else None
-        )
     authority_snapshot = tuple(
         ArtifactSnapshotV2(path.name, len(raw), _digest_bytes(raw))
         for path, raw in (
@@ -2407,7 +2491,7 @@ def _report(
         "NOT_QUALIFIED",
         False,
         producer_revision,
-        producer_fingerprint_summary,
+        verified_producer_fingerprint_sha256,
         source_hash,
         ".".join(map(str, sys.version_info[:3])),
         SOURCE_RELEASE_HASH,
@@ -2476,7 +2560,6 @@ def compare_population_v2(
     submission: PopulationSubmissionV2,
     *,
     producer_revision: str | None = None,
-    producer_executable_fingerprint: object | None = None,
 ) -> AuditReportV2:
     """Recompute expected synthetic outputs and compare all five producer wire payloads."""
     input_tuple = tuple(inputs)
@@ -2489,7 +2572,7 @@ def compare_population_v2(
             input_tuple,
             submission,
             producer_revision=producer_revision,
-            producer_executable_fingerprint=producer_executable_fingerprint,
+            verified_producer_fingerprint_sha256=None,
             derivation=None,
             mismatches=(mismatch,),
         )
@@ -2500,7 +2583,7 @@ def compare_population_v2(
             input_tuple,
             submission,
             producer_revision=producer_revision,
-            producer_executable_fingerprint=producer_executable_fingerprint,
+            verified_producer_fingerprint_sha256=None,
             derivation=derivation,
             mismatches=(mismatch,),
         )
@@ -2513,7 +2596,7 @@ def compare_population_v2(
             input_tuple,
             submission,
             producer_revision=producer_revision,
-            producer_executable_fingerprint=producer_executable_fingerprint,
+            verified_producer_fingerprint_sha256=None,
             derivation=derivation,
             mismatches=(mismatch,),
         )
@@ -2532,7 +2615,7 @@ def compare_population_v2(
             input_tuple,
             submission,
             producer_revision=producer_revision,
-            producer_executable_fingerprint=producer_executable_fingerprint,
+            verified_producer_fingerprint_sha256=None,
             derivation=derivation,
             mismatches=(mismatch,),
         )
@@ -2540,6 +2623,26 @@ def compare_population_v2(
     expected_census = _jsonl_objects(derivation.expected_census, "independent census")
     expected_truth = _jsonl_objects(derivation.expected_truth, "independent truth")
     mismatches: list[MismatchV2] = []
+    fingerprint = actual_receipt.get("producer_executable_fingerprint")
+    fingerprint_verified = _producer_fingerprint_is_verified(producer_revision, fingerprint)
+    if producer_revision != PRODUCER_REVISION:
+        mismatches.append(
+            MismatchV2(
+                "provenance",
+                "/producer_revision",
+                _digest(PRODUCER_REVISION),
+                _value_digest(producer_revision),
+            )
+        )
+    if not fingerprint_verified:
+        mismatches.append(
+            MismatchV2(
+                "provenance",
+                "/producer_executable_fingerprint",
+                _digest(PRODUCER_FINGERPRINT_SHA256),
+                _value_digest(fingerprint),
+            )
+        )
     if submission.manifest_json != canonical_bytes(actual_manifest):
         mismatches.append(
             MismatchV2(
@@ -2603,7 +2706,7 @@ def compare_population_v2(
         submission.candidates_jsonl,
         submission.diagnostic_census_jsonl,
         submission.truth_jsonl,
-        producer_executable_fingerprint,
+        fingerprint if fingerprint_verified else None,
     )
     expected_receipt["receipt_sha256"] = _digest(expected_receipt)
     mismatches.extend(_record_mismatches("receipt_json", expected_receipt, actual_receipt))
@@ -2613,7 +2716,9 @@ def compare_population_v2(
         input_tuple,
         submission,
         producer_revision=producer_revision,
-        producer_executable_fingerprint=producer_executable_fingerprint,
+        verified_producer_fingerprint_sha256=(
+            PRODUCER_FINGERPRINT_SHA256 if fingerprint_verified else None
+        ),
         derivation=derivation,
         mismatches=mismatch_tuple,
     )
@@ -2632,7 +2737,7 @@ def derive_synthetic_population_v2(
             input_tuple,
             None,
             producer_revision=None,
-            producer_executable_fingerprint=None,
+            verified_producer_fingerprint_sha256=None,
             derivation=None,
             mismatches=(MismatchV2("input", "/", None, _digest(str(exc))),),
         )
@@ -2648,6 +2753,6 @@ def derive_synthetic_population_v2(
         input_tuple,
         None,
         producer_revision=None,
-        producer_executable_fingerprint=None,
+        verified_producer_fingerprint_sha256=None,
         derivation=derivation,
     )
