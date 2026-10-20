@@ -83,7 +83,7 @@ def validate_naming(root: Path) -> tuple[str, ...]:
             continue
         relative = path.relative_to(root)
         if any(pattern.search(path.name) for pattern in FORBIDDEN_PATH_PATTERNS):
-            errors.append(f"forbidden canonical path component: {relative}")
+            errors.append(f"forbidden canonical path component: {relative.as_posix()}")
         if not path.is_file():
             continue
         try:
@@ -95,7 +95,7 @@ def validate_naming(root: Path) -> tuple[str, ...]:
         )
         lowered_source = source.casefold()
         if any(identity.casefold() in lowered_source for identity in _OBSOLETE_IDENTITIES):
-            errors.append(f"obsolete project identity in canonical content: {relative}")
+            errors.append(f"obsolete project identity in canonical content: {relative.as_posix()}")
         for pattern in FORBIDDEN_PATH_PATTERNS:
             for match in pattern.finditer(source):
                 if not any(
@@ -103,6 +103,6 @@ def validate_naming(root: Path) -> tuple[str, ...]:
                 ):
                     errors.append(
                         f"historical identifier outside structured provenance value in "
-                        f"{relative}: {match.group()}"
+                        f"{relative.as_posix()}: {match.group()}"
                     )
     return tuple(sorted(set(errors)))

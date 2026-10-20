@@ -66,28 +66,29 @@ def validate_artifacts(root: Path, *, max_file_bytes: int = MAX_ARTIFACT_BYTES) 
     errors: list[str] = []
     for path in root.rglob("*"):
         relative = path.relative_to(root)
+        display = relative.as_posix()
         if any(part in _IGNORED_PARTS for part in relative.parts):
             continue
         if path.is_symlink():
-            errors.append(f"symlink is not allowed in the bootstrap repository: {relative}")
+            errors.append(f"symlink is not allowed in the bootstrap repository: {display}")
             continue
         if not path.is_file():
             continue
         name = path.name.casefold()
         if _restricted_data_path(relative):
-            errors.append(f"SkillCorner source or derived data is not allowed here: {relative}")
+            errors.append(f"SkillCorner source or derived data is not allowed here: {display}")
         if _git_lfs_pointer(path):
-            errors.append(f"Git LFS dataset pointer is not allowed: {relative}")
+            errors.append(f"Git LFS dataset pointer is not allowed: {display}")
         if path.suffix.casefold() in _FORBIDDEN_SUFFIXES:
-            errors.append(f"data or checkpoint artifact is not allowed: {relative}")
+            errors.append(f"data or checkpoint artifact is not allowed: {display}")
         if path.suffix.casefold() == ".pb" and _model_binary_path(relative):
-            errors.append(f"model protobuf artifact is not allowed: {relative}")
+            errors.append(f"model protobuf artifact is not allowed: {display}")
         if path.suffix.casefold() == ".bin" and _model_binary_path(relative):
-            errors.append(f"model or checkpoint binary is not allowed: {relative}")
+            errors.append(f"model or checkpoint binary is not allowed: {display}")
         if name in _SECRET_NAMES or path.suffix.casefold() in {".key", ".pem"}:
-            errors.append(f"secret-like file is not allowed: {relative}")
+            errors.append(f"secret-like file is not allowed: {display}")
         if any(part.casefold() in _FORBIDDEN_NAME_PARTS for part in relative.parts):
-            errors.append(f"private or challenge artifact path is not allowed: {relative}")
+            errors.append(f"private or challenge artifact path is not allowed: {display}")
         if path.stat().st_size > max_file_bytes:
-            errors.append(f"file exceeds {max_file_bytes} bytes: {relative}")
+            errors.append(f"file exceeds {max_file_bytes} bytes: {display}")
     return tuple(sorted(set(errors)))
