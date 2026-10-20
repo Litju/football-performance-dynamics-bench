@@ -33,9 +33,12 @@ and plan `a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62`.
 `MatchSourceBytesV2` accepts in-memory match metadata JSON, raw tracking JSONL,
 and normalized phase-interval JSON. Parsing rejects duplicate JSON keys, invalid
 UTF-8, non-finite numbers, malformed timestamps, duplicate/non-monotonic source
-frames, invalid ball objects, and missing required source fields. Sampling selects
-absolute even source frames only and assigns `canonical_sample_index = frame // 2`;
-period changes do not reset parity or the canonical index.
+frames, and any raw 10 Hz frame whose top-level keys differ from the frozen source
+schema. It checks nested player, ball, and possession fields only on retained even
+frames. Retained player fields must be exact, IDs unique, and every observed ID
+present in the match roster. Sampling selects absolute even source frames only and
+assigns `canonical_sample_index = frame // 2`; period changes do not reset parity
+or the canonical index.
 Each match's retained-sample digest is SHA-256 over the canonical compact JSON
 array of its independently reconstructed retained sample records in source order.
 
@@ -68,11 +71,17 @@ derivation is incomplete if any required match has no scoreable window.
 checks ordered candidate and census rows, diagnostic exclusions and warnings,
 membership and roles, origin players, physical truth values, masks, scoreability,
 all manifest/candidate/truth/output digests, input and retained-sample snapshots,
-source-wide scan counts, the producer package fingerprint, and the receipt
-self-digest. It compares values against the independent replay, so resealing a
-fabricated manifest or receipt cannot make changed membership, players, truth, or
-masks reconcile. Issue codes, order, and sample indices are compared; message prose
-is treated as presentation text.
+source-wide scan counts, producer provenance, and the receipt self-digest. Each
+warning and exclusion occurrence retains its canonical sample index, multiplicity,
+and producer order; only message prose is treated as presentation text.
+Artifact values are checked against the independent replay, so resealing changed
+membership, truth, or masks cannot make them reconcile.
+
+The comparison API does not accept a caller-supplied fingerprint. It requires the
+exact producer revision and validates the receipt's complete, sorted inventory of
+79 package-relative `.py`/`.json` paths and SHA-256 values, its self-hash, and the
+fingerprint digest pinned from that immutable Git tree. A missing, altered,
+incomplete, or self-rehashed forged inventory cannot yield `RECONCILED`.
 
 `AuditReportV2` contains no source rows or truth panels. It records SHA-256 and byte
 length snapshots for the authority documents, inputs, retained samples, and
@@ -81,25 +90,39 @@ per-match counts; stop status; and mismatch paths with expected/actual value has
 Canonical report bytes include `report_sha256`, computed over the report without
 that field. Reports have no runtime timestamp and do not emit a qualification PASS.
 
-## PR #20 synthetic integration
+## Frozen PR #20 synthetic reconciliation
 
-The independent implementation was frozen at commit
-`69bb56903c035c8e052609b2656769ed14a1c115` before generating producer outputs from
-PR #20 HEAD `6644dba8c945ca86be72b54792db30cbe488e5d0`. The integration used only
-synthetic 10 Hz inputs and compared the five emitted wire artifacts. The verifier
-reconciled 60 candidates, 60 eligible windows, 860 census slots, and 60 scoreable
-windows with **zero mismatches**. Each synthetic match had 86 raw frames, 43
-retained samples, 43 diagnostic grid slots, and three complete-support candidates.
+The repaired verifier implementation was frozen at commit
+`b9aaed295f0a22f4845ab6eb1cad3dcfaee65dce` with source SHA-256
+`09d12139e858accc7cb96e5e2c4b5fbcccb61e0046943418cc921391136e7593` before any
+new producer comparison outputs were generated. The producer ran in a separate
+process from the immutable PR #20 revision
+`6644dba8c945ca86be72b54792db30cbe488e5d0`; no producer eligibility code is
+imported or called by the verifier.
 
-The producer fingerprint independently recomputed from the pinned package files
-matched the receipt: 79 `.py`/`.json` files, SHA-256
-`153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4`. The
-hash-bound comparison report is [`prospective-population-verifier-v2-reconciliation.json`](prospective-population-verifier-v2-reconciliation.json),
-with report SHA-256 `a5389934bcc5cf1ff7f8d7bdf7927e1de8ce90ab45ec6ecfb168884e9b75e1a3` and
-file SHA-256 `5f634b3b3c0ea21f5ae38f8019571ab1455628216df91adaf079525475c1ecd4`.
-It records `RECONCILED`, `authoritative: false`, and
-`qualification_status: NOT_QUALIFIED`. The producer receipt itself remains
-`UNQUALIFIED` and says `independent_verification: NOT_PERFORMED`.
+All six valid synthetic cases reconciled the five wire artifacts with zero
+mismatches: a clean baseline, multiple nullable detection flags with missing and
+partial XY, an absent ball object, repeated player warnings with a missing active
+record, a phase gap at a support edge, and malformed nested data on an odd frame.
+The clean baseline contains 60 candidates, 60 eligible windows, 860 diagnostic
+census slots, and 60 scoreable windows. Seven malformed-source controls were
+rejected by both implementations: extra top-level fields on odd and even frames,
+an extra retained-player field, duplicate and unknown retained-player IDs, and
+malformed retained ball and possession schemas.
+
+The pinned digest commits to all 79 sorted package paths and file digests at the
+producer revision: SHA-256
+`153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4`. The refreshed
+clean-baseline report is
+[`prospective-population-verifier-v2-reconciliation.json`](prospective-population-verifier-v2-reconciliation.json),
+with report SHA-256 `624db3c7ebb96b1759871d4f07f1ec06e1db3fc202009ee7d31a02742b82f7a0`.
+The suite records six per-case audit-report hashes, output snapshots, and the
+negative-source outcomes in
+[`prospective-population-verifier-v2-adversarial-reconciliation.json`](prospective-population-verifier-v2-adversarial-reconciliation.json),
+with suite SHA-256 `1f53f7710f8187ecb1f9fb306c911dab9a75b9e03e111ae510aeca63a18abb66`.
+Every report records `RECONCILED`, `authoritative: false`, and
+`qualification_status: NOT_QUALIFIED`; the producer receipts remain
+`UNQUALIFIED` and say `independent_verification: NOT_PERFORMED`.
 
 ## Independence and limits
 

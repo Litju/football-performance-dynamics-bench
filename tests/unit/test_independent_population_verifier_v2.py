@@ -48,13 +48,17 @@ def _timestamp(frame: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{deciseconds * 10:02d}"
 
 
-def _fixture() -> list[verifier.MatchSourceBytesV2]:
+def _fixture(*, players_per_team: int = 7) -> list[verifier.MatchSourceBytesV2]:
     result = []
     for match_number, match_id in enumerate(_match_ids()):
         home_team = 600_000 + match_number * 2
         away_team = home_team + 1
-        home_players = [100_000 + match_number * 100 + index for index in range(1, 8)]
-        away_players = [200_000 + match_number * 100 + index for index in range(1, 8)]
+        home_players = [
+            100_000 + match_number * 100 + index for index in range(1, players_per_team + 1)
+        ]
+        away_players = [
+            200_000 + match_number * 100 + index for index in range(1, players_per_team + 1)
+        ]
         roster = [
             {
                 "id": player_id,
