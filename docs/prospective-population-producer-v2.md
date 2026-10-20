@@ -156,9 +156,19 @@ hashes the canonical JSON array of exactly the protocol candidate
 {match_id, origin_sample_id} identities, including candidates excluded by
 eligibility but excluding diagnostic-only grid slots without a complete
 observed support. The receipt separately binds the full diagnostic census
-count, ordered identities and JSONL bytes. `eligibility_result_sha256` hashes
-the complete dataclass diagnostic, including UNQUALIFIED status. Existing
-representation-tagged truth and mask hash functions specify the wire hashes;
+count, ordered identities and JSONL bytes.
+
+`producer_executable_fingerprint` lists every installed-package `.py` and
+`.json` file by sorted package-relative path and SHA-256, then hashes that
+manifest. It includes the producer, canonicalizer, period/eligibility code,
+protocol split and truth/hash utilities, plus their packaged authorities. The
+package declares no third-party runtime dependencies. The fingerprint contains
+no checkout path, build timestamp or VCS metadata, so the wheel and sdist-built
+wheel produce the same fingerprint and canonical receipt bytes.
+
+`eligibility_result_sha256` hashes the complete dataclass diagnostic,
+including UNQUALIFIED status. Existing representation-tagged truth and mask
+hash functions specify the wire hashes;
 their legacy serialization version labels remain unchanged. Input snapshots
 are domain-separated by named field in the receipt. The receipt self-digest
 hashes its canonical object with only receipt_sha256 omitted.

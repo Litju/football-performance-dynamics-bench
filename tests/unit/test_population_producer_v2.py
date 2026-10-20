@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
 
 import pytest
 
@@ -247,6 +248,34 @@ def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submissio
         submission.require_empirical_qualification()
     with pytest.raises(ValueError, match="independently verified"):
         authority.require_empirical_qualification()
+
+
+def test_receipt_fingerprints_every_production_package_file(submission):
+    receipt = json.loads(submission.receipt_json)
+    fingerprint = receipt["producer_executable_fingerprint"]
+    package_root = Path(p.__file__).resolve().parents[2]
+    expected_files = [
+        {
+            "path": path.relative_to(package_root).as_posix(),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        for path in sorted(
+            (
+                path
+                for path in package_root.rglob("*")
+                if path.is_file() and path.suffix in {".py", ".json"}
+            ),
+            key=lambda path: path.relative_to(package_root).as_posix(),
+        )
+    ]
+    assert fingerprint["schema_id"] == "fpdbench.production-package-fingerprint"
+    assert fingerprint["files"] == expected_files
+    fingerprint_content = dict(fingerprint)
+    fingerprint_digest = fingerprint_content.pop("sha256")
+    assert fingerprint_digest == hashlib.sha256(canonical_bytes(fingerprint_content)).hexdigest()
+    assert "producer_code_sha256" not in receipt
+    receipt_digest = receipt.pop("receipt_sha256")
+    assert receipt_digest == hashlib.sha256(canonical_bytes(receipt)).hexdigest()
 
 
 @pytest.mark.parametrize("missing,eligible", [(2, 3), (3, 2)])

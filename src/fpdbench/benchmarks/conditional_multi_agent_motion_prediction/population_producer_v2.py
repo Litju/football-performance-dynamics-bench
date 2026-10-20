@@ -47,6 +47,34 @@ def _digest(value: object) -> str:
     return _sha(canonical_bytes(value))
 
 
+def production_dependency_fingerprint() -> dict[str, object]:
+    package_root = Path(__file__).resolve().parents[2]
+    paths = sorted(
+        (
+            path
+            for path in package_root.rglob("*")
+            if path.is_file() and path.suffix in {".py", ".json"}
+        ),
+        key=lambda path: path.relative_to(package_root).as_posix(),
+    )
+    files = [
+        {
+            "path": path.relative_to(package_root).as_posix(),
+            "sha256": _sha(path.read_bytes()),
+        }
+        for path in paths
+    ]
+    fingerprint: dict[str, object] = {
+        "schema_id": "fpdbench.production-package-fingerprint",
+        "schema_version": "1.0.0",
+        "package": "fpdbench",
+        "hash_algorithm": "sha256",
+        "files": files,
+    }
+    fingerprint["sha256"] = _digest(fingerprint)
+    return fingerprint
+
+
 def _mapping(value: object, label: str) -> Mapping[str, object]:
     if not isinstance(value, dict):
         raise ValueError(f"{label} must be a JSON object")
@@ -199,6 +227,7 @@ def produce_population_draft_v2(
     expected_ids = {match for _, match in roles}
     if len(inputs) != 20 or {item.match_id for item in inputs} != expected_ids:
         raise ValueError("incomplete population: require exactly the pinned 20 matches")
+    executable_fingerprint = production_dependency_fingerprint()
     by_match = {item.match_id: item for item in inputs}
     # shortcut: hold fixtures in memory, add restricted streaming before real runs.
     prepared: dict[
@@ -379,7 +408,7 @@ def produce_population_draft_v2(
         "status": "UNQUALIFIED",
         "input_kind": input_kind,
         "producer_version": PRODUCER_VERSION,
-        "producer_code_sha256": _sha(Path(__file__).read_bytes()),
+        "producer_executable_fingerprint": executable_fingerprint,
         "authority_bindings": {
             "source_release_hash": EXPECTED_SOURCE_RELEASE_HASH,
             "source_population_hash": EXPECTED_SOURCE_POPULATION_HASH,
