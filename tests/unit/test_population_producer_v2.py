@@ -82,6 +82,28 @@ def synthetic_sources() -> tuple[p.PopulationMatchInputV2, ...]:
     return tuple(sources)
 
 
+def complete_10hz_sources(
+    sources: tuple[p.PopulationMatchInputV2, ...],
+) -> tuple[p.PopulationMatchInputV2, ...]:
+    complete = []
+    for source in sources:
+        frames = _rows(source.tracking_jsonl)
+        raw_frames = []
+        for frame in frames:
+            raw_frames.append(frame)
+            odd_frame = copy.deepcopy(frame)
+            odd_frame["frame"] += 1
+            odd_frame["timestamp"] = (
+                f"00:00:{odd_frame['frame'] // 10:02d}.{odd_frame['frame'] % 10}0"
+            )
+            odd_frame["ball_data"]["x"] = 777.0
+            for player in odd_frame["player_data"]:
+                player["x"] = 777.0
+            raw_frames.append(odd_frame)
+        complete.append(replace(source, tracking_jsonl=_lines(raw_frames)))
+    return tuple(complete)
+
+
 def _lines(values) -> bytes:
     return b"".join(canonical_bytes(value) + b"\n" for value in values)
 
@@ -102,6 +124,16 @@ def sources():
 @pytest.fixture(scope="module")
 def submission(sources):
     return p.produce_population_draft_v2(sources, input_kind="synthetic")
+
+
+@pytest.fixture(scope="module")
+def raw_10hz_sources(sources):
+    return complete_10hz_sources(sources)
+
+
+@pytest.fixture(scope="module")
+def raw_10hz_submission(raw_10hz_sources):
+    return p.produce_population_draft_v2(raw_10hz_sources, input_kind="synthetic")
 
 
 def test_complete_census_and_canonical_order(sources, submission):
@@ -187,6 +219,82 @@ def test_complete_census_and_canonical_order(sources, submission):
             ]
         )
     ).hexdigest()
+
+
+def test_full_10hz_stream_retains_global_even_frames_and_exact_counts(
+    sources, submission, raw_10hz_sources, raw_10hz_submission
+):
+    source_frames = _rows(raw_10hz_sources[0].tracking_jsonl)
+    assert [frame["frame"] for frame in source_frames] == list(range(100, 186))
+    assert all(frame["ball_data"]["x"] == 777.0 for frame in source_frames if frame["frame"] % 2)
+    assert raw_10hz_submission.manifest_json == submission.manifest_json
+    assert raw_10hz_submission.candidates_jsonl == submission.candidates_jsonl
+    assert raw_10hz_submission.truth_jsonl == submission.truth_jsonl
+    full_receipt = json.loads(raw_10hz_submission.receipt_json)
+    retained_only_receipt = json.loads(submission.receipt_json)
+    for actual, expected in zip(
+        full_receipt["input_receipts"],
+        retained_only_receipt["input_receipts"],
+        strict=True,
+    ):
+        assert actual["source_frame_count"] == 86
+        assert actual["retained_sample_count"] == 43
+        assert actual["retained_samples_sha256"] == expected["retained_samples_sha256"]
+
+
+def test_raw_frame_gaps_preserve_or_block_exactly(raw_10hz_sources, raw_10hz_submission):
+    full_receipt = json.loads(raw_10hz_submission.receipt_json)
+    odd_gap = [
+        frame
+        for frame in _rows(raw_10hz_sources[0].tracking_jsonl)
+        if frame["frame"] != 101
+    ]
+    odd_gap_submission = p.produce_population_draft_v2(
+        _changed(raw_10hz_sources, odd_gap), input_kind="synthetic"
+    )
+    odd_gap_receipt = json.loads(odd_gap_submission.receipt_json)
+    odd_gap_input = odd_gap_receipt["input_receipts"][0]
+    assert odd_gap_input["source_frame_count"] == 85
+    assert odd_gap_input["retained_sample_count"] == 43
+    assert odd_gap_input["retained_samples_sha256"] == full_receipt["input_receipts"][0][
+        "retained_samples_sha256"
+    ]
+    assert odd_gap_submission.manifest_json == raw_10hz_submission.manifest_json
+    assert odd_gap_submission.candidates_jsonl == raw_10hz_submission.candidates_jsonl
+    assert odd_gap_submission.truth_jsonl == raw_10hz_submission.truth_jsonl
+
+    even_gap = [
+        frame
+        for frame in _rows(raw_10hz_sources[0].tracking_jsonl)
+        if frame["frame"] != 160
+    ]
+    with pytest.raises(p.IncompletePopulationV2) as error:
+        p.produce_population_draft_v2(_changed(raw_10hz_sources, even_gap), input_kind="synthetic")
+    incomplete = json.loads(error.value.receipt_json)
+    first_match = incomplete["match_counts"][0]
+    first_input = incomplete["input_receipts"][0]
+    assert first_input["source_frame_count"] == 85
+    assert first_input["retained_sample_count"] == 42
+    assert first_match["candidate_window_count"] == 0
+    assert first_match["diagnostic_origin_count"] == 43
+    assert incomplete["status"] == "INCOMPLETE"
+    assert incomplete["source_byte_qualified"] is False
+    assert "population_manifest_sha256" not in incomplete
+
+
+@pytest.mark.parametrize("mutation", ["duplicate", "timestamp"])
+def test_raw_odd_frame_integrity_errors_fail_closed(raw_10hz_sources, mutation):
+    frames = _rows(raw_10hz_sources[0].tracking_jsonl)
+    if mutation == "duplicate":
+        duplicate_index = next(index for index, frame in enumerate(frames) if frame["frame"] == 121)
+        frames.insert(duplicate_index + 1, copy.deepcopy(frames[duplicate_index]))
+    else:
+        odd_frame = next(frame for frame in frames if frame["frame"] == 121)
+        odd_frame["timestamp"] = "00:00:12.20"
+    with pytest.raises(ValueError):
+        p.produce_population_draft_v2(
+            _changed(raw_10hz_sources, frames), input_kind="synthetic"
+        )
 
 
 def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submission):

@@ -206,10 +206,13 @@ Assign the second verifier to a different engineering task. It must:
    independently authored code/version, all input hashes, producer outputs and the
    exact population manifest. Design protected receipt authentication separately;
    do not make a caller-provided PASS sufficient to enable scoring.
-5. Exercise the synthetic raw-frame generator in
-   `tests/unit/test_population_producer_v2.py::synthetic_sources` and its adversarial
-   transformations. These fixtures build raw frames without producer eligibility
-   calls. The current tests are producer tests, **not** a second verifier.
+5. Exercise the complete synthetic 10 Hz generator in
+   `tests/unit/test_population_producer_v2.py::complete_10hz_sources` and its
+   adversarial transformations. It covers all frames 100–185, exact 86 source /
+   43 retained counts, even-frame parity, an omitted odd frame (85/43), an omitted
+   even frame (85/42 and INCOMPLETE), duplicate odd frames and odd-frame timestamp
+   mismatch. Its retained-sample hashes and outputs reconcile with the retained-only
+   control. These are producer tests, **not** a second verifier.
 
 Required adversarial verifier cases include a missing/duplicate match, shuffled
 match input, missing origin with unchanged grid count, exact 39/41 versus 38/41,
