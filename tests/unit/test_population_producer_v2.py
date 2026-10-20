@@ -194,12 +194,11 @@ def test_complete_census_and_canonical_order(sources, submission):
     assert receipt["candidate_origin_population_sha256"] == digest
     for count, match_id in zip(receipt["match_counts"], match_ids, strict=True):
         match_origins = [origin for origin in expected_origins if origin["match_id"] == match_id]
-        assert count["candidate_origin_population_sha256"] == hashlib.sha256(
-            canonical_bytes(match_origins)
-        ).hexdigest()
-        match_diagnostics = [
-            row for row in diagnostics if row["match_id"] == match_id
-        ]
+        assert (
+            count["candidate_origin_population_sha256"]
+            == hashlib.sha256(canonical_bytes(match_origins)).hexdigest()
+        )
+        match_diagnostics = [row for row in diagnostics if row["match_id"] == match_id]
         diagnostic_origins = [
             {"match_id": match_id, "origin_sample_id": f"period_1/sample_{sample}"}
             for sample in range(50, 93)
@@ -208,17 +207,21 @@ def test_complete_census_and_canonical_order(sources, submission):
             {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
             for row in match_diagnostics
         ] == diagnostic_origins
-        assert count["diagnostic_origin_census_sha256"] == hashlib.sha256(
-            canonical_bytes(diagnostic_origins)
-        ).hexdigest()
-    assert receipt["diagnostic_origin_census_sha256"] == hashlib.sha256(
-        canonical_bytes(
-            [
-                {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
-                for row in diagnostics
-            ]
+        assert (
+            count["diagnostic_origin_census_sha256"]
+            == hashlib.sha256(canonical_bytes(diagnostic_origins)).hexdigest()
         )
-    ).hexdigest()
+    assert (
+        receipt["diagnostic_origin_census_sha256"]
+        == hashlib.sha256(
+            canonical_bytes(
+                [
+                    {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
+                    for row in diagnostics
+                ]
+            )
+        ).hexdigest()
+    )
 
 
 def test_full_10hz_stream_retains_global_even_frames_and_exact_counts(
@@ -245,9 +248,7 @@ def test_full_10hz_stream_retains_global_even_frames_and_exact_counts(
 def test_raw_frame_gaps_preserve_or_block_exactly(raw_10hz_sources, raw_10hz_submission):
     full_receipt = json.loads(raw_10hz_submission.receipt_json)
     odd_gap = [
-        frame
-        for frame in _rows(raw_10hz_sources[0].tracking_jsonl)
-        if frame["frame"] != 101
+        frame for frame in _rows(raw_10hz_sources[0].tracking_jsonl) if frame["frame"] != 101
     ]
     odd_gap_submission = p.produce_population_draft_v2(
         _changed(raw_10hz_sources, odd_gap), input_kind="synthetic"
@@ -256,17 +257,16 @@ def test_raw_frame_gaps_preserve_or_block_exactly(raw_10hz_sources, raw_10hz_sub
     odd_gap_input = odd_gap_receipt["input_receipts"][0]
     assert odd_gap_input["source_frame_count"] == 85
     assert odd_gap_input["retained_sample_count"] == 43
-    assert odd_gap_input["retained_samples_sha256"] == full_receipt["input_receipts"][0][
-        "retained_samples_sha256"
-    ]
+    assert (
+        odd_gap_input["retained_samples_sha256"]
+        == full_receipt["input_receipts"][0]["retained_samples_sha256"]
+    )
     assert odd_gap_submission.manifest_json == raw_10hz_submission.manifest_json
     assert odd_gap_submission.candidates_jsonl == raw_10hz_submission.candidates_jsonl
     assert odd_gap_submission.truth_jsonl == raw_10hz_submission.truth_jsonl
 
     even_gap = [
-        frame
-        for frame in _rows(raw_10hz_sources[0].tracking_jsonl)
-        if frame["frame"] != 160
+        frame for frame in _rows(raw_10hz_sources[0].tracking_jsonl) if frame["frame"] != 160
     ]
     with pytest.raises(p.IncompletePopulationV2) as error:
         p.produce_population_draft_v2(_changed(raw_10hz_sources, even_gap), input_kind="synthetic")
@@ -292,9 +292,7 @@ def test_raw_odd_frame_integrity_errors_fail_closed(raw_10hz_sources, mutation):
         odd_frame = next(frame for frame in frames if frame["frame"] == 121)
         odd_frame["timestamp"] = "00:00:12.20"
     with pytest.raises(ValueError):
-        p.produce_population_draft_v2(
-            _changed(raw_10hz_sources, frames), input_kind="synthetic"
-        )
+        p.produce_population_draft_v2(_changed(raw_10hz_sources, frames), input_kind="synthetic")
 
 
 def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submission):
@@ -343,9 +341,10 @@ def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submissio
         receipt["candidates_jsonl_sha256"]
         == hashlib.sha256(submission.candidates_jsonl).hexdigest()
     )
-    assert receipt["diagnostic_census_jsonl_sha256"] == hashlib.sha256(
-        submission.diagnostic_census_jsonl
-    ).hexdigest()
+    assert (
+        receipt["diagnostic_census_jsonl_sha256"]
+        == hashlib.sha256(submission.diagnostic_census_jsonl).hexdigest()
+    )
     assert receipt["truth_jsonl_sha256"] == hashlib.sha256(submission.truth_jsonl).hexdigest()
     assert receipt["source_byte_qualified"] is False
     assert receipt["independent_verification"] == "NOT_PERFORMED"
@@ -442,9 +441,10 @@ def test_missing_origin_keeps_full_candidate_grid_and_fails_incomplete(sources):
         for match_id in match_ids[1:]
         for sample in (75, 76, 77)
     ]
-    assert receipt["candidate_origin_population_sha256"] == hashlib.sha256(
-        canonical_bytes(expected_origins)
-    ).hexdigest()
+    assert (
+        receipt["candidate_origin_population_sha256"]
+        == hashlib.sha256(canonical_bytes(expected_origins)).hexdigest()
+    )
     assert receipt["status"] == "INCOMPLETE"
     assert "population_manifest_sha256" not in receipt
 
@@ -460,9 +460,7 @@ def test_incomplete_support_stays_in_diagnostic_census(sources):
     assert first["diagnostic_origin_count"] == 43
     assert first["diagnostic_excluded_window_count"] == 41
     candidates = [
-        row
-        for row in _rows(result.candidates_jsonl)
-        if row["match_id"] == sources[0].match_id
+        row for row in _rows(result.candidates_jsonl) if row["match_id"] == sources[0].match_id
     ]
     diagnostics = [
         row

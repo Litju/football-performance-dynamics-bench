@@ -331,7 +331,7 @@ def produce_population_draft_v2(
                 )
                 decision = asdict(diagnostic)
                 decision_hash = _digest(decision)
-                row = {
+                row: dict[str, object] = {
                     **identity,
                     "diagnostic": decision,
                     "eligibility_result_sha256": decision_hash,
@@ -399,9 +399,7 @@ def produce_population_draft_v2(
             }
         )
     candidate_bytes = b"".join(canonical_bytes(row) + b"\n" for row in candidates)
-    diagnostic_census_bytes = b"".join(
-        canonical_bytes(row) + b"\n" for row in diagnostic_census
-    )
+    diagnostic_census_bytes = b"".join(canonical_bytes(row) + b"\n" for row in diagnostic_census)
     receipt: dict[str, object] = {
         "schema_id": "fpdbench.population-producer-receipt",
         "schema_version": "1.0.0",
