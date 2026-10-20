@@ -34,7 +34,7 @@ from .prospective_protocol import (
     PROTOCOL_V2_SHA256,
 )
 
-PRODUCER_VERSION = "res501-population-producer/1"
+PRODUCER_VERSION = "res501-population-producer/2"
 type Pair = tuple[float, float]
 type Panel = tuple[tuple[Pair | None, ...], ...]
 
@@ -93,6 +93,7 @@ class PopulationVerificationSubmissionV2:
     candidates_jsonl: bytes
     truth_jsonl: bytes
     receipt_json: bytes
+    diagnostic_census_jsonl: bytes = b""
     status: Literal["UNQUALIFIED"] = field(default="UNQUALIFIED", init=False)
 
     def require_empirical_qualification(self) -> None:
@@ -267,7 +268,9 @@ def produce_population_draft_v2(
         sample for _, match_id in roles for sample in prepared[match_id][1]
     )
     candidates: list[dict[str, object]] = []
+    diagnostic_census: list[dict[str, object]] = []
     origins: list[dict[str, str]] = []
+    diagnostic_origins: list[dict[str, str]] = []
     truths: list[dict[str, object]] = []
     matches: list[dict[str, object]] = []
     counts: list[dict[str, object]] = []
@@ -275,15 +278,20 @@ def produce_population_draft_v2(
         metadata, samples, phases, periods = prepared[match_id]
         indexed = {cast(int, sample["source_frame"]): sample for sample in samples}
         windows: list[dict[str, object]] = []
-        candidate_count = scoreable_windows = scoreable_scenes = 0
-        exclusions: dict[str, int] = {}
-        warnings: dict[str, int] = {}
+        candidate_origins: list[dict[str, str]] = []
+        match_diagnostic_origins: list[dict[str, str]] = []
+        candidate_count = diagnostic_count = scoreable_windows = scoreable_scenes = 0
+        candidate_exclusions: dict[str, int] = {}
+        candidate_warnings: dict[str, int] = {}
+        diagnostic_exclusions: dict[str, int] = {}
+        diagnostic_warnings: dict[str, int] = {}
         for period, (start, end) in sorted(periods.items()):
             for frame in range(start + start % 2, end, 2):
                 origin_id = f"period_{period}/sample_{frame // 2}"
                 identity = {"match_id": match_id, "origin_sample_id": origin_id}
-                origins.append(identity)
-                candidate_count += 1
+                diagnostic_origins.append(identity)
+                match_diagnostic_origins.append(identity)
+                diagnostic_count += 1
                 support = tuple(indexed.get(frame + offset * 2) for offset in range(-25, 16))
                 diagnostic = diagnose_skillcorner_window_v2(
                     support,
@@ -294,16 +302,33 @@ def produce_population_draft_v2(
                 )
                 decision = asdict(diagnostic)
                 decision_hash = _digest(decision)
-                candidates.append(
-                    {**identity, "diagnostic": decision, "eligibility_result_sha256": decision_hash}
-                )
+                row = {
+                    **identity,
+                    "diagnostic": decision,
+                    "eligibility_result_sha256": decision_hash,
+                }
+                diagnostic_census.append(row)
                 for issues, totals in (
-                    (diagnostic.exclusion_reasons, exclusions),
-                    (diagnostic.warnings, warnings),
+                    (diagnostic.exclusion_reasons, diagnostic_exclusions),
+                    (diagnostic.warnings, diagnostic_warnings),
                 ):
                     for code in {issue.code for issue in issues}:
                         totals[code] = totals.get(code, 0) + 1
-                if not diagnostic.candidate_rules_pass:
+                complete_support = indexed.get(frame) is not None and all(
+                    sample is not None for sample in support
+                )
+                if complete_support:
+                    origins.append(identity)
+                    candidate_origins.append(identity)
+                    candidate_count += 1
+                    candidates.append(row)
+                    for issues, totals in (
+                        (diagnostic.exclusion_reasons, candidate_exclusions),
+                        (diagnostic.warnings, candidate_warnings),
+                    ):
+                        for code in {issue.code for issue in issues}:
+                            totals[code] = totals.get(code, 0) + 1
+                if not complete_support or not diagnostic.candidate_rules_pass:
                     continue
                 window_id = prospective_window_id_v2(match_id, origin_id)
                 scenes: list[dict[str, object]] = []
@@ -328,16 +353,26 @@ def produce_population_draft_v2(
             {
                 "role": role,
                 "match_id": match_id,
+                "candidate_origin_population_sha256": _digest(candidate_origins),
                 "candidate_window_count": candidate_count,
                 "eligible_window_count": len(windows),
                 "excluded_window_count": candidate_count - len(windows),
+                "diagnostic_origin_count": diagnostic_count,
+                "diagnostic_origin_census_sha256": _digest(match_diagnostic_origins),
+                "diagnostic_excluded_window_count": diagnostic_count - len(windows),
                 "directed_scene_count": len(windows) * 2,
                 "scoreable_scene_count": scoreable_scenes,
                 "scoreable_window_count": scoreable_windows,
-                "exclusion_window_counts": exclusions,
-                "warning_window_counts": warnings,
+                "exclusion_window_counts": candidate_exclusions,
+                "warning_window_counts": candidate_warnings,
+                "diagnostic_exclusion_window_counts": diagnostic_exclusions,
+                "diagnostic_warning_window_counts": diagnostic_warnings,
             }
         )
+    candidate_bytes = b"".join(canonical_bytes(row) + b"\n" for row in candidates)
+    diagnostic_census_bytes = b"".join(
+        canonical_bytes(row) + b"\n" for row in diagnostic_census
+    )
     receipt: dict[str, object] = {
         "schema_id": "fpdbench.population-producer-receipt",
         "schema_version": "1.0.0",
@@ -357,6 +392,11 @@ def produce_population_draft_v2(
         "independent_verification": "NOT_PERFORMED",
         "input_receipts": input_receipts,
         "match_counts": counts,
+        "candidate_origin_population_sha256": _digest(origins),
+        "diagnostic_origin_census_count": len(diagnostic_origins),
+        "diagnostic_origin_census_sha256": _digest(diagnostic_origins),
+        "candidates_jsonl_sha256": _sha(candidate_bytes),
+        "diagnostic_census_jsonl_sha256": _sha(diagnostic_census_bytes),
         "drift_scan": asdict(scan),
     }
     if any(cast(int, count["scoreable_window_count"]) == 0 for count in counts):
@@ -384,7 +424,7 @@ def produce_population_draft_v2(
         "plan_version": "2.0.0",
         "plan_sha256": PLAN_V2_SHA256,
         "ball_null_flag_finite_xy_count": 0,
-        "candidate_window_count": len(candidates),
+        "candidate_window_count": len(origins),
         "eligible_window_count": sum(cast(int, count["eligible_window_count"]) for count in counts),
         "candidate_origin_population_sha256": _digest(origins),
         "matches": matches,
@@ -392,11 +432,9 @@ def produce_population_draft_v2(
     }
     manifest["manifest_sha256"] = _digest(manifest)
     validate_evaluation_population_authority_v2_document(manifest)
-    candidate_bytes = b"".join(canonical_bytes(row) + b"\n" for row in candidates)
     truth_bytes = b"".join(canonical_bytes(row) + b"\n" for row in truths)
     receipt.update(
         population_manifest_sha256=manifest["manifest_sha256"],
-        candidates_jsonl_sha256=_sha(candidate_bytes),
         truth_jsonl_sha256=_sha(truth_bytes),
     )
     receipt["receipt_sha256"] = _digest(receipt)
@@ -405,4 +443,5 @@ def produce_population_draft_v2(
         candidate_bytes,
         truth_bytes,
         canonical_bytes(receipt),
+        diagnostic_census_bytes,
     )

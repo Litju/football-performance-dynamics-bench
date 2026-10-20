@@ -106,19 +106,20 @@ def submission(sources):
 def test_complete_census_and_canonical_order(sources, submission):
     manifest = json.loads(submission.manifest_json)
     receipt = json.loads(submission.receipt_json)
-    assert manifest["candidate_window_count"] == 20 * 43
+    assert manifest["candidate_window_count"] == 20 * 3
     assert manifest["eligible_window_count"] == 20 * 3
     roles = plan.protocol_split_v2()["roles"]
-    assert [match["match_id"] for match in manifest["matches"]] == [
-        match_id for ids in roles.values() for match_id in ids
-    ]
+    match_ids = [match_id for ids in roles.values() for match_id in ids]
+    assert [match["match_id"] for match in manifest["matches"]] == match_ids
     assert [count["role"] for count in receipt["match_counts"]].count("training") == 12
     assert [count["role"] for count in receipt["match_counts"]].count("validation") == 4
     assert [count["role"] for count in receipt["match_counts"]].count("evaluation") == 4
     for count in receipt["match_counts"]:
-        assert count["candidate_window_count"] == 43
+        assert count["candidate_window_count"] == 3
         assert count["eligible_window_count"] == count["scoreable_window_count"] == 3
-        assert count["excluded_window_count"] == 40
+        assert count["excluded_window_count"] == 0
+        assert count["diagnostic_origin_count"] == 43
+        assert count["diagnostic_excluded_window_count"] == 40
         assert count["scoreable_scene_count"] == count["directed_scene_count"] == 6
     for match in manifest["matches"]:
         assert [w["origin_sample_id"] for w in match["windows"]] == [
@@ -131,10 +132,60 @@ def test_complete_census_and_canonical_order(sources, submission):
     )
     assert reversed_submission == submission
     candidates = _rows(submission.candidates_jsonl)
-    assert candidates[0]["origin_sample_id"] == "period_1/sample_50"
-    assert candidates[42]["origin_sample_id"] == "period_1/sample_92"
-    assert not candidates[0]["diagnostic"]["candidate_rules_pass"]
-    assert not candidates[42]["diagnostic"]["candidate_rules_pass"]
+    diagnostics = _rows(submission.diagnostic_census_jsonl)
+    assert len(candidates) == manifest["candidate_window_count"] == 60
+    assert len(diagnostics) == receipt["diagnostic_origin_census_count"] == 20 * 43
+    assert [row["origin_sample_id"] for row in candidates[:3]] == [
+        "period_1/sample_75",
+        "period_1/sample_76",
+        "period_1/sample_77",
+    ]
+    assert [row["origin_sample_id"] for row in diagnostics[:43]][::42] == [
+        "period_1/sample_50",
+        "period_1/sample_92",
+    ]
+    assert not diagnostics[0]["diagnostic"]["candidate_rules_pass"]
+    assert not diagnostics[42]["diagnostic"]["candidate_rules_pass"]
+    expected_origins = [
+        {"match_id": match_id, "origin_sample_id": f"period_1/sample_{sample}"}
+        for match_id in match_ids
+        for sample in (75, 76, 77)
+    ]
+    actual_origins = [
+        {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
+        for row in candidates
+    ]
+    assert actual_origins == expected_origins
+    digest = hashlib.sha256(canonical_bytes(expected_origins)).hexdigest()
+    assert manifest["candidate_origin_population_sha256"] == digest
+    assert receipt["candidate_origin_population_sha256"] == digest
+    for count, match_id in zip(receipt["match_counts"], match_ids, strict=True):
+        match_origins = [origin for origin in expected_origins if origin["match_id"] == match_id]
+        assert count["candidate_origin_population_sha256"] == hashlib.sha256(
+            canonical_bytes(match_origins)
+        ).hexdigest()
+        match_diagnostics = [
+            row for row in diagnostics if row["match_id"] == match_id
+        ]
+        diagnostic_origins = [
+            {"match_id": match_id, "origin_sample_id": f"period_1/sample_{sample}"}
+            for sample in range(50, 93)
+        ]
+        assert [
+            {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
+            for row in match_diagnostics
+        ] == diagnostic_origins
+        assert count["diagnostic_origin_census_sha256"] == hashlib.sha256(
+            canonical_bytes(diagnostic_origins)
+        ).hexdigest()
+    assert receipt["diagnostic_origin_census_sha256"] == hashlib.sha256(
+        canonical_bytes(
+            [
+                {"match_id": row["match_id"], "origin_sample_id": row["origin_sample_id"]}
+                for row in diagnostics
+            ]
+        )
+    ).hexdigest()
 
 
 def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submission):
@@ -183,6 +234,9 @@ def test_nonzero_physical_truth_fixed_panels_common_masks_and_bindings(submissio
         receipt["candidates_jsonl_sha256"]
         == hashlib.sha256(submission.candidates_jsonl).hexdigest()
     )
+    assert receipt["diagnostic_census_jsonl_sha256"] == hashlib.sha256(
+        submission.diagnostic_census_jsonl
+    ).hexdigest()
     assert receipt["truth_jsonl_sha256"] == hashlib.sha256(submission.truth_jsonl).hexdigest()
     assert receipt["source_byte_qualified"] is False
     assert receipt["independent_verification"] == "NOT_PERFORMED"
@@ -203,7 +257,7 @@ def test_exact_39_of_41_coverage(sources, missing, eligible):
     result = p.produce_population_draft_v2(_changed(sources, frames), input_kind="synthetic")
     receipt = json.loads(result.receipt_json)
     assert receipt["match_counts"][0]["eligible_window_count"] == eligible
-    decision = _rows(result.candidates_jsonl)[25]["diagnostic"]
+    decision = _rows(result.diagnostic_census_jsonl)[25]["diagnostic"]
     assert decision["candidate_rules_pass"] == (missing == 2)
     assert decision["quality"]["ball_observations"]["valid_position_count"] == 41 - missing
 
@@ -213,7 +267,7 @@ def test_null_origin_excludes_without_dropping_other_candidates(sources):
     frames[25]["ball_data"] = {"x": None, "y": None, "z": None, "is_detected": None}
     result = p.produce_population_draft_v2(_changed(sources, frames), input_kind="synthetic")
     assert json.loads(result.receipt_json)["match_counts"][0]["eligible_window_count"] == 2
-    first = _rows(result.candidates_jsonl)[25]["diagnostic"]
+    first = _rows(result.diagnostic_census_jsonl)[25]["diagnostic"]
     assert "BALL_MISSING_AT_ORIGIN" in {r["code"] for r in first["exclusion_reasons"]}
 
 
@@ -239,11 +293,51 @@ def test_missing_origin_keeps_full_candidate_grid_and_fails_incomplete(sources):
         p.produce_population_draft_v2(_changed(sources, frames), input_kind="synthetic")
     receipt = json.loads(error.value.receipt_json)
     first = receipt["match_counts"][0]
-    assert first["candidate_window_count"] == 43
+    assert first["candidate_window_count"] == 0
+    assert first["diagnostic_origin_count"] == 43
     assert first["eligible_window_count"] == first["scoreable_window_count"] == 0
-    assert first["exclusion_window_counts"]["TEMPORAL_GAP"] > 0
+    assert first["exclusion_window_counts"] == {}
+    assert first["diagnostic_exclusion_window_counts"]["TEMPORAL_GAP"] > 0
+    assert receipt["diagnostic_origin_census_count"] == 20 * 43
+    match_ids = [match_id for ids in plan.protocol_split_v2()["roles"].values() for match_id in ids]
+    expected_origins = [
+        {"match_id": match_id, "origin_sample_id": f"period_1/sample_{sample}"}
+        for match_id in match_ids[1:]
+        for sample in (75, 76, 77)
+    ]
+    assert receipt["candidate_origin_population_sha256"] == hashlib.sha256(
+        canonical_bytes(expected_origins)
+    ).hexdigest()
     assert receipt["status"] == "INCOMPLETE"
     assert "population_manifest_sha256" not in receipt
+
+
+def test_incomplete_support_stays_in_diagnostic_census(sources):
+    frames = _rows(sources[0].tracking_jsonl)
+    del frames[0]
+    result = p.produce_population_draft_v2(_changed(sources, frames), input_kind="synthetic")
+    receipt = json.loads(result.receipt_json)
+    first = receipt["match_counts"][0]
+    assert first["candidate_window_count"] == 2
+    assert first["eligible_window_count"] == 2
+    assert first["diagnostic_origin_count"] == 43
+    assert first["diagnostic_excluded_window_count"] == 41
+    candidates = [
+        row
+        for row in _rows(result.candidates_jsonl)
+        if row["match_id"] == sources[0].match_id
+    ]
+    diagnostics = [
+        row
+        for row in _rows(result.diagnostic_census_jsonl)
+        if row["match_id"] == sources[0].match_id
+    ]
+    assert [row["origin_sample_id"] for row in candidates] == [
+        "period_1/sample_76",
+        "period_1/sample_77",
+    ]
+    assert diagnostics[0]["origin_sample_id"] == "period_1/sample_50"
+    assert not diagnostics[0]["diagnostic"]["candidate_rules_pass"]
 
 
 def test_partial_truth_false_detection_and_no_future_entrant(sources):
@@ -385,4 +479,6 @@ def test_two_periods_enumerated_without_cross_period_eligible_windows(sources):
         "period_2/sample_176",
         "period_2/sample_177",
     ]
-    assert json.loads(result.receipt_json)["match_counts"][0]["candidate_window_count"] == 86
+    first_count = json.loads(result.receipt_json)["match_counts"][0]
+    assert first_count["candidate_window_count"] == 6
+    assert first_count["diagnostic_origin_count"] == 86

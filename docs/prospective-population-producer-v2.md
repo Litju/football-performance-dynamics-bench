@@ -131,19 +131,32 @@ boundary is deliberately explicit: this is **not** byte-qualified source CSV.
 The future authorized adapter must independently bind normalization to the exact
 pinned phase CSV and account for index/events files, even when unused as features.
 
-The frozen `PopulationVerificationSubmissionV2` contains four byte payloads:
+The frozen `PopulationVerificationSubmissionV2` contains five byte payloads:
 
 | Field | Canonical content / verification responsibility |
 | --- | --- |
 | manifest_json | Existing population 2.0.0 schema; structural validation only |
-| candidates_jsonl | One row per candidate in canonical order: match_id, origin_sample_id, complete public diagnostic, canonical diagnostic SHA-256 |
+| candidates_jsonl | One row per protocol candidate, ordered by split role, match, numeric period and sample; each row includes its complete public diagnostic and SHA-256 |
+| diagnostic_census_jsonl | One row for every even metadata-period grid slot, including missing origins and incomplete support, in the same canonical order |
 | truth_jsonl | One row per retained window/scene: identity, origin player IDs/XY, both 15-slot truth panels, common Boolean mask, representation digests, scoreability and NO_FINAL_TARGET reason |
-| receipt_json | Versioned input SHA-256/size snapshots, canonical retained-sample digest/count, producer code digest/version, full source-wide scan counts, per-match accounting and output digests |
+| receipt_json | Versioned input SHA-256/size snapshots, retained-sample digests/counts, candidate and diagnostic census counts/digests, producer dependency fingerprint, full source-wide scan counts and output digests |
+
+The frozen protocol defines origin candidates as canonical 5 Hz samples with
+complete 41-sample support. We apply that wording directly: a candidate must
+have an observed origin and all 41 expected canonical sample positions must be
+present. Eligibility is evaluated after this population is formed. A metadata
+grid slot with no observed origin or incomplete support remains in the
+diagnostic census and is not assigned candidate membership. The census keeps
+the grid identity (period and canonical sample index) for those diagnostic-only
+slots. No frozen authority JSON or scientific eligibility rule changed.
 
 All serialized objects use existing sorted-key compact UTF-8 canonical JSON.
 JSONL has one LF after **every** row. `candidate_origin_population_sha256`
-hashes the canonical JSON array of every {match_id, origin_sample_id}, including
-excluded and missing-origin candidates. `eligibility_result_sha256` hashes
+hashes the canonical JSON array of exactly the protocol candidate
+{match_id, origin_sample_id} identities, including candidates excluded by
+eligibility but excluding diagnostic-only grid slots without a complete
+observed support. The receipt separately binds the full diagnostic census
+count, ordered identities and JSONL bytes. `eligibility_result_sha256` hashes
 the complete dataclass diagnostic, including UNQUALIFIED status. Existing
 representation-tagged truth and mask hash functions specify the wire hashes;
 their legacy serialization version labels remain unchanged. Input snapshots
