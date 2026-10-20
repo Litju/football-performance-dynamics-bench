@@ -861,9 +861,7 @@ def _parse_match(source: MatchSourceBytesV2) -> MatchContext:
                 "possession": possession_value,
             }
         )
-    retained_samples_sha256 = _digest_bytes(
-        b"".join(canonical_bytes(row) + b"\n" for row in retained_rows)
-    )
+    retained_samples_sha256 = _digest(retained_rows)
     return MatchContext(
         source.match_id,
         home_id,

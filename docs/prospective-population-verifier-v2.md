@@ -36,6 +36,8 @@ UTF-8, non-finite numbers, malformed timestamps, duplicate/non-monotonic source
 frames, invalid ball objects, and missing required source fields. Sampling selects
 absolute even source frames only and assigns `canonical_sample_index = frame // 2`;
 period changes do not reset parity or the canonical index.
+Each match's retained-sample digest is SHA-256 over the canonical compact JSON
+array of its independently reconstructed retained sample records in source order.
 
 The complete diagnostic census enumerates every even source-frame grid slot in
 each half-open metadata period. Protocol candidates are the subset with an observed
