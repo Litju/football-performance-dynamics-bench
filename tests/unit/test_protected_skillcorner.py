@@ -440,6 +440,50 @@ def test_system_trust_filesystem_probe_uses_open_directory_descriptor(monkeypatc
         assert seen == [os.fstat(fd).st_ino]
 
 
+@pytest.mark.parametrize(
+    "entry_kind",
+    ["file_symlink", "directory_symlink", "dangling_symlink", "fifo", "native_binary"],
+)
+def test_adapter_inventory_rejects_unreviewed_package_entries(
+    monkeypatch, tmp_path, entry_kind
+):
+    package_root = tmp_path / "mock-fpdbench"
+    module_path = package_root / "data_sources" / "protected_skillcorner.py"
+    module_path.parent.mkdir(parents=True)
+    module_path.write_text("# synthetic installed source\\n", encoding="utf-8")
+    monkeypatch.setattr(adapter, "__file__", str(module_path))
+    baseline = adapter.installed_adapter_inventory()
+    assert [entry["path"] for entry in baseline] == ["data_sources/protected_skillcorner.py"]
+    if entry_kind == "file_symlink":
+        (package_root / "injected.py").symlink_to(module_path)
+    elif entry_kind == "directory_symlink":
+        (package_root / "linked_sources").symlink_to(module_path.parent, target_is_directory=True)
+    elif entry_kind == "dangling_symlink":
+        (package_root / "missing.json").symlink_to(package_root / "absent.json")
+    elif entry_kind == "fifo":
+        os.mkfifo(package_root / "unexpected", 0o600)
+    else:
+        (package_root / "unreviewed.so").write_bytes(b"synthetic")
+    with pytest.raises(ValueError, match="unreviewed installed package"):
+        adapter.installed_adapter_inventory()
+
+
+def test_adapter_inventory_includes_new_python_sources(monkeypatch, tmp_path):
+    package_root = tmp_path / "mock-fpdbench"
+    module_path = package_root / "data_sources" / "protected_skillcorner.py"
+    module_path.parent.mkdir(parents=True)
+    module_path.write_text("# synthetic source\\n", encoding="utf-8")
+    monkeypatch.setattr(adapter, "__file__", str(module_path))
+    original = adapter._inventory_digest(adapter.installed_adapter_inventory())
+    (package_root / "unexpected.py").write_text("# unreviewed\\n", encoding="utf-8")
+    updated = adapter.installed_adapter_inventory()
+    assert {entry["path"] for entry in updated} == {
+        "data_sources/protected_skillcorner.py",
+        "unexpected.py",
+    }
+    assert adapter._inventory_digest(updated) != original
+
+
 def test_trusted_policy_is_required(monkeypatch, tmp_path):
     monkeypatch.setattr(adapter, "TRUST_DIRECTORY", tmp_path / "missing")
     with pytest.raises(ValueError, match="policy"):

@@ -24,6 +24,13 @@ Its files are:
 | `policy.sig` | SSH detached signature of the exact policy bytes in namespace `fpdbench-res544-trust-policy-v1` |
 | `reviewer.allowed_signers` | Reviewer public key(s), with the exact file digest pinned by the signed policy |
 
+The adapter inventory is traversed through no-follow Linux directory descriptors:
+unexpected symlinks, non-regular entries and native compiled executables fail
+closed instead of being silently excluded from the reviewed digest. Generated
+bytecode, installed dependencies and the eventual protected worker interpreters
+require distinct runtime/environment attestation before real-source execution;
+the Python/JSON source inventory alone does not authenticate those runtimes.
+
 The signed policy pins the installed adapter inventory, reviewer principal and
 receipt namespace, the PR #20 producer revision and 79-file inventory, the PR #21
 verifier revision and 79-file inventory, the 81-file/20-LFS source authority, and
