@@ -1,9 +1,9 @@
-# RES-501 protected source adapter — synthetic delivery
+# protected-population workstream protected source adapter — synthetic delivery
 
 Status: **READY_FOR_INDEPENDENT_SOURCE_ADAPTER_REVIEW / NOT_QUALIFIED**.
 This implements source preparation, not protected population execution. No real
 SkillCorner files were opened, acquired, normalized or qualified for this delivery.
-No population qualification token is created. RES-339 remains blocked.
+No population qualification token is created. empirical execution remains blocked.
 
 ## Integration preflight
 
@@ -26,7 +26,7 @@ Rehearsed #18 → #19 → #20 → #21 from official main
 `986e54f`. No merge conflicts; inspected the automatic wheel-smoke combination
 and retained both producer and independent verifier checks. Existing PRs, refs,
 thread states and main were not changed. The new draft targets a separate
-`codex/res-501-integration-rehearsal` branch at this rehearsal commit so the adapter
+the integration rehearsal branch at this rehearsal commit so the adapter
 has a focused review diff. That base is an integration experiment, not approved main.
 
 Main branch protection was inspected: strict `quality` and
@@ -178,4 +178,4 @@ repository validation, evidence validation, reproducibility and isolated
 wheel/sdist smoke. Evidence remains 232 references / 63 digests; snapshot remains
 `a22f93f11cf428b7f326a93714fbcc798c99e5d0dbcab5122edb48d050b4a873`.
 Final test counts, exact delivery HEAD and exact-head CI links are recorded in the
-draft PR and RES-501 handoff comment.
+draft PR and protected-population workstream handoff comment.
