@@ -118,6 +118,26 @@ def _git_environment() -> dict[str, str]:
     return env
 
 
+def _filesystem_type(directory_fd: int) -> str:
+    """Identify the filesystem of an opened directory, not a replaceable path."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/stat", "-f", "-c", "%T", f"/proc/self/fd/{directory_fd}"],
+            pass_fds=(directory_fd,),
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=10,
+            env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raise ValueError("cannot establish protected filesystem provenance") from None
+    filesystem = result.stdout.strip()
+    if not filesystem:
+        raise ValueError("cannot establish protected filesystem provenance")
+    return filesystem
+
+
 @contextmanager
 def private_directory(path: Path) -> Generator[int]:
     """PR #16's boundary, strengthened with component-wise no-follow directory FDs."""
@@ -140,15 +160,8 @@ def private_directory(path: Path) -> Generator[int]:
             else:
                 raise ValueError("storage is inside a Git worktree")
         _check_directory(fd, private=True)
-        # Reject Windows/network filesystems even when mounted outside /mnt.
-        filesystem = subprocess.run(
-            ["stat", "-f", "-c", "%T", f"/proc/self/fd/{fd}"],
-            pass_fds=(fd,),
-            capture_output=True,
-            check=True,
-            text=True,
-        ).stdout.strip()
-        if filesystem not in {"ext2/ext3", "btrfs", "xfs", "tmpfs", "overlayfs"}:
+        # Reject Windows/network backing filesystems even through bind mounts.
+        if _filesystem_type(fd) not in {"ext2/ext3", "btrfs", "xfs", "tmpfs", "overlayfs"}:
             raise ValueError("unsupported protected-storage filesystem")
         git = subprocess.run(
             ["git", "-C", f"/proc/self/fd/{fd}", "rev-parse", "--is-inside-work-tree"],
@@ -549,6 +562,10 @@ def _trusted_directory() -> Generator[int]:
                 raise ValueError("system trust directory is inside a Git worktree")
         if not path.parts[1:]:
             raise ValueError("system trust directory must not be root")
+        # A signed root policy is trustworthy only on a locally managed Linux FS.
+        # Exclude overlay/Windows/network/FUSE mounts, even behind an /etc bind mount.
+        if _filesystem_type(fd) not in {"ext2/ext3", "btrfs", "xfs", "tmpfs"}:
+            raise ValueError("unsupported protected trust filesystem")
         yield fd
     finally:
         os.close(fd)

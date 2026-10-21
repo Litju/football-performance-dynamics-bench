@@ -412,6 +412,34 @@ def test_independent_signature_and_provenance(snapshot, tmp_path, monkeypatch):
         adapter.authenticate_receipt(receipt, sign(rotated_key, receipt))
 
 
+@pytest.mark.parametrize("filesystem", ["9p", "drvfs", "cifs", "nfs", "fuseblk", "overlayfs"])
+def test_system_trust_rejects_untrusted_backing_filesystems(monkeypatch, tmp_path, filesystem):
+    trust = tmp_path / "system-trust"
+    trust.mkdir(mode=0o755)
+    monkeypatch.setattr(adapter, "TRUST_DIRECTORY", trust)
+    monkeypatch.setattr(adapter, "TRUST_OWNER_UID", os.getuid())
+    monkeypatch.setattr(adapter, "_filesystem_type", lambda _fd: filesystem)
+    with pytest.raises(ValueError, match="unsupported protected trust filesystem"):
+        with adapter._trusted_directory():
+            pytest.fail("untrusted backing filesystem was accepted")
+
+
+def test_system_trust_filesystem_probe_uses_open_directory_descriptor(monkeypatch, tmp_path):
+    trust = tmp_path / "system-trust"
+    trust.mkdir(mode=0o755)
+    monkeypatch.setattr(adapter, "TRUST_DIRECTORY", trust)
+    monkeypatch.setattr(adapter, "TRUST_OWNER_UID", os.getuid())
+    seen = []
+
+    def check_opened_fd(fd):
+        seen.append(os.fstat(fd).st_ino)
+        return "ext2/ext3"
+
+    monkeypatch.setattr(adapter, "_filesystem_type", check_opened_fd)
+    with adapter._trusted_directory() as fd:
+        assert seen == [os.fstat(fd).st_ino]
+
+
 def test_trusted_policy_is_required(monkeypatch, tmp_path):
     monkeypatch.setattr(adapter, "TRUST_DIRECTORY", tmp_path / "missing")
     with pytest.raises(ValueError, match="policy"):

@@ -11,6 +11,10 @@ Production receipt authentication reads a fixed bundle from
 `/etc/fpdbench/protected-executor`; callers cannot supply expected hashes,
 allowed-signers files, signer identities, or package pins. The directory and its
 files must be root-owned, outside every Git worktree, and not group/other writable.
+The opened trust-directory descriptor must also report a local Linux ext/btrfs/xfs
+or tmpfs backing filesystem; Windows/9p, network, FUSE, and overlay mounts are
+rejected even when bind-mounted beneath /etc. The check uses the opened directory
+descriptor rather than trusting its pathname or reported owner alone.
 Its files are:
 
 | File | Authority |
