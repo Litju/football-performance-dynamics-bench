@@ -107,8 +107,8 @@ Sequence: deliberate integration of #18's scientific provenance first; then chec
 #19 against the resulting main, rerun integration CI, review and seek authorized
 integration. Both remain DRAFT/unmerged. #16/#17 are a separate diagnostic/audit
 stack: #16 precedes #17; after authorized #16 integration inspect #17's new base
-and rerun CI/review. Their historical POSIX storage gate is not a Windows receipt
-writer and must not be reused as one. The new producer branch is stacked directly
+and rerun CI/review. Their historical POSIX storage gate requires independent assessment before reuse
+in the WSL/Linux v2 adapter; its frozen v1 canonicalizer must not be reused. The new producer branch is stacked directly
 on reviewed #19, excludes #16/#17/#18, and must be reviewed against that base.
 
 Sources: [Linear issue 501](https://linear.app/alignerr-cmj/issue/fe554f95-1ae8-406c-9dd7-a73d91711e51),
@@ -225,7 +225,7 @@ and a fully rehashed fabricated receipt/membership. Last cases must still fail
 independent source comparison even when structural validators accept them.
 
 Before authorized real qualification: integrate/review #18 then #19 deliberately,
-review this producer, separately implement/review the verifier, add a Windows-native
-restricted-storage/ACL and immutable write adapter, verify all pinned source bytes
+review this producer, separately implement/review the verifier, add a WSL/Linux
+restricted-storage adapter with owned 0700 directories and exclusive 0600 receipts, verify all pinned source bytes
 and LFS payloads, obtain explicit real-source execution authorization, and reconcile
 both exhaustive runs. Publish only approved non-reconstructive closeout aggregates.

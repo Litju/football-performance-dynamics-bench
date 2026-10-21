@@ -137,9 +137,9 @@ only for wire serialization.
 The fixtures use synthetic numbers only. The normalized phase bytes are the
 producer's documented synthetic interface, not byte-qualified source CSV. This
 module does not authenticate the 81 pinned files or LFS payloads, prove real-source
-coverage, check data rights or Windows ACLs, write restricted receipts, or accept
+coverage, check data rights or Linux/POSIX storage controls, write restricted receipts, or accept
 a protected attestation. It must not be used to qualify real data. A separate
-Windows-native protected adapter, independent source-byte verification, owner
+WSL/Linux protected adapter, independent source-byte verification, owner
 authorization, protected receipt authentication, and subsequent scientific and
 repository reviews remain required by the active protected-population acceptance
 task.
