@@ -444,9 +444,7 @@ def test_system_trust_filesystem_probe_uses_open_directory_descriptor(monkeypatc
     "entry_kind",
     ["file_symlink", "directory_symlink", "dangling_symlink", "fifo", "native_binary"],
 )
-def test_adapter_inventory_rejects_unreviewed_package_entries(
-    monkeypatch, tmp_path, entry_kind
-):
+def test_adapter_inventory_rejects_unreviewed_package_entries(monkeypatch, tmp_path, entry_kind):
     package_root = tmp_path / "mock-fpdbench"
     module_path = package_root / "data_sources" / "protected_skillcorner.py"
     module_path.parent.mkdir(parents=True)
