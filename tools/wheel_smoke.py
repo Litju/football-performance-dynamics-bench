@@ -232,6 +232,17 @@ independent_audit = independent_population_verifier_v2.derive_synthetic_populati
 assert independent_audit.status == "INVALID_INPUT"
 assert independent_audit.qualification_status == "NOT_QUALIFIED"
 assert independent_audit.authoritative is False
+assert not independent_population_verifier_v2._producer_fingerprint_is_verified(
+    independent_population_verifier_v2.PRODUCER_REVISION, fingerprint
+)
+from fpdbench.data_sources import protected_skillcorner as protected
+assert protected._authority()["upstream"]["pinned_commit"] == protected.REVISION
+assert len(protected._records(protected._authority())) == 81
+assert protected.normalize_phases(
+    b"frame_start,frame_end\\n100,186\\n",
+    {{"match_periods": [{{"period": 1, "start_frame": 100, "end_frame": 186}}]}},
+) == b'[{{"frame_end":186,"frame_start":100,"period":1}}]'
+
 versioned_files = (
     "data_states/skillcorner_5hz_v2.json",
     "eligibility/skillcorner_window_v2.json",
