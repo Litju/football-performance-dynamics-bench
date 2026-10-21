@@ -12,6 +12,10 @@ from pathlib import Path
 
 PRODUCER = "6644dba8c945ca86be72b54792db30cbe488e5d0"
 VERIFIER = "ef1a22583cdd52bb63509a13bfc480a313ea69d4"
+PACKAGE_INVENTORIES = {
+    "producer": "153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4",
+    "verifier": "c61851dd0b930694a960d8cf79046258ea92a8c2cc19db60d33fdbb12f4b6b09",
+}
 REPO = Path(__file__).resolve().parents[1]
 WORKER = """
 import dataclasses, hashlib, json, pathlib, sys
@@ -20,6 +24,21 @@ kind = sys.argv[2]
 module = "population_producer_v2" if kind == "producer" else "independent_population_verifier_v2"
 import importlib
 m = importlib.import_module("fpdbench.benchmarks.conditional_multi_agent_motion_prediction."+module)
+package_root = pathlib.Path(m.__file__).resolve().parents[2]
+files = [{"path":p.relative_to(package_root).as_posix(),
+          "sha256":hashlib.sha256(p.read_bytes()).hexdigest()}
+         for p in sorted(package_root.rglob("*"))
+         if p.is_file() and p.suffix in (".py", ".json")]
+fingerprint = {"schema_id":"fpdbench.production-package-fingerprint",
+               "schema_version":"1.0.0", "package":"fpdbench",
+               "hash_algorithm":"sha256", "files":files}
+fingerprint["sha256"] = hashlib.sha256(json.dumps(
+    fingerprint, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+expected_inventory = {
+    "producer":"153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4",
+    "verifier":"c61851dd0b930694a960d8cf79046258ea92a8c2cc19db60d33fdbb12f4b6b09",
+}[kind]
+assert fingerprint["sha256"] == expected_inventory, "isolated package inventory drift"
 fields = ("metadata_json", "tracking_jsonl", "phase_intervals_json")
 inputs = [dict(match_id=r["match_id"], **{f:r[f].encode() for f in fields})
           for r in json.loads((root/"inputs.json").read_bytes())]
@@ -77,6 +96,36 @@ def main() -> None:
             checkout.mkdir()
             with tarfile.open(archive) as source:
                 source.extractall(checkout, filter="data")
+            paths = sorted(
+                (
+                    path
+                    for path in (checkout / "src/fpdbench").rglob("*")
+                    if path.is_file() and path.suffix in {".py", ".json"}
+                ),
+                key=lambda path: path.relative_to(checkout / "src/fpdbench").as_posix(),
+            )
+            inventory = [
+                {
+                    "path": path.relative_to(checkout / "src/fpdbench").as_posix(),
+                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                }
+                for path in paths
+            ]
+            package = {
+                "schema_id": "fpdbench.production-package-fingerprint",
+                "schema_version": "1.0.0",
+                "package": "fpdbench",
+                "hash_algorithm": "sha256",
+                "files": inventory,
+            }
+            inventory_digest = hashlib.sha256(
+                json.dumps(
+                    package, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ).encode()
+            ).hexdigest()
+            assert inventory_digest == PACKAGE_INVENTORIES[kind], (
+                f"{kind} source package inventory drift"
+            )
             subprocess.run(["uv", "build", "--wheel", str(checkout)], check=True)
             wheel = next((checkout / "dist").glob("*.whl"))
             environment = root / f"{kind}-venv"

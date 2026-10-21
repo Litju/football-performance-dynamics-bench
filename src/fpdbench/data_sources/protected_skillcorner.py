@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import csv
 import hashlib
 import io
@@ -18,6 +19,16 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import BinaryIO, cast
 
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    empirical_experiment_plan as experiment_plan,
+)
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
+    EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+    EXPECTED_MEASUREMENT_STATE_V2_HASH,
+    EXPECTED_SOURCE_POPULATION_HASH,
+    EXPECTED_SOURCE_RELEASE_HASH,
+    PROTOCOL_V2_SHA256,
+)
 from fpdbench.data_sources.skillcorner import (
     MANIFEST_PATH,
     canonical_bytes,
@@ -35,9 +46,23 @@ MANIFEST_SHA256 = "938cded522ee08f5de539976752fde51b2e858709574f3f63380bd72dd1af
 SCHEMA = "fpdbench.protected-source-preflight"
 VERSION = "1.0.0"
 NAMESPACE = "fpdbench-res501-source-v1"
+TRUST_DIRECTORY = Path("/etc/fpdbench/protected-executor")
+TRUST_OWNER_UID = 0
+TRUST_POLICY_NAMESPACE = "fpdbench-res544-trust-policy-v1"
+TRUST_POLICY_PRINCIPAL = "fpdbench-policy-owner"
+TRUST_POLICY_SCHEMA = "fpdbench.protected-execution-trust-policy"
+TRUST_POLICY_VERSION = "1.0.0"
+PRODUCER_REVISION = "6644dba8c945ca86be72b54792db30cbe488e5d0"
+PRODUCER_INVENTORY_SHA256 = "153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4"
+VERIFIER_REVISION = "ef1a22583cdd52bb63509a13bfc480a313ea69d4"
+VERIFIER_INVENTORY_SHA256 = "c61851dd0b930694a960d8cf79046258ea92a8c2cc19db60d33fdbb12f4b6b09"
+POPULATION_SCHEMA_SHA256 = "27da86b7355c311a65c68ab9b2bd3ae86e27779ed48641c23181ffe2f9adc224"
+RESULT_SCHEMA_SHA256 = "d0d7dbf4a14cade66d1e0ce7282441d8f035a68de8a192ad8e4d70210be18f7f"
 # Bounds are resource limits, not permission to truncate or omit any source rows.
 MAX_ROW = 1024 * 1024
 MAX_DOCUMENT = 16 * 1024 * 1024
+MAX_TRUST_POLICY = 1024 * 1024
+PLAN_V2_SHA256 = experiment_plan.PLAN_V2_SHA256
 
 
 def _object(value: object) -> dict[str, object]:
@@ -93,6 +118,26 @@ def _git_environment() -> dict[str, str]:
     return env
 
 
+def _filesystem_type(directory_fd: int) -> str:
+    """Identify the filesystem of an opened directory, not a replaceable path."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/stat", "-f", "-c", "%T", f"/proc/self/fd/{directory_fd}"],
+            pass_fds=(directory_fd,),
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=10,
+            env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        raise ValueError("cannot establish protected filesystem provenance") from None
+    filesystem = result.stdout.strip()
+    if not filesystem:
+        raise ValueError("cannot establish protected filesystem provenance")
+    return filesystem
+
+
 @contextmanager
 def private_directory(path: Path) -> Generator[int]:
     """PR #16's boundary, strengthened with component-wise no-follow directory FDs."""
@@ -115,15 +160,8 @@ def private_directory(path: Path) -> Generator[int]:
             else:
                 raise ValueError("storage is inside a Git worktree")
         _check_directory(fd, private=True)
-        # Reject Windows/network filesystems even when mounted outside /mnt.
-        filesystem = subprocess.run(
-            ["stat", "-f", "-c", "%T", f"/proc/self/fd/{fd}"],
-            pass_fds=(fd,),
-            capture_output=True,
-            check=True,
-            text=True,
-        ).stdout.strip()
-        if filesystem not in {"ext2/ext3", "btrfs", "xfs", "tmpfs", "overlayfs"}:
+        # Reject Windows/network backing filesystems even through bind mounts.
+        if _filesystem_type(fd) not in {"ext2/ext3", "btrfs", "xfs", "tmpfs", "overlayfs"}:
             raise ValueError("unsupported protected-storage filesystem")
         git = subprocess.run(
             ["git", "-C", f"/proc/self/fd/{fd}", "rev-parse", "--is-inside-work-tree"],
@@ -470,15 +508,7 @@ def source_preflight(source: Path, destination: Path) -> None:
                 )
             if _verify_sources(root, records) != inventory:
                 raise ValueError("source changed during preflight")
-            package_root = Path(__file__).resolve().parents[1]
-            implementation = [
-                {
-                    "path": path.relative_to(package_root).as_posix(),
-                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                }
-                for path in sorted(package_root.rglob("*"))
-                if path.is_file() and path.suffix in {".py", ".json"}
-            ]
+            implementation = installed_adapter_inventory()
             receipt = {
                 "schema_id": SCHEMA,
                 "schema_version": VERSION,
@@ -503,49 +533,327 @@ def source_preflight(source: Path, destination: Path) -> None:
             ) from None
 
 
-def authenticate_receipt(
-    receipt: bytes,
-    signature: Path,
-    allowed_signers: Path,
-    *,
-    trusted_signers_sha256: str,
-    expected_package_sha256: str,
-) -> dict[str, object]:
-    """Independent reviewer pins trust file AND reviewed adapter inventory out of band."""
-    if len(receipt) > MAX_DOCUMENT:
-        raise ValueError("oversized receipt")
-    with private_directory(allowed_signers.parent) as trusted_root:
-        trusted = _document(trusted_root, allowed_signers.name)
-    with private_directory(signature.parent) as signature_root:
-        signed = _document(signature_root, signature.name)
-    if hashlib.sha256(trusted).hexdigest() != trusted_signers_sha256:
-        raise ValueError("untrusted signer configuration")
-    with tempfile.TemporaryDirectory(prefix="res501-auth-") as temporary:
-        with private_directory(Path(temporary)) as root:
-            write_private(root, "signers", trusted)
-            write_private(root, "signature", signed)
+@contextmanager
+def _trusted_directory() -> Generator[int]:
+    path = TRUST_DIRECTORY
+    if sys.platform != "linux" or not path.is_absolute() or ".." in path.parts:
+        raise ValueError("Linux system trust directory required")
+    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for index, part in enumerate(path.parts[1:]):
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = child
+            info = os.fstat(fd)
+            final = index == len(path.parts) - 2
+            allowed_owners = {0, TRUST_OWNER_UID}
+            if (
+                not stat.S_ISDIR(info.st_mode)
+                or info.st_uid not in allowed_owners
+                or (final and info.st_uid != TRUST_OWNER_UID)
+                or (info.st_mode & 0o022 and (final or not info.st_mode & stat.S_ISVTX))
+            ):
+                raise ValueError("unsafe system trust directory")
+            try:
+                os.stat(".git", dir_fd=fd, follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                raise ValueError("system trust directory is inside a Git worktree")
+        if not path.parts[1:]:
+            raise ValueError("system trust directory must not be root")
+        # A signed root policy is trustworthy only on a locally managed Linux FS.
+        # Exclude overlay/Windows/network/FUSE mounts, even behind an /etc bind mount.
+        if _filesystem_type(fd) not in {"ext2/ext3", "btrfs", "xfs", "tmpfs"}:
+            raise ValueError("unsupported protected trust filesystem")
+        yield fd
+    finally:
+        os.close(fd)
+
+
+def _trusted_file(directory: int, name: str, *, limit: int = MAX_TRUST_POLICY) -> bytes:
+    if len(_parts(name)) != 1:
+        raise ValueError("unsafe trust filename")
+    fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != TRUST_OWNER_UID
+            or info.st_mode & 0o022
+            or info.st_nlink != 1
+            or info.st_size > limit
+        ):
+            raise ValueError("unsafe system trust file")
+        # A local policy directory cannot make an individual bind-mounted file safe.
+        if info.st_dev != os.fstat(directory).st_dev or _filesystem_type(stream.fileno()) not in {
+            "ext2/ext3",
+            "btrfs",
+            "xfs",
+            "tmpfs",
+        }:
+            raise ValueError("untrusted system trust file filesystem")
+        payload = stream.read(limit + 1)
+        if (
+            len(payload) != info.st_size
+            or len(payload) > limit
+            or _file_identity(os.fstat(stream.fileno())) != _file_identity(info)
+        ):
+            raise ValueError("system trust file changed while open")
+        return payload
+
+
+def _hash(value: object, label: str) -> str:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise ValueError(f"invalid {label}")
+    return value
+
+
+def _fingerprint(public_key: bytes) -> str:
+    return "SHA256:" + base64.b64encode(hashlib.sha256(public_key).digest()).decode().rstrip("=")
+
+
+def _signer_fingerprints(payload: bytes, principal: str) -> frozenset[str]:
+    try:
+        lines = payload.decode("utf-8").splitlines()
+    except UnicodeDecodeError:
+        raise ValueError("invalid allowed-signers file") from None
+    fingerprints: list[str] = []
+    for line in lines:
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split()
+        if (
+            len(fields) not in {3, 4}
+            or fields[0] != principal
+            or fields[1] not in {"ssh-ed25519", "ecdsa-sha2-nistp256", "ssh-rsa"}
+        ):
+            raise ValueError("allowed-signers file must contain only the pinned principal")
+        try:
+            public_key = base64.b64decode(fields[2], validate=True)
+        except ValueError:
+            raise ValueError("invalid allowed-signers public key") from None
+        if not public_key:
+            raise ValueError("empty allowed-signers public key")
+        fingerprints.append(_fingerprint(public_key))
+    if not fingerprints or len(fingerprints) != len(set(fingerprints)):
+        raise ValueError("allowed-signers file is empty or duplicated")
+    return frozenset(fingerprints)
+
+
+def _verify_ssh_signature(
+    payload: bytes, signature: bytes, allowed_signers: bytes, principal: str, namespace: str
+) -> None:
+    with tempfile.TemporaryDirectory(prefix="fpdbench-auth-", dir="/tmp") as temporary:
+        root_path = Path(temporary)
+        with private_directory(root_path) as root:
+            write_private(root, "allowed_signers", allowed_signers)
+            write_private(root, "signature", signature)
+        try:
             result = subprocess.run(
                 [
-                    "ssh-keygen",
+                    "/usr/bin/ssh-keygen",
                     "-Y",
                     "verify",
                     "-f",
-                    temporary + "/signers",
+                    temporary + "/allowed_signers",
                     "-I",
-                    "res501-source",
+                    principal,
                     "-n",
-                    NAMESPACE,
+                    namespace,
                     "-s",
                     temporary + "/signature",
                 ],
-                input=receipt,
+                input=payload,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
                 check=False,
+                timeout=15,
             )
-    if result.returncode:
-        raise ValueError("source receipt signature not authenticated")
-    value = _object(_json(receipt))
+        except (OSError, subprocess.TimeoutExpired):
+            raise ValueError("detached signature verification unavailable") from None
+        if result.returncode:
+            raise ValueError("detached signature not authenticated")
+
+
+def _authority_bindings() -> dict[str, str]:
+    return {
+        "source_authority_sha256": MANIFEST_SHA256,
+        "source_release_sha256": EXPECTED_SOURCE_RELEASE_HASH,
+        "source_population_sha256": EXPECTED_SOURCE_POPULATION_HASH,
+        "measurement_state_sha256": EXPECTED_MEASUREMENT_STATE_V2_HASH,
+        "eligibility_policy_sha256": EXPECTED_ELIGIBILITY_POLICY_V2_HASH,
+        "protocol_sha256": PROTOCOL_V2_SHA256,
+        "plan_sha256": PLAN_V2_SHA256,
+        "population_schema_sha256": POPULATION_SCHEMA_SHA256,
+        "result_schema_sha256": RESULT_SCHEMA_SHA256,
+    }
+
+
+def installed_adapter_inventory() -> list[dict[str, str]]:
+    """Enumerate installed source through directory FDs; never silently omit symlinks."""
+    package_root = Path(__file__).resolve().parents[1]
+    inventory: list[dict[str, str]] = []
+
+    def visit(directory_fd: int, prefix: str) -> None:
+        with os.scandir(directory_fd) as entries:
+            names = sorted(entry.name for entry in entries)
+        for name in names:
+            if name in {".", ".."}:
+                raise ValueError("unreviewed installed package path")
+            relative = f"{prefix}{name}"
+            info = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            if stat.S_ISLNK(info.st_mode):
+                raise ValueError("unreviewed installed package symlink")
+            if stat.S_ISDIR(info.st_mode):
+                child_fd = os.open(
+                    name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd
+                )
+                try:
+                    visit(child_fd, relative + "/")
+                finally:
+                    os.close(child_fd)
+            elif stat.S_ISREG(info.st_mode):
+                if name.endswith((".so", ".pyd", ".dll", ".exe")):
+                    raise ValueError("unreviewed installed package executable")
+                if not relative.endswith((".py", ".json")):
+                    # Generated bytecode/resources are distinct from the pinned source
+                    # inventory; isolated worker runtime provenance is a later gate.
+                    continue
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory_fd)
+                with os.fdopen(fd, "rb") as stream:
+                    opened = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (
+                        info.st_dev,
+                        info.st_ino,
+                    ):
+                        raise ValueError("installed package changed during inventory")
+                    sha = hashlib.sha256()
+                    while chunk := stream.read(MAX_ROW):
+                        sha.update(chunk)
+                    if _file_identity(os.fstat(stream.fileno())) != _file_identity(opened):
+                        raise ValueError("installed package changed during inventory")
+                inventory.append({"path": relative, "sha256": sha.hexdigest()})
+            else:
+                raise ValueError("unreviewed installed package nonregular entry")
+
+    root_fd = os.open(package_root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        visit(root_fd, "")
+    finally:
+        os.close(root_fd)
+    inventory.sort(key=lambda entry: entry["path"])
+    return inventory
+
+
+def _inventory_digest(inventory: object) -> str:
+    return hashlib.sha256(canonical_bytes(inventory)).hexdigest()
+
+
+def _validate_trust_policy(payload: bytes, reviewer_signers: bytes) -> dict[str, object]:
+    value = _object(_json(payload))
+    if canonical_bytes(value) != payload or set(value) != {
+        "schema_id",
+        "schema_version",
+        "generation",
+        "status",
+        "reviewer",
+        "adapter_inventory_sha256",
+        "producer",
+        "verifier",
+        "authority_bindings",
+        "revoked_signer_key_fingerprints",
+    }:
+        raise ValueError("invalid trusted execution policy shape")
+    generation = value.get("generation")
+    if (
+        value.get("schema_id") != TRUST_POLICY_SCHEMA
+        or value.get("schema_version") != TRUST_POLICY_VERSION
+        or value.get("status") != "ACTIVE"
+        or isinstance(generation, bool)
+        or not isinstance(generation, int)
+        or generation < 1
+    ):
+        raise ValueError("invalid trusted execution policy identity")
+    reviewer = _object(value.get("reviewer"))
+    if set(reviewer) != {"principal", "namespace", "allowed_signers_sha256"}:
+        raise ValueError("invalid reviewer policy")
+    principal = reviewer.get("principal")
+    if (
+        not isinstance(principal, str)
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._@-]{0,127}", principal) is None
+        or reviewer.get("namespace") != NAMESPACE
+        or _hash(reviewer.get("allowed_signers_sha256"), "reviewer key digest")
+        != hashlib.sha256(reviewer_signers).hexdigest()
+    ):
+        raise ValueError("reviewer identity or allowed-signers digest mismatch")
+    if _hash(value.get("adapter_inventory_sha256"), "adapter inventory digest") != (
+        _inventory_digest(installed_adapter_inventory())
+    ):
+        raise ValueError("unreviewed protected adapter inventory")
+    producer = _object(value.get("producer"))
+    verifier = _object(value.get("verifier"))
+    if producer != {
+        "revision": PRODUCER_REVISION,
+        "inventory_sha256": PRODUCER_INVENTORY_SHA256,
+    } or verifier != {
+        "revision": VERIFIER_REVISION,
+        "inventory_sha256": VERIFIER_INVENTORY_SHA256,
+    }:
+        raise ValueError("producer or verifier pin differs from the reviewed historical packages")
+    bindings = _object(value.get("authority_bindings"))
+    if bindings != _authority_bindings():
+        raise ValueError("trusted policy changes frozen scientific authority bindings")
+    revoked = value.get("revoked_signer_key_fingerprints")
+    if not isinstance(revoked, list):
+        raise ValueError("invalid reviewer key revocation list")
+    revoked_values: list[str] = []
+    for item in cast(list[object], revoked):
+        if not isinstance(item, str) or re.fullmatch(r"SHA256:[A-Za-z0-9+/]{43}", item) is None:
+            raise ValueError("invalid reviewer key revocation list")
+        revoked_values.append(item)
+    if revoked_values != sorted(set(revoked_values)):
+        raise ValueError("invalid reviewer key revocation list")
+    current = _signer_fingerprints(reviewer_signers, principal)
+    if current.intersection(revoked_values):
+        raise ValueError("revoked reviewer key remains authorized")
+    return value
+
+
+def _load_trusted_policy() -> tuple[dict[str, object], bytes]:
+    try:
+        with _trusted_directory() as root:
+            payload = _trusted_file(root, "policy.json")
+            signature = _trusted_file(root, "policy.sig")
+            root_signers = _trusted_file(root, "root.allowed_signers")
+            reviewer_signers = _trusted_file(root, "reviewer.allowed_signers")
+        _signer_fingerprints(root_signers, TRUST_POLICY_PRINCIPAL)
+        _verify_ssh_signature(
+            payload, signature, root_signers, TRUST_POLICY_PRINCIPAL, TRUST_POLICY_NAMESPACE
+        )
+        return _validate_trust_policy(payload, reviewer_signers), reviewer_signers
+    except (OSError, ValueError, json.JSONDecodeError):
+        raise ValueError("trusted protected-execution policy is unavailable or invalid") from None
+
+
+def _validate_source_receipt(
+    payload: bytes, value: dict[str, object], policy: Mapping[str, object]
+) -> None:
+    if canonical_bytes(value) != payload or set(value) != {
+        "schema_id",
+        "schema_version",
+        "status",
+        "qualification_status",
+        "source_revision",
+        "authority_sha256",
+        "inputs",
+        "scan",
+        "normalized_phases",
+        "adapter_package",
+        "authentication",
+    }:
+        raise ValueError("invalid source-preflight receipt shape")
     if (
         value.get("schema_id") != SCHEMA
         or value.get("schema_version") != VERSION
@@ -553,8 +861,178 @@ def authenticate_receipt(
         or value.get("qualification_status") != "NOT_QUALIFIED"
         or value.get("source_revision") != REVISION
         or value.get("authority_sha256") != MANIFEST_SHA256
-        or hashlib.sha256(canonical_bytes(value.get("adapter_package"))).hexdigest()
-        != expected_package_sha256
+        or value.get("authentication") != "DETACHED_SSH_SIGNATURE_REQUIRED"
     ):
-        raise ValueError("unreviewed receipt provenance contract")
+        raise ValueError("receipt is not an unqualified v2 source preflight")
+    inventory = installed_adapter_inventory()
+    if value.get("adapter_package") != inventory or _inventory_digest(inventory) != policy.get(
+        "adapter_inventory_sha256"
+    ):
+        raise ValueError("source receipt does not bind the reviewed adapter inventory")
+
+    manifest = _authority()
+    records = _records(manifest)
+    raw_inputs = value.get("inputs")
+    if not isinstance(raw_inputs, list):
+        raise ValueError("source receipt does not cover the pinned source inventory")
+    input_rows = cast(list[object], raw_inputs)
+    if len(input_rows) != len(records):
+        raise ValueError("source receipt does not cover the pinned source inventory")
+    by_path: dict[str, dict[str, object]] = {}
+    for record, raw in zip(records, input_rows, strict=True):
+        row = _object(raw)
+        path = str(record["repository_path"])
+        is_lfs = record["identity_type"] == "git_lfs_pointer"
+        expected_size = record["lfs_payload_size"] if is_lfs else record["byte_size"]
+        sha256 = _hash(row.get("sha256"), "source digest")
+        size = row.get("bytes")
+        if (
+            set(row) != {"path", "bytes", "sha256", "git_blob_sha"}
+            or row.get("path") != path
+            or isinstance(size, bool)
+            or not isinstance(size, int)
+            or size != expected_size
+            or row.get("git_blob_sha") != record["git_blob_sha"]
+            or (is_lfs and sha256 != record["lfs_oid_sha256"])
+            or (record.get("raw_sha256") is not None and sha256 != record["raw_sha256"])
+        ):
+            raise ValueError("source receipt differs from the pinned 81-file authority")
+        by_path[path] = row
+
+    selected = cast(list[int], manifest["selected_source_matches"])
+    scans = value.get("scan")
+    if not isinstance(scans, list):
+        raise ValueError("source receipt has incomplete global scan coverage")
+    scan_rows = cast(list[object], scans)
+    if len(scan_rows) != len(selected):
+        raise ValueError("source receipt has incomplete global scan coverage")
+    for match_id, raw in zip(selected, scan_rows, strict=True):
+        row = _object(raw)
+        prefix = f"data/matches/{match_id}/{match_id}"
+        tracking = by_path[prefix + "_tracking_extrapolated.jsonl"]
+        source_rows = row.get("source_rows")
+        even_rows = row.get("even_source_rows")
+        retained_rows = row.get("retained_rows")
+        if (
+            set(row)
+            != {
+                "match_id",
+                "source_rows",
+                "tracking_sha256",
+                "even_source_rows",
+                "even_frame_ids_sha256",
+                "retained_rows",
+                "retained_sha256",
+            }
+            or type(row.get("match_id")) is not int
+            or row.get("match_id") != match_id
+            or isinstance(source_rows, bool)
+            or not isinstance(source_rows, int)
+            or source_rows < 1
+            or isinstance(even_rows, bool)
+            or not isinstance(even_rows, int)
+            or not 1 <= even_rows <= source_rows
+            or isinstance(retained_rows, bool)
+            or not isinstance(retained_rows, int)
+            or retained_rows != even_rows
+            or row.get("tracking_sha256") != tracking["sha256"]
+        ):
+            raise ValueError("source receipt global scan is incomplete or inconsistent")
+        _hash(row.get("even_frame_ids_sha256"), "retained frame identity digest")
+        _hash(row.get("retained_sha256"), "retained sample digest")
+
+    normalized = value.get("normalized_phases")
+    if not isinstance(normalized, list):
+        raise ValueError("source receipt has incomplete phase normalization")
+    normalized_rows = cast(list[object], normalized)
+    if len(normalized_rows) != len(selected):
+        raise ValueError("source receipt has incomplete phase normalization")
+    for match_id, raw in zip(selected, normalized_rows, strict=True):
+        row = _object(raw)
+        prefix = f"data/matches/{match_id}/{match_id}"
+        expected = {
+            "path": f"phases-{match_id}.json",
+            "source_sha256": by_path[prefix + "_phases_of_play.csv"]["sha256"],
+            "metadata_sha256": by_path[prefix + "_match.json"]["sha256"],
+        }
+        if set(row) != {"path", "sha256", "source_sha256", "metadata_sha256"} or any(
+            row.get(key) != item for key, item in expected.items()
+        ):
+            raise ValueError("source receipt phase lineage differs from the pinned inputs")
+        _hash(row.get("sha256"), "normalized phase digest")
+
+
+def authenticate_receipt(receipt: bytes, signature: bytes) -> dict[str, object]:
+    """Authenticate against the root-owned policy; no trust pin comes from the caller."""
+    if len(receipt) > MAX_DOCUMENT or len(signature) > MAX_DOCUMENT:
+        raise ValueError("oversized protected receipt or signature")
+    policy, reviewer_signers = _load_trusted_policy()
+    reviewer = _object(policy["reviewer"])
+    _verify_ssh_signature(
+        receipt,
+        signature,
+        reviewer_signers,
+        cast(str, reviewer["principal"]),
+        cast(str, reviewer["namespace"]),
+    )
+    value = _object(_json(receipt))
+    _validate_source_receipt(receipt, value, policy)
     return value
+
+
+def verify_source_snapshot(source: Path, receipt_directory: Path) -> None:
+    """Reauthenticate and recheck the complete snapshot immediately before a later run."""
+    try:
+        with private_directory(source) as root, private_directory(receipt_directory) as output:
+            source_info, output_info = os.fstat(root), os.fstat(output)
+            if (
+                source == receipt_directory
+                or source in receipt_directory.parents
+                or receipt_directory in source.parents
+                or (source_info.st_dev, source_info.st_ino) in _ancestor_identities(output)
+                or (output_info.st_dev, output_info.st_ino) in _ancestor_identities(root)
+            ):
+                raise ValueError("overlapping protected roots")
+            receipt = _document(root=output, path="source-preflight.json")
+            signature = _document(root=output, path="source-preflight.sig")
+            value = authenticate_receipt(receipt, signature)
+            manifest = _authority()
+            records = _records(manifest)
+            inventory = _verify_sources(root, records)
+            if inventory != value["inputs"]:
+                raise ValueError("source inventory changed")
+            scan = _scan(root, manifest)
+            if scan != value["scan"]:
+                raise ValueError("source-wide scan changed")
+            expected = {str(row["path"]): str(row["sha256"]) for row in inventory}
+            expected_phases: list[dict[str, str]] = []
+            for match_id in cast(list[int], manifest["selected_source_matches"]):
+                prefix = f"data/matches/{match_id}/{match_id}"
+                metadata = _document(root, prefix + "_match.json")
+                csv_bytes = _document(root, prefix + "_phases_of_play.csv")
+                if (
+                    hashlib.sha256(metadata).hexdigest() != expected[prefix + "_match.json"]
+                    or hashlib.sha256(csv_bytes).hexdigest()
+                    != expected[prefix + "_phases_of_play.csv"]
+                ):
+                    raise ValueError("phase source changed")
+                phases = normalize_phases(csv_bytes, _object(_json(metadata)))
+                name = f"phases-{match_id}.json"
+                expected_phases.append(
+                    {
+                        "path": name,
+                        "sha256": hashlib.sha256(phases).hexdigest(),
+                        "source_sha256": hashlib.sha256(csv_bytes).hexdigest(),
+                        "metadata_sha256": hashlib.sha256(metadata).hexdigest(),
+                    }
+                )
+                if _document(output, name) != phases:
+                    raise ValueError("normalized phase snapshot changed")
+            if expected_phases != value["normalized_phases"] or (
+                _verify_sources(root, records) != inventory
+            ):
+                raise ValueError("protected source snapshot changed")
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        raise ValueError(
+            "INCOMPLETE: authenticated protected source snapshot changed or is invalid"
+        ) from None
