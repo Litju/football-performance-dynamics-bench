@@ -586,9 +586,12 @@ def _trusted_file(directory: int, name: str, *, limit: int = MAX_TRUST_POLICY) -
         ):
             raise ValueError("unsafe system trust file")
         # A local policy directory cannot make an individual bind-mounted file safe.
-        if info.st_dev != os.fstat(directory).st_dev or _filesystem_type(
-            stream.fileno()
-        ) not in {"ext2/ext3", "btrfs", "xfs", "tmpfs"}:
+        if info.st_dev != os.fstat(directory).st_dev or _filesystem_type(stream.fileno()) not in {
+            "ext2/ext3",
+            "btrfs",
+            "xfs",
+            "tmpfs",
+        }:
             raise ValueError("untrusted system trust file filesystem")
         payload = stream.read(limit + 1)
         if (
