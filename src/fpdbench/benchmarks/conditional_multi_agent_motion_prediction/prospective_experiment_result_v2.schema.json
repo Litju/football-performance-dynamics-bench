@@ -1,0 +1,1527 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.prospective-experiment-result/2.0.0",
+  "title": "Prospective v2 experiment run result manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "plan_id",
+    "plan_version",
+    "plan_sha256",
+    "protocol_id",
+    "protocol_version",
+    "protocol_sha256",
+    "source_release_id",
+    "source_release_version",
+    "source_release_hash",
+    "source_population_hash",
+    "measurement_state_id",
+    "measurement_state_version",
+    "measurement_state_hash",
+    "eligibility_policy_id",
+    "eligibility_policy_version",
+    "eligibility_policy_hash",
+    "population_id",
+    "population_schema_id",
+    "population_schema_version",
+    "run_id",
+    "cell_id",
+    "model_class_id",
+    "information_regime",
+    "target_representation",
+    "fit_role",
+    "lomo_fold_id",
+    "held_out_match_id",
+    "seed",
+    "train_match_ids",
+    "validation_match_ids",
+    "population_authority_sha256",
+    "configuration_sha256",
+    "environment_sha256",
+    "checkpoint_sha256",
+    "selected_step",
+    "stopping_reason",
+    "status",
+    "output_artifacts",
+    "metrics",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "fpdbench.prospective-experiment-result"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "plan_id": {
+      "const": "skillcorner.prospective_conditional_motion.execution"
+    },
+    "plan_version": {
+      "const": "2.0.0"
+    },
+    "plan_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "protocol_id": {
+      "const": "skillcorner.prospective_conditional_motion"
+    },
+    "protocol_version": {
+      "const": "2.0.0"
+    },
+    "protocol_sha256": {
+      "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cell_id": {
+      "enum": [
+        "origin_persistence_v1|history_only|absolute_xy",
+        "origin_persistence_v1|future_ball|absolute_xy",
+        "origin_persistence_v1|future_opponent_plus_ball|absolute_xy",
+        "origin_persistence_v1|history_only|origin_relative_displacement",
+        "origin_persistence_v1|future_ball|origin_relative_displacement",
+        "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement",
+        "constant_velocity_1s_v1|history_only|absolute_xy",
+        "constant_velocity_1s_v1|future_ball|absolute_xy",
+        "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy",
+        "constant_velocity_1s_v1|history_only|origin_relative_displacement",
+        "constant_velocity_1s_v1|future_ball|origin_relative_displacement",
+        "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement",
+        "per_target_context_deepsets_mlp_v1|history_only|absolute_xy",
+        "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy",
+        "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy",
+        "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement",
+        "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement",
+        "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"
+      ]
+    },
+    "model_class_id": {
+      "enum": [
+        "origin_persistence_v1",
+        "constant_velocity_1s_v1",
+        "per_target_context_deepsets_mlp_v1"
+      ]
+    },
+    "information_regime": {
+      "enum": [
+        "history_only",
+        "future_ball",
+        "future_opponent_plus_ball"
+      ]
+    },
+    "target_representation": {
+      "enum": [
+        "absolute_xy",
+        "origin_relative_displacement"
+      ]
+    },
+    "fit_role": {
+      "enum": [
+        "final_train",
+        "lomo",
+        "baseline"
+      ]
+    },
+    "lomo_fold_id": {
+      "enum": [
+        null,
+        "fold-01",
+        "fold-02",
+        "fold-03",
+        "fold-04",
+        "fold-05",
+        "fold-06",
+        "fold-07",
+        "fold-08",
+        "fold-09",
+        "fold-10",
+        "fold-11",
+        "fold-12"
+      ]
+    },
+    "held_out_match_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "seed": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "train_match_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*$"
+      }
+    },
+    "validation_match_ids": {
+      "const": [
+        "1953632",
+        "1996435",
+        "2015213",
+        "2017461"
+      ]
+    },
+    "population_authority_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "configuration_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "environment_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "checkpoint_sha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selected_step": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stopping_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "failed_infrastructure",
+        "failed_model",
+        "failed_validation",
+        "incomplete"
+      ]
+    },
+    "output_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_id",
+          "sha256",
+          "relation"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "relation": {
+            "enum": [
+              "output",
+              "diagnostic"
+            ]
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "match_id",
+          "metric_id",
+          "value",
+          "unit"
+        ],
+        "properties": {
+          "scope": {
+            "enum": [
+              "validation_match",
+              "lomo_held_out_match",
+              "evaluation_match"
+            ]
+          },
+          "match_id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "metric_id": {
+            "enum": [
+              "ade_m",
+              "fde_m",
+              "xy_rmse_m"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "const": "metres"
+          }
+        }
+      }
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "source_release_id": {
+      "const": "skillcorner_open_data_v1"
+    },
+    "source_release_version": {
+      "const": "1.0.0"
+    },
+    "source_release_hash": {
+      "const": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+    },
+    "source_population_hash": {
+      "const": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
+    },
+    "measurement_state_id": {
+      "const": "skillcorner_5hz_v2"
+    },
+    "measurement_state_version": {
+      "const": "2.0.0"
+    },
+    "measurement_state_hash": {
+      "const": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671"
+    },
+    "eligibility_policy_id": {
+      "const": "skillcorner_window_v2"
+    },
+    "eligibility_policy_version": {
+      "const": "2.0.0"
+    },
+    "eligibility_policy_hash": {
+      "const": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
+    },
+    "population_id": {
+      "const": "skillcorner.prospective.conditional_motion.population_v2"
+    },
+    "population_schema_id": {
+      "const": "fpdbench.prospective-evaluation-population"
+    },
+    "population_schema_version": {
+      "const": "2.0.0"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "const": "baseline"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "model_class_id": {
+            "enum": [
+              "origin_persistence_v1",
+              "constant_velocity_1s_v1"
+            ]
+          },
+          "lomo_fold_id": {
+            "const": null
+          },
+          "held_out_match_id": {
+            "const": null
+          },
+          "seed": {
+            "const": null
+          },
+          "checkpoint_sha256": {
+            "const": null
+          },
+          "selected_step": {
+            "const": null
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "enum": [
+              "final_train",
+              "lomo"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "seed": {
+            "enum": [
+              1729,
+              2718,
+              31415
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "const": "final_train"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": null
+          },
+          "held_out_match_id": {
+            "const": null
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "lomo_fold_id": {
+            "type": "string"
+          },
+          "held_out_match_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|history_only|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|history_only|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|history_only|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|history_only|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "origin_persistence_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|history_only|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|history_only|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|history_only|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|history_only|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "constant_velocity_1s_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "absolute_xy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "history_only"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "future_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cell_id": {
+            "const": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement"
+          },
+          "model_class_id": {
+            "const": "per_target_context_deepsets_mlp_v1"
+          },
+          "information_regime": {
+            "const": "future_opponent_plus_ball"
+          },
+          "target_representation": {
+            "const": "origin_relative_displacement"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "const": "baseline"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "train_match_ids": {
+            "const": []
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "fit_role": {
+            "const": "final_train"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-01"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1886347"
+          },
+          "train_match_ids": {
+            "const": [
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-02"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1899585"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-03"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1927964"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-04"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1959846"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-05"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1986691"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-06"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "1996436"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-07"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2006363"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-08"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2007448"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007721",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-09"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2007721"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2011166",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-10"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2011166"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2013725",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-11"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2013725"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2016236"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lomo_fold_id": {
+            "const": "fold-12"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fit_role": {
+            "const": "lomo"
+          },
+          "held_out_match_id": {
+            "const": "2016236"
+          },
+          "train_match_ids": {
+            "const": [
+              "1886347",
+              "1899585",
+              "1927964",
+              "1959846",
+              "1986691",
+              "1996436",
+              "2006363",
+              "2007448",
+              "2007721",
+              "2011166",
+              "2013725"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          },
+          "fit_role": {
+            "enum": [
+              "final_train",
+              "lomo"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "checkpoint_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "selected_step": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 5000,
+            "multipleOf": 100
+          },
+          "stopping_reason": {
+            "enum": [
+              "early_stopping",
+              "maximum_optimizer_steps",
+              "compute_ceiling"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "failed_infrastructure",
+              "failed_model",
+              "failed_validation",
+              "incomplete"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "checkpoint_sha256": {
+            "const": null
+          },
+          "selected_step": {
+            "const": null
+          },
+          "metrics": {
+            "const": []
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "enum": [
+              "baseline_complete",
+              "early_stopping",
+              "maximum_optimizer_steps",
+              "compute_ceiling"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed_infrastructure"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "enum": [
+              "external_worker_interruption"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed_model"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "enum": [
+              "nonfinite_model",
+              "out_of_memory",
+              "nondeterministic_runtime"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed_validation"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "enum": [
+              "invalid_population",
+              "missing_validation_score",
+              "evaluation_failure"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "incomplete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "enum": [
+              "campaign_incomplete"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          },
+          "fit_role": {
+            "const": "baseline"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stopping_reason": {
+            "const": "baseline_complete"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "description": "Structural validation only. Self-consistent hashes do not prove source membership, physical truth, masks, or scoreability. Empirical use requires a separately independently verified exhaustive protected-population receipt; no verifier or qualified population ships in the successor implementation."
+}

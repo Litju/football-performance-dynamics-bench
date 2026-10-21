@@ -19,13 +19,25 @@ from fpdbench.data_states.skillcorner import (
     load_manifest as load_data_state_manifest,
 )
 from fpdbench.data_states.skillcorner import (
+    load_manifest_v2 as load_data_state_manifest_v2,
+)
+from fpdbench.data_states.skillcorner import (
     validate_manifest as validate_data_state_manifest,
+)
+from fpdbench.data_states.skillcorner import (
+    validate_manifest_v2 as validate_data_state_manifest_v2,
 )
 from fpdbench.eligibility.skillcorner import (
     load_manifest as load_eligibility_manifest,
 )
 from fpdbench.eligibility.skillcorner import (
+    load_manifest_v2 as load_eligibility_manifest_v2,
+)
+from fpdbench.eligibility.skillcorner import (
     validate_manifest as validate_eligibility_manifest,
+)
+from fpdbench.eligibility.skillcorner import (
+    validate_manifest_v2 as validate_eligibility_manifest_v2,
 )
 from fpdbench.provenance.evidence_inventory import validate_evidence_inventory
 from fpdbench.provenance.scientific_lock import build_scientific_lock, verify_scientific_lock
@@ -91,11 +103,14 @@ def _parser() -> argparse.ArgumentParser:
     data_state_commands.add_parser("list")
     data_state_description = data_state_commands.add_parser("describe")
     data_state_description.add_argument("data_state_id")
-    data_state_commands.add_parser("verify")
+    data_state_verify = data_state_commands.add_parser("verify")
+    data_state_verify.add_argument("data_state_id", nargs="?")
 
     eligibility = commands.add_parser("eligibility")
     eligibility_commands = eligibility.add_subparsers(dest="eligibility_command", required=True)
-    eligibility_commands.add_parser("verify")
+    eligibility_commands.add_parser("list")
+    eligibility_verify = eligibility_commands.add_parser("verify")
+    eligibility_verify.add_argument("policy_id", nargs="?")
 
     lock = commands.add_parser("lock")
     lock_commands = lock.add_subparsers(dest="lock_command", required=True)
@@ -249,18 +264,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0
     if args.command == "data-states" and args.data_state_command == "list":
-        print("skillcorner_5hz_v1")
+        print("skillcorner_5hz_v1\nskillcorner_5hz_v2")
         return 0
     if args.command == "data-states" and args.data_state_command == "describe":
-        if args.data_state_id != "skillcorner_5hz_v1":
+        if args.data_state_id == "skillcorner_5hz_v1":
+            manifest = load_data_state_manifest()
+        elif args.data_state_id == "skillcorner_5hz_v2":
+            manifest = load_data_state_manifest_v2()
+        else:
             print(f"unknown data state: {args.data_state_id}", file=sys.stderr)
             return 2
-        print(json.dumps(load_data_state_manifest(), indent=2, sort_keys=True))
+        print(json.dumps(manifest, indent=2, sort_keys=True))
         return 0
     if args.command == "data-states" and args.data_state_command == "verify":
+        data_state_id = args.data_state_id or "skillcorner_5hz_v1"
+        if data_state_id == "skillcorner_5hz_v1":
+            load, validate = load_data_state_manifest, validate_data_state_manifest
+        elif data_state_id == "skillcorner_5hz_v2":
+            load, validate = load_data_state_manifest_v2, validate_data_state_manifest_v2
+        else:
+            return _print_errors((f"unknown data state: {data_state_id}",))
         try:
-            manifest = load_data_state_manifest()
-            errors = validate_data_state_manifest(manifest)
+            manifest = load()
+            errors = validate(manifest)
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             return _print_errors((f"data-state verification failed: {exc}",))
         if errors:
@@ -279,10 +305,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         )
         return 0
+    if args.command == "eligibility" and args.eligibility_command == "list":
+        print("skillcorner_window_v1\nskillcorner_window_v2")
+        return 0
     if args.command == "eligibility" and args.eligibility_command == "verify":
+        policy_id = args.policy_id or "skillcorner_window_v1"
+        if policy_id == "skillcorner_window_v1":
+            load, validate = load_eligibility_manifest, validate_eligibility_manifest
+        elif policy_id == "skillcorner_window_v2":
+            load, validate = load_eligibility_manifest_v2, validate_eligibility_manifest_v2
+        else:
+            return _print_errors((f"unknown window eligibility policy: {policy_id}",))
         try:
-            manifest = load_eligibility_manifest()
-            errors = validate_eligibility_manifest(manifest)
+            manifest = load()
+            errors = validate(manifest)
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             return _print_errors((f"window eligibility verification failed: {exc}",))
         if errors:

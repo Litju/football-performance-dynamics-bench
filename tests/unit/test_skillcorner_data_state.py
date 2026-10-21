@@ -6,11 +6,15 @@ from typing import cast
 import pytest
 
 from fpdbench.data_states.skillcorner import (
+    canonical_ball_v2,
     compute_data_state_hash,
     iter_skillcorner_5hz,
+    iter_skillcorner_5hz_v2,
     load_manifest,
+    load_manifest_v2,
     serialize_sample,
     validate_manifest,
+    validate_manifest_v2,
 )
 from fpdbench.validation.artifacts import validate_artifacts
 
@@ -96,6 +100,181 @@ def test_pinned_manifest_hash_and_source_release_are_valid() -> None:
     wrong_source = copy.deepcopy(manifest)
     wrong_source["source_release_id"] = "skillcorner_open_data_v1:sha256:" + "0" * 64
     assert any("source_release_id" in error for error in validate_manifest(wrong_source))
+
+
+def test_v2_manifest_is_additive_and_keeps_sampling_transform_version() -> None:
+    manifest = load_manifest_v2()
+    state = cast(dict[str, object], manifest["scientific_state"])
+    transform = cast(dict[str, object], state["transform"])
+
+    assert validate_manifest_v2(manifest) == ()
+    assert manifest["data_state_id"] == "skillcorner_5hz_v2"
+    assert manifest["data_state_version"] == "2.0.0"
+    assert transform == {
+        "transform_id": "skillcorner_source_frame_even_10hz_to_5hz",
+        "transform_version": "1.0.0",
+    }
+    assert load_manifest()["data_state_hash"] == (
+        "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
+    )
+
+    changed = copy.deepcopy(manifest)
+    changed_state = cast(dict[str, object], changed["scientific_state"])
+    changed_transform = cast(dict[str, object], changed_state["transform"])
+    changed_transform["transform_version"] = "2.0.0"
+    _rehash(changed)
+    assert validate_manifest_v2(changed)
+
+
+@pytest.mark.parametrize(
+    ("ball", "expected", "codes"),
+    [
+        (None, None, ()),
+        (
+            {"x": 3.0, "y": -2.0, "z": None, "is_detected": True},
+            {"x_m": 3.0, "y_m": -2.0, "is_detected": True},
+            (),
+        ),
+        (
+            {"x": 3, "y": -2, "z": 4, "is_detected": False},
+            {"x_m": 3.0, "y_m": -2.0, "is_detected": False},
+            (),
+        ),
+        (
+            {"x": 3.0, "y": -2.0, "z": 0, "is_detected": None},
+            {"x_m": 3.0, "y_m": -2.0, "is_detected": None},
+            (),
+        ),
+        (
+            {"x": 3.0, "y": None, "z": None, "is_detected": None},
+            {"x_m": 3.0, "y_m": None, "is_detected": None},
+            (),
+        ),
+        (
+            {"x": None, "y": -2.0, "z": None, "is_detected": False},
+            {"x_m": None, "y_m": -2.0, "is_detected": False},
+            (),
+        ),
+        (
+            {"x": None, "y": None, "z": None, "is_detected": None},
+            {"x_m": None, "y_m": None, "is_detected": None},
+            (),
+        ),
+        ({"x": 1, "y": 2, "z": None, "is_detected": 0}, None, ("INVALID_DETECTION_FLAG",)),
+        ({"x": 1, "y": 2, "z": None}, None, ("INVALID_DETECTION_FLAG", "INVALID_SAMPLE_SCHEMA")),
+        ({"x": 1, "z": None, "is_detected": True}, None, ("INVALID_SAMPLE_SCHEMA",)),
+        ({"x": "1", "y": 2, "z": None, "is_detected": True}, None, ("INVALID_SAMPLE_SCHEMA",)),
+        (
+            {"x": float("inf"), "y": 2, "z": None, "is_detected": True},
+            None,
+            ("NONFINITE_COORDINATE",),
+        ),
+        ({"x": 1, "y": 2, "z": float("nan"), "is_detected": None}, None, ("NONFINITE_COORDINATE",)),
+        ({"x": 1, "y": 2, "z": True, "is_detected": None}, None, ("INVALID_SAMPLE_SCHEMA",)),
+        (
+            {"x": 1, "y": 2, "z": None, "is_detected": None, "extra": 1},
+            None,
+            ("INVALID_SAMPLE_SCHEMA",),
+        ),
+        (
+            {"x": 1, "y": 2, "z": float("inf"), "is_detected": "bad"},
+            None,
+            ("INVALID_DETECTION_FLAG", "NONFINITE_COORDINATE"),
+        ),
+    ],
+)
+def test_v2_ball_state_table(
+    ball: dict[str, object] | None,
+    expected: dict[str, object] | None,
+    codes: tuple[str, ...],
+) -> None:
+    if codes:
+        with pytest.raises(ValueError) as error:
+            canonical_ball_v2(ball)
+        assert set(codes).issubset(set(str(error.value).split(", ")))
+    else:
+        assert canonical_ball_v2(ball) == expected
+
+
+@pytest.mark.parametrize("flag_state", ("true", "false", "null", "missing", "invalid"))
+@pytest.mark.parametrize(
+    "coordinate_state",
+    (
+        "both_finite",
+        "x_only",
+        "y_only",
+        "both_null",
+        "missing_key",
+        "nonnumeric",
+        "nonfinite",
+    ),
+)
+def test_v2_flag_and_coordinate_cartesian_table(flag_state: str, coordinate_state: str) -> None:
+    flag_value: object = {
+        "true": True,
+        "false": False,
+        "null": None,
+        "invalid": "false",
+    }.get(flag_state)
+    ball: dict[str, object] = {"x": 1.0, "y": 2.0, "z": None}
+    if flag_state != "missing":
+        ball["is_detected"] = flag_value
+    if coordinate_state == "x_only":
+        ball["y"] = None
+    elif coordinate_state == "y_only":
+        ball["x"] = None
+    elif coordinate_state == "both_null":
+        ball.update(x=None, y=None)
+    elif coordinate_state == "missing_key":
+        del ball["x"]
+    elif coordinate_state == "nonnumeric":
+        ball["x"] = "1"
+    elif coordinate_state == "nonfinite":
+        ball["x"] = float("inf")
+
+    expected_codes = set()
+    if flag_state == "missing":
+        expected_codes.update(("INVALID_DETECTION_FLAG", "INVALID_SAMPLE_SCHEMA"))
+    elif flag_state == "invalid":
+        expected_codes.add("INVALID_DETECTION_FLAG")
+    if coordinate_state in {"missing_key", "nonnumeric"}:
+        expected_codes.add("INVALID_SAMPLE_SCHEMA")
+    elif coordinate_state == "nonfinite":
+        expected_codes.add("NONFINITE_COORDINATE")
+    if expected_codes:
+        with pytest.raises(ValueError) as error:
+            canonical_ball_v2(ball)
+        assert expected_codes.issubset(set(str(error.value).split(", ")))
+    else:
+        assert canonical_ball_v2(ball) == {
+            "x_m": ball["x"],
+            "y_m": ball["y"],
+            "is_detected": flag_value,
+        }
+
+
+def test_v2_iterator_preserves_unknown_flag_without_changing_v1() -> None:
+    frames = [
+        _frame(
+            100,
+            "00:00:10.00",
+            ball={"x": 1.0, "y": 2.0, "z": None, "is_detected": None},
+        ),
+        _frame(101, "00:00:10.10"),
+    ]
+    v2 = load_manifest_v2()
+    sample = next(
+        iter_skillcorner_5hz_v2(
+            frames,
+            _metadata(),
+            source_release_id=cast(str, v2["source_release_id"]),
+        )
+    )
+    assert sample["data_state_id"] == "skillcorner_5hz_v2"
+    assert sample["data_state_hash"] == v2["data_state_hash"]
+    assert sample["ball"] == {"x_m": 1.0, "y_m": 2.0, "is_detected": None}
+    with pytest.raises(ValueError, match="ball is_detected must be boolean"):
+        next(_samples(frames))
 
 
 @pytest.mark.parametrize("missing", ["section", "field_contract", "field_entry"])
