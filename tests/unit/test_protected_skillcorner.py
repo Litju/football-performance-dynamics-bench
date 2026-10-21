@@ -482,6 +482,24 @@ def test_adapter_inventory_includes_new_python_sources(monkeypatch, tmp_path):
     assert adapter._inventory_digest(updated) != original
 
 
+def test_system_trust_rejects_foreign_backed_policy_file(monkeypatch, tmp_path):
+    trust = tmp_path / "system-trust"
+    trust.mkdir(mode=0o755)
+    signer_file = trust / "root.allowed_signers"
+    signer_file.write_bytes(b"synthetic policy key")
+    signer_file.chmod(0o644)
+    monkeypatch.setattr(adapter, "TRUST_DIRECTORY", trust)
+    monkeypatch.setattr(adapter, "TRUST_OWNER_UID", os.getuid())
+
+    def filesystem_type(fd):
+        return "9p" if adapter.stat.S_ISREG(os.fstat(fd).st_mode) else "ext2/ext3"
+
+    monkeypatch.setattr(adapter, "_filesystem_type", filesystem_type)
+    with adapter._trusted_directory() as directory:
+        with pytest.raises(ValueError, match="untrusted system trust file filesystem"):
+            adapter._trusted_file(directory, "root.allowed_signers")
+
+
 def test_trusted_policy_is_required(monkeypatch, tmp_path):
     monkeypatch.setattr(adapter, "TRUST_DIRECTORY", tmp_path / "missing")
     with pytest.raises(ValueError, match="policy"):

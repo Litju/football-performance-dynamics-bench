@@ -15,6 +15,9 @@ The opened trust-directory descriptor must also report a local Linux ext/btrfs/x
 or tmpfs backing filesystem; Windows/9p, network, FUSE, and overlay mounts are
 rejected even when bind-mounted beneath /etc. The check uses the opened directory
 descriptor rather than trusting its pathname or reported owner alone.
+Each individual policy/signing file is also verified through its open descriptor
+to reject a different device or unsupported filesystem bind-mounted inside an
+otherwise trusted directory.
 Its files are:
 
 | File | Authority |
