@@ -40,3 +40,5 @@ SkillCorner Open Data is an external prospective source; no SkillCorner data byt
 The prospective 10 Hz to 5 Hz measurement transform, entity/missingness rules, and data-state identity are defined in the [SkillCorner 5 Hz measurement data state](docs/skillcorner-data-state.md) and can be verified offline with `fpdbench data-states verify`.
 
 The additive nullable-ball successor is documented in the [v2 measurement](docs/skillcorner-data-state-v2.md), [v2 eligibility policy](docs/skillcorner-window-eligibility-v2.md), [v2 protocol](docs/prospective-skillcorner-protocol-v2.md), [v2 execution plan](docs/prospective-experiment-plan-v2.md), [protected population gate](docs/prospective-population-qualification-v2.md), and [v2 data card](docs/skillcorner-data-card-v2.md). Verify its authorities explicitly with `fpdbench data-states verify skillcorner_5hz_v2` and `fpdbench eligibility verify skillcorner_window_v2`.
+
+The first [v2 population producer and independent-verifier handoff](docs/prospective-population-producer-v2.md) is synthetic-only and empirically unqualified.

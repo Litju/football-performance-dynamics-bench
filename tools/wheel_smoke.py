@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import tarfile
 import tempfile
@@ -25,8 +26,8 @@ def main() -> int:
         empty_working_directory = root / "work"
         empty_working_directory.mkdir()
         venv.EnvBuilder(with_pip=True).create(environment)
-        python = environment / "bin" / "python"
-        cli = environment / "bin" / "fpdbench"
+        python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        cli = environment / ("Scripts/fpdbench.exe" if os.name == "nt" else "bin/fpdbench")
         subprocess.run(
             [
                 str(python),
@@ -50,6 +51,38 @@ import pathlib
 import sys
 
 import fpdbench
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.population_producer_v2 import (
+    PopulationMatchInputV2,
+    PopulationVerificationSubmissionV2,
+    production_dependency_fingerprint,
+    produce_population_draft_v2,
+)
+from fpdbench.data_sources.skillcorner import canonical_bytes
+
+fixture_input = PopulationMatchInputV2("synthetic", b"{{}}", b"", b"[]")
+assert isinstance(fixture_input.metadata_json, bytes)
+fingerprint = production_dependency_fingerprint()
+receipt = {{"producer_executable_fingerprint": fingerprint}}
+receipt["receipt_sha256"] = hashlib.sha256(canonical_bytes(receipt)).hexdigest()
+verified_receipt = dict(receipt)
+receipt_digest = verified_receipt.pop("receipt_sha256")
+assert receipt_digest == hashlib.sha256(canonical_bytes(verified_receipt)).hexdigest()
+print(json.dumps(fingerprint, sort_keys=True, separators=(",", ":")))
+for kind in ("synthetic", "restricted"):
+    try:
+        produce_population_draft_v2((), input_kind=kind)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("partial/unauthorized population accepted")
+submission = PopulationVerificationSubmissionV2(b"{{}}", b"", b"", b"{{}}")
+assert submission.status == "UNQUALIFIED"
+try:
+    submission.require_empirical_qualification()
+except ValueError:
+    pass
+else:
+    raise AssertionError("producer authorized empirical use")
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
     PROTOCOL_SHA256,
     load_prospective_protocol,
@@ -244,7 +277,13 @@ license_text = distribution.locate_file(license_path).read_text()
 assert "Grant of Patent License" in license_text
 assert "limitations under the License." in license_text
 """
-        subprocess.run([str(python), "-I", "-c", smoke], cwd=empty_working_directory, check=True)
+        wheel_smoke = subprocess.run(
+            [str(python), "-I", "-c", smoke],
+            cwd=empty_working_directory,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         subprocess.run(
             [str(cli), "--help"],
             cwd=empty_working_directory,
@@ -292,8 +331,12 @@ assert "limitations under the License." in license_text
         sdist_working_directory = root / "sdist-work"
         sdist_working_directory.mkdir()
         venv.EnvBuilder(with_pip=True).create(sdist_environment)
-        sdist_python = sdist_environment / "bin" / "python"
-        sdist_cli = sdist_environment / "bin" / "fpdbench"
+        sdist_python = sdist_environment / (
+            "Scripts/python.exe" if os.name == "nt" else "bin/python"
+        )
+        sdist_cli = sdist_environment / (
+            "Scripts/fpdbench.exe" if os.name == "nt" else "bin/fpdbench"
+        )
         subprocess.run(
             [
                 str(sdist_python),
@@ -308,11 +351,15 @@ assert "limitations under the License." in license_text
             check=True,
             stdout=subprocess.DEVNULL,
         )
-        subprocess.run(
+        sdist_smoke = subprocess.run(
             [str(sdist_python), "-I", "-c", smoke],
             cwd=sdist_working_directory,
+            capture_output=True,
+            text=True,
             check=True,
         )
+        if wheel_smoke.stdout != sdist_smoke.stdout:
+            raise RuntimeError("wheel and sdist production fingerprints differ")
         subprocess.run(
             [str(sdist_cli), "data-states", "verify", "skillcorner_5hz_v2"],
             cwd=sdist_working_directory,
