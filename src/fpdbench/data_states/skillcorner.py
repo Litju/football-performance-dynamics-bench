@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import re
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import cast
 
@@ -18,6 +18,8 @@ from fpdbench.data_sources.skillcorner import (
 )
 
 MANIFEST_PATH = Path(__file__).with_name("skillcorner_5hz_v1.json")
+MANIFEST_V2_PATH = Path(__file__).with_name("skillcorner_5hz_v2.json")
+SUPPORTED_DATA_STATE_V2_HASH = "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671"
 _TIMESTAMP = re.compile(r"([0-9]+):([0-5][0-9]):([0-5][0-9])\.([0-9]{2})\Z")
 _STATE_SECTION_TYPES: dict[str, dict[str, type[object]]] = {
     "entity_schema": dict.fromkeys(
@@ -401,6 +403,16 @@ def load_manifest() -> dict[str, object]:
     return cast(dict[str, object], typed_value)
 
 
+def load_manifest_v2() -> dict[str, object]:
+    value = json.loads(MANIFEST_V2_PATH.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("v2 data-state manifest must be a JSON object with string keys")
+    typed_value = cast(dict[object, object], value)
+    if not all(isinstance(key, str) for key in typed_value):
+        raise ValueError("v2 data-state manifest must be a JSON object with string keys")
+    return cast(dict[str, object], typed_value)
+
+
 def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
     errors: list[str] = []
     if manifest.get("schema_id") != "fpdbench.skillcorner-data-state":
@@ -456,6 +468,79 @@ def validate_manifest(manifest: Mapping[str, object]) -> tuple[str, ...]:
     else:
         if manifest.get("data_state_hash") != expected_hash:
             errors.append("data_state_hash does not match scientific_state")
+    return tuple(errors)
+
+
+def validate_manifest_v2(manifest: Mapping[str, object]) -> tuple[str, ...]:
+    """Validate the additive nullable-ball measurement authority."""
+    errors: list[str] = []
+    for field, expected in (
+        ("schema_id", "fpdbench.skillcorner-data-state"),
+        ("schema_version", "2.0.0"),
+        ("data_state_id", "skillcorner_5hz_v2"),
+        ("data_state_version", "2.0.0"),
+    ):
+        if manifest.get(field) != expected:
+            errors.append(f"unexpected v2 data-state {field}")
+
+    try:
+        source = _mapping(load_source_manifest(), "pinned source authority")
+        for field in ("source_id", "source_release_id", "source_release_hash"):
+            if manifest.get(field) != source.get(field):
+                errors.append(f"v2 data-state {field} does not match the pinned source authority")
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        errors.append(f"could not verify pinned source authority: {exc}")
+
+    try:
+        state = _mapping(manifest.get("scientific_state"), "scientific_state")
+    except (ValueError, TypeError):
+        errors.append("v2 scientific_state must be an object with string keys")
+        return tuple(errors)
+    try:
+        actual_hash = compute_data_state_hash(state)
+    except (TypeError, ValueError):
+        errors.append("v2 scientific_state cannot be canonically serialized")
+    else:
+        if actual_hash != SUPPORTED_DATA_STATE_V2_HASH:
+            errors.append("v2 scientific_state differs from its frozen authority")
+        if manifest.get("data_state_hash") != actual_hash:
+            errors.append("v2 data_state_hash does not match scientific_state")
+
+    def section(name: str) -> Mapping[str, object]:
+        try:
+            return _mapping(state.get(name), f"scientific_state.{name}")
+        except ValueError as exc:
+            errors.append(str(exc))
+            return {}
+
+    identity = section("identity")
+    source_state = section("source")
+    ball_state = section("ball_state")
+    transform = section("transform")
+    expected_stop = (
+        "Unobserved in the pinned corpus; retain source values and stop source-specific population "
+        "qualification before eligibility membership or model masks with "
+        "BALL_NULL_FLAG_WITH_FINITE_XY_UNAPPROVED."
+    )
+    if any(
+        identity.get(field) != manifest.get(field)
+        for field in ("schema_id", "schema_version", "data_state_id", "data_state_version")
+    ):
+        errors.append("v2 scientific_state identity does not match manifest")
+    if any(
+        source_state.get(field) != manifest.get(field)
+        for field in ("source_id", "source_release_id", "source_release_hash")
+    ):
+        errors.append("v2 scientific_state source does not match manifest")
+    if ball_state.get("null_flag_finite_xy") != expected_stop:
+        errors.append("v2 nullable-ball population stop differs from its approved contract")
+    if (
+        transform.get("transform_id") != "skillcorner_source_frame_even_10hz_to_5hz"
+        or transform.get("transform_version") != "1.0.0"
+    ):
+        errors.append(
+            "v2 sampling sub-transform must remain skillcorner_source_frame_even_10hz_to_5hz 1.0.0"
+        )
     return tuple(errors)
 
 
@@ -534,6 +619,49 @@ def _canonical_ball(value: object) -> dict[str, object] | None:
     }
 
 
+def canonical_ball_v2(value: object) -> dict[str, object] | None:
+    """Preserve nullable detection and XY states while validating every source key."""
+    if value is None:
+        return None
+    errors: set[str] = set()
+    if not isinstance(value, Mapping):
+        raise ValueError("INVALID_SAMPLE_SCHEMA: ball_data must be an object or null")
+    typed_ball = cast(Mapping[object, object], value)
+    if not all(isinstance(key, str) for key in typed_ball):
+        raise ValueError("INVALID_SAMPLE_SCHEMA: ball_data keys must be strings")
+    ball = cast(Mapping[str, object], value)
+    expected_keys = {"x", "y", "z", "is_detected"}
+    if set(ball) != expected_keys:
+        errors.add("INVALID_SAMPLE_SCHEMA")
+    detected = ball.get("is_detected")
+    if detected is not None and not isinstance(detected, bool):
+        errors.add("INVALID_DETECTION_FLAG")
+    elif "is_detected" not in ball:
+        errors.add("INVALID_DETECTION_FLAG")
+
+    coordinates: dict[str, float | None] = {}
+    for key in ("x", "y", "z"):
+        if key not in ball:
+            errors.add("INVALID_SAMPLE_SCHEMA")
+            continue
+        item = ball[key]
+        if item is None:
+            coordinates[key] = None
+        elif isinstance(item, bool) or not isinstance(item, int | float):
+            errors.add("INVALID_SAMPLE_SCHEMA")
+        elif not math.isfinite(float(item)):
+            errors.add("NONFINITE_COORDINATE")
+        else:
+            coordinates[key] = float(item)
+    if errors:
+        raise ValueError(", ".join(sorted(errors)))
+    return {
+        "x_m": coordinates["x"],
+        "y_m": coordinates["y"],
+        "is_detected": detected,
+    }
+
+
 def _canonical_possession(value: object) -> dict[str, object] | None:
     if value is None:
         return None
@@ -550,19 +678,21 @@ def _canonical_possession(value: object) -> dict[str, object] | None:
     return {"group": group, "player_id": player_id}
 
 
-def iter_skillcorner_5hz(
+def _iter_skillcorner_5hz(
     source_frames: Iterable[Mapping[str, object]],
     match_metadata: Mapping[str, object],
     *,
     source_release_id: str,
+    manifest: Mapping[str, object],
+    validator: Callable[[Mapping[str, object]], tuple[str, ...]],
+    ball_parser: Callable[[object], dict[str, object] | None],
 ) -> Iterator[dict[str, object]]:
     """Yield the even-numbered source frames, validating in one forward pass."""
-    manifest = load_manifest()
-    errors = validate_manifest(manifest)
+    errors = validator(manifest)
     if errors:
         raise ValueError("invalid SkillCorner data-state manifest: " + "; ".join(errors))
     if source_release_id != manifest.get("source_release_id"):
-        raise ValueError("source release identity does not match skillcorner_5hz_v1")
+        raise ValueError(f"source release identity does not match {manifest.get('data_state_id')}")
     temporal = _mapping(
         _mapping(manifest["scientific_state"], "scientific_state")["temporal_sampling"],
         "temporal_sampling",
@@ -660,12 +790,46 @@ def iter_skillcorner_5hz(
                 "pitch_length_m": pitch_length,
                 "pitch_width_m": pitch_width,
                 "players": players,
-                "ball": _canonical_ball(frame["ball_data"]),
+                "ball": ball_parser(frame["ball_data"]),
                 "possession": _canonical_possession(frame["possession"]),
             }
         previous_frame = source_frame
         previous_period = period
         previous_timestamp = timestamp
+
+
+def iter_skillcorner_5hz(
+    source_frames: Iterable[Mapping[str, object]],
+    match_metadata: Mapping[str, object],
+    *,
+    source_release_id: str,
+) -> Iterator[dict[str, object]]:
+    """Yield the even-numbered source frames under the frozen v1 authority."""
+    yield from _iter_skillcorner_5hz(
+        source_frames,
+        match_metadata,
+        source_release_id=source_release_id,
+        manifest=load_manifest(),
+        validator=validate_manifest,
+        ball_parser=_canonical_ball,
+    )
+
+
+def iter_skillcorner_5hz_v2(
+    source_frames: Iterable[Mapping[str, object]],
+    match_metadata: Mapping[str, object],
+    *,
+    source_release_id: str,
+) -> Iterator[dict[str, object]]:
+    """Yield the same even frames under the nullable-ball v2 authority."""
+    yield from _iter_skillcorner_5hz(
+        source_frames,
+        match_metadata,
+        source_release_id=source_release_id,
+        manifest=load_manifest_v2(),
+        validator=validate_manifest_v2,
+        ball_parser=canonical_ball_v2,
+    )
 
 
 def serialize_sample(sample: Mapping[str, object]) -> bytes:

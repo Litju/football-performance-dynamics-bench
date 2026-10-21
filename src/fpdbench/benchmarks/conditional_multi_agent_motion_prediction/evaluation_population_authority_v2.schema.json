@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.prospective-evaluation-population/2.0.0",
+  "title": "Restricted v2 prospective eligible-window population authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "population_id",
+    "source_release_id",
+    "source_release_version",
+    "source_release_hash",
+    "source_population_hash",
+    "measurement_state_id",
+    "measurement_state_version",
+    "measurement_state_hash",
+    "eligibility_policy_id",
+    "eligibility_policy_version",
+    "eligibility_policy_hash",
+    "protocol_id",
+    "protocol_version",
+    "protocol_sha256",
+    "plan_id",
+    "plan_version",
+    "plan_sha256",
+    "ball_null_flag_finite_xy_count",
+    "candidate_window_count",
+    "eligible_window_count",
+    "candidate_origin_population_sha256",
+    "matches",
+    "membership_sha256",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "fpdbench.prospective-evaluation-population"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "population_id": {
+      "const": "skillcorner.prospective.conditional_motion.population_v2"
+    },
+    "source_release_id": {
+      "const": "skillcorner_open_data_v1"
+    },
+    "source_release_version": {
+      "const": "1.0.0"
+    },
+    "source_release_hash": {
+      "const": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+    },
+    "source_population_hash": {
+      "const": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
+    },
+    "measurement_state_id": {
+      "const": "skillcorner_5hz_v2"
+    },
+    "measurement_state_version": {
+      "const": "2.0.0"
+    },
+    "measurement_state_hash": {
+      "const": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671"
+    },
+    "eligibility_policy_id": {
+      "const": "skillcorner_window_v2"
+    },
+    "eligibility_policy_version": {
+      "const": "2.0.0"
+    },
+    "eligibility_policy_hash": {
+      "const": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11"
+    },
+    "protocol_id": {
+      "const": "skillcorner.prospective_conditional_motion"
+    },
+    "protocol_version": {
+      "const": "2.0.0"
+    },
+    "protocol_sha256": {
+      "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    },
+    "plan_id": {
+      "const": "skillcorner.prospective_conditional_motion.execution"
+    },
+    "plan_version": {
+      "const": "2.0.0"
+    },
+    "plan_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "ball_null_flag_finite_xy_count": {
+      "const": 0
+    },
+    "candidate_window_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "eligible_window_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "candidate_origin_population_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "matches": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/match"
+      }
+    },
+    "membership_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "match_id",
+        "windows"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "training",
+            "validation",
+            "evaluation"
+          ]
+        },
+        "match_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/window"
+          }
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "window_id",
+        "origin_sample_id",
+        "eligibility_result_sha256",
+        "scenes"
+      ],
+      "properties": {
+        "window_id": {
+          "$ref": "#/$defs/sha256"
+        },
+        "origin_sample_id": {
+          "type": "string",
+          "pattern": "^period_[1-5]/sample_(0|[1-9][0-9]*)$"
+        },
+        "eligibility_result_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "scenes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/scene"
+          }
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scene_id",
+        "player_ids",
+        "absolute_xy_truth_sha256",
+        "displacement_truth_sha256",
+        "truth_mask_sha256"
+      ],
+      "properties": {
+        "scene_id": {
+          "enum": [
+            "home",
+            "away"
+          ]
+        },
+        "player_ids": {
+          "type": "array",
+          "minItems": 7,
+          "items": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "absolute_xy_truth_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "displacement_truth_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "truth_mask_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  },
+  "description": "Structural validation only. Self-consistent hashes do not prove source membership, physical truth, masks, or scoreability. Empirical use requires a separately independently verified exhaustive protected-population receipt; no verifier or qualified population ships in the successor implementation."
+}

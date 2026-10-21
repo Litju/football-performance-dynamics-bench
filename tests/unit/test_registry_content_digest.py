@@ -260,7 +260,7 @@ def test_network_only_catalogue_source_is_not_fetched(tmp_path: Path) -> None:
 
 def test_private_qualification_source_is_not_opened(tmp_path: Path) -> None:
     digest = hashlib.sha256(b"private bytes").hexdigest()
-    source = Path("/tmp/J03WMX/private_truth.parquet")
+    source = tmp_path / "J03WMX" / "private_truth.parquet"
     _write_data_assets(tmp_path, [_data_asset_record(digest, source)])
 
     report = resolve_evidence_references((_reference(digest),), tmp_path)

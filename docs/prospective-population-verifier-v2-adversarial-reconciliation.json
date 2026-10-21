@@ -1,0 +1,309 @@
+{
+  "authoritative": false,
+  "case_reports": [
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "c5ee26f18fbf6a9d534701c2cf0d91504463096c58e775b8360e981f50ce8e8e",
+          "size_bytes": 61063
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "6d4ec5141aa1e995d2914f764a322cda5b21ff8f9427d2bb7ad41164fc99a0c6",
+          "size_bytes": 251580
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "5036f724874e55d120d57042ff9db70c92d08934ba426710cc8384d4a30cd26f",
+          "size_bytes": 3834380
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "547ce117ec2c1c9f2d3e4f2b06d4501bbe55e3b59dfb68ee78101fc0eaa3483b",
+          "size_bytes": 648760
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "c1c0e23bfbcf53ef328c344f6fa4c7720dac123febef78524f55862c618f7e99",
+          "size_bytes": 37155
+        }
+      ],
+      "audit_report_sha256": "624db3c7ebb96b1759871d4f07f1ec06e1db3fc202009ee7d31a02742b82f7a0",
+      "authoritative": false,
+      "case_id": "clean_baseline",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 60,
+        "scoreable_windows": 60
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    },
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "5763e16b51e8ea4defa9b8692de7ea5d8a4ce2506bc2eba4a989863d17ed82f8",
+          "size_bytes": 59113
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "e7b53aa2cc17bca7409bb22a2d39a77f8a711e49d307de08c2a97be3fd2f15de",
+          "size_bytes": 253096
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "dfe3ecdc84a035aa6a27f444a4e17f595288cf6a19dfce768b430a77b1eafb74",
+          "size_bytes": 3847760
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "cd2ee382e4e74bb9be34915d3ed4e6485602a17f3a20f1bda1108ff88b95ad88",
+          "size_bytes": 627144
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "37620d199ee2e5480aa7842374e9e232f21cb1865ba392f63e8c1b63daf9a874",
+          "size_bytes": 37381
+        }
+      ],
+      "audit_report_sha256": "ff0612601769078ebca9283f85217d3e9c51a12d001cf459911747cd648f944f",
+      "authoritative": false,
+      "case_id": "nullable_ball_flags_and_xy",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 58,
+        "scoreable_windows": 58
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    },
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "ad40d9368f950facbb7f354376dee02b28fc048d7fb5c08568caf17eb7405ed9",
+          "size_bytes": 60088
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "25433ae80f3e0f91be48b5e6762f279ee39dfcad879bd4ba21207334bb417342",
+          "size_bytes": 252056
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "62f18ad2c9b88413983693330c3548ded60213f7b8a76f34ff1ab994955a636e",
+          "size_bytes": 3837338
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "5f0a79a1335d5abf25fa6b6b4bad5bb37569d1621e1a3ed593d0048c85c44a73",
+          "size_bytes": 637938
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "33acb91925cdc8ec2d900b4cd25f61048ca75bf40981145138f7b4790a9d95cc",
+          "size_bytes": 37255
+        }
+      ],
+      "audit_report_sha256": "ca05c359ed2211ba635a558f1605e54b6f01024a83fc9efd84650c72b405cfd6",
+      "authoritative": false,
+      "case_id": "missing_ball_object",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 59,
+        "scoreable_windows": 59
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    },
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "eb5c299bdefcdfe7adc45c92f40f098478303b020e517f52a5202d03dde6daef",
+          "size_bytes": 64276
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "10c979c57631288f7b69bad8ebc3bb15bb32e36553dacd96805dcc48fa1cf5b0",
+          "size_bytes": 253026
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "31f4265668394a04774fdcbafe0b2b25b9d6d0afe5d3bad4ab53660639636297",
+          "size_bytes": 3849268
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "52b73721bc0e4fc23e1339d2e1a573314304b1890888b9be4fac69aa07b58596",
+          "size_bytes": 890394
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "45fca416d666978c744445d534738f9b6fa9c12c2f9fc3333f81981f40bcad06",
+          "size_bytes": 37368
+        }
+      ],
+      "audit_report_sha256": "a1f2cfced1129d59d054b7b4e9e9ce396ef4787aad436287b372fbca8fa67438",
+      "authoritative": false,
+      "case_id": "player_missing_record_and_repeated_null_coordinates",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 60,
+        "scoreable_windows": 60
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    },
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "75a5eff4e96197e9844fa33493f8e1972c5e5fce8bc3525074be4bc3375e9465",
+          "size_bytes": 60088
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "5130b00a229bc9dee9ade5654d41a6ac330b854d7684425f624dcd1cd8c1f855",
+          "size_bytes": 251723
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "bf9e4465c2ed04a0a630b6836d6db7084dcdca0fededfbc9ae83fb969cebef28",
+          "size_bytes": 3834523
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "8552f20e06e8613a8f9846fe467f0d37ef87de46008d73441262bc50d0cfe9ce",
+          "size_bytes": 637952
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "c48bc33261320932c8249c8d2fb3d1a1834fbd65ee4087394258c6bcf6ca9b53",
+          "size_bytes": 37220
+        }
+      ],
+      "audit_report_sha256": "eb0d883f80accd379937b441b6ab025eff569e6df0f047a545d293eb18cb5883",
+      "authoritative": false,
+      "case_id": "phase_gap_at_support_edge",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 59,
+        "scoreable_windows": 59
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    },
+    {
+      "artifact_snapshots": [
+        {
+          "artifact": "manifest_json",
+          "sha256": "c5ee26f18fbf6a9d534701c2cf0d91504463096c58e775b8360e981f50ce8e8e",
+          "size_bytes": 61063
+        },
+        {
+          "artifact": "candidates_jsonl",
+          "sha256": "6d4ec5141aa1e995d2914f764a322cda5b21ff8f9427d2bb7ad41164fc99a0c6",
+          "size_bytes": 251580
+        },
+        {
+          "artifact": "diagnostic_census_jsonl",
+          "sha256": "5036f724874e55d120d57042ff9db70c92d08934ba426710cc8384d4a30cd26f",
+          "size_bytes": 3834380
+        },
+        {
+          "artifact": "truth_jsonl",
+          "sha256": "547ce117ec2c1c9f2d3e4f2b06d4501bbe55e3b59dfb68ee78101fc0eaa3483b",
+          "size_bytes": 648760
+        },
+        {
+          "artifact": "receipt_json",
+          "sha256": "3c83838d4ff005a424970168471871add1508e80abfc3ab2ddee23e98fbde785",
+          "size_bytes": 37155
+        }
+      ],
+      "audit_report_sha256": "9ba62e2f1959fd0725593f500a42fca16c74f5ed24be7333c6734bff5b315841",
+      "authoritative": false,
+      "case_id": "odd_frame_nested_fields_ignored",
+      "counts": {
+        "ball_null_flag_finite_xy": 0,
+        "candidates": 60,
+        "diagnostic_grid": 860,
+        "eligible": 60,
+        "scoreable_windows": 60
+      },
+      "mismatch_count": 0,
+      "qualification_status": "NOT_QUALIFIED",
+      "status": "RECONCILED"
+    }
+  ],
+  "negative_source_cases": [
+    {
+      "case_id": "odd_top_level_extra_key",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_top_level_extra_key",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_player_schema_extra_key",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_duplicate_player_identity",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_unknown_player_identity",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_ball_nested_schema",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    },
+    {
+      "case_id": "even_possession_nested_schema",
+      "producer_error_type": "ValueError",
+      "producer_rejected": true,
+      "verifier_status": "INVALID_INPUT"
+    }
+  ],
+  "producer_fingerprint_sha256": "153bc67c532b8eddba90a98994d60f656526e71961f17c9d1f2454a72dd2e1a4",
+  "producer_revision": "6644dba8c945ca86be72b54792db30cbe488e5d0",
+  "qualification_status": "NOT_QUALIFIED",
+  "report_sha256": "1f53f7710f8187ecb1f9fb306c911dab9a75b9e03e111ae510aeca63a18abb66",
+  "schema_id": "fpdbench.independent-population-verifier-v2-reconciliation-suite",
+  "schema_version": "1.0.0",
+  "verifier_freeze_commit": "b9aaed295f0a22f4845ab6eb1cad3dcfaee65dce",
+  "verifier_source_sha256": "09d12139e858accc7cb96e5e2c4b5fbcccb61e0046943418cc921391136e7593"
+}

@@ -103,7 +103,10 @@ def test_cli_verifies_and_describes_pinned_sources(capsys: object) -> None:
 
 def test_cli_lists_describes_and_verifies_data_states(capsys: object) -> None:
     assert main(["data-states", "list"]) == 0
-    assert capsys.readouterr().out.strip() == "skillcorner_5hz_v1"  # type: ignore[attr-defined]
+    assert capsys.readouterr().out.splitlines() == [  # type: ignore[attr-defined]
+        "skillcorner_5hz_v1",
+        "skillcorner_5hz_v2",
+    ]
 
     assert main(["data-states", "verify"]) == 0
     report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
@@ -116,10 +119,21 @@ def test_cli_lists_describes_and_verifies_data_states(capsys: object) -> None:
     assert main(["data-states", "describe", "skillcorner_5hz_v1"]) == 0
     manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert manifest["scientific_state"]["temporal_sampling"]["sampling_frame_remainder"] == 0
+    assert main(["data-states", "describe", "skillcorner_5hz_v2"]) == 0
+    v2_manifest = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert v2_manifest["data_state_version"] == "2.0.0"
+    assert v2_manifest["scientific_state"]["transform"]["transform_version"] == "1.0.0"
+    assert main(["data-states", "verify", "skillcorner_5hz_v2"]) == 0
+    assert json.loads(capsys.readouterr().out)["data_state_hash"] == v2_manifest["data_state_hash"]  # type: ignore[attr-defined]
     assert main(["data-states", "describe", "unknown"]) == 2
 
 
 def test_cli_verifies_skillcorner_window_eligibility(capsys: object) -> None:
+    assert main(["eligibility", "list"]) == 0
+    assert capsys.readouterr().out.splitlines() == [  # type: ignore[attr-defined]
+        "skillcorner_window_v1",
+        "skillcorner_window_v2",
+    ]
     assert main(["eligibility", "verify"]) == 0
     report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert report["status"] == "passed"
@@ -131,3 +145,7 @@ def test_cli_verifies_skillcorner_window_eligibility(capsys: object) -> None:
         report["data_state_hash"]
         == "4c29471c7fccc037dcfafd30222991e06d150e0887c0b667918bfa374262c6c3"
     )
+    assert main(["eligibility", "verify", "skillcorner_window_v2"]) == 0
+    v2_report = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert v2_report["policy_id"] == "skillcorner_window_v2"
+    assert v2_report["data_state_id"] == "skillcorner_5hz_v2"

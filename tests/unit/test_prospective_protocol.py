@@ -8,10 +8,17 @@ from typing import cast
 
 import pytest
 
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.information import (
+    validate_information_boundary,
+)
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.prospective_protocol import (
     PROTOCOL_SHA256,
+    PROTOCOL_V2_SHA256,
     load_prospective_protocol,
+    load_prospective_protocol_v2,
     validate_prospective_protocol_document,
+    validate_prospective_protocol_v2,
+    validate_prospective_protocol_v2_document,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,6 +79,53 @@ def test_prospective_protocol_is_stable_pinned_and_uses_the_exact_population() -
 
     assert document["protocol_sha256"] == PROTOCOL_SHA256
     _validate(document)
+
+
+def test_prospective_protocol_v2_binds_successors_and_preserves_frozen_factors() -> None:
+    document = load_prospective_protocol_v2()
+    source = _read("data_sources/skillcorner_open_data_v1.json")
+    measurement = _read("data_states/skillcorner_5hz_v2.json")
+    eligibility = _read("eligibility/skillcorner_window_v2.json")
+
+    assert document["protocol_version"] == "2.0.0"
+    assert document["protocol_sha256"] == PROTOCOL_V2_SHA256
+    validate_prospective_protocol_v2_document(document, source, measurement, eligibility)
+    assert validate_prospective_protocol_v2(ROOT) == ()
+
+    state = cast(dict[str, object], document["scientific_state"])
+    authorities = cast(dict[str, object], state["authorities"])
+    assert authorities["measurement_state_hash"] == measurement["data_state_hash"]
+    assert authorities["eligibility_policy_hash"] == eligibility["policy_hash"]
+    v1_state = cast(dict[str, object], load_prospective_protocol()["scientific_state"])
+    assert state["split"] == v1_state["split"]
+    regimes = cast(list[dict[str, object]], state["information_regimes"])
+    assert [regime["regime_id"] for regime in regimes] == [
+        "history_only",
+        "future_ball",
+        "future_opponent_plus_ball",
+    ]
+    for regime in regimes:
+        features = cast(list[str], regime["model_visible_features"])
+        validate_information_boundary(features)
+        assert "future.target_team.xy_m" not in features
+        assert "future.target_mask" not in features
+    assert regimes[1]["future_context_features"] == [
+        "future.ball.xy_m",
+        "future.ball.observation_mask",
+    ]
+    assert regimes[2]["future_context_features"] == [
+        "future.ball.xy_m",
+        "future.ball.observation_mask",
+        "future.opponent_team.xy_m",
+        "future.opponent_team.observation_mask",
+    ]
+
+    changed = copy.deepcopy(document)
+    changed_state = cast(dict[str, object], changed["scientific_state"])
+    changed_authorities = cast(dict[str, object], changed_state["authorities"])
+    changed_authorities["measurement_state_hash"] = "0" * 64
+    with pytest.raises(ValueError, match="v2 protocol differs"):
+        validate_prospective_protocol_v2_document(changed, source, measurement, eligibility)
 
 
 def test_protocol_hash_detects_unreviewed_identity_drift() -> None:
