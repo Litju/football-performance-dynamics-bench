@@ -137,32 +137,39 @@ creation is not a filesystem immutable flag. Signed receipt verification detects
 post-signature edits; later execution must recheck its source snapshot. No test
 or receipt claims resistance to a hostile kernel or compromised reviewer key.
 
-## Independent, versioned provenance
+## Trusted execution policy
 
-The adapter introduces `fpdbench.protected-source-preflight` **1.0.0**, separate
-from the frozen producer fingerprint contract. Its receipt contains an ordered
-inventory of the installed adapter package's Python/JSON contents, the pinned
-source-authority digest/revision, all 81 source digests, retained-frame evidence
-and normalization lineage. A self-hash is deliberately insufficient.
+The source preflight remains `fpdbench.protected-source-preflight` **1.0.0** and
+always reports `SOURCE_PREFLIGHT / NOT_QUALIFIED`. Its receipt records the ordered
+adapter inventory, all pinned source identities, the complete retained-frame scan
+and phase normalization lineage. The receipt's attached inventory or any
+self-hash is not a trust source.
 
-An independent reviewer must inspect the evidence, pin the reviewed package
-inventory digest and a trusted SSH allowed-signers file **outside the receipt**,
-and sign the exact receipt bytes using namespace `fpdbench-res501-source-v1` and
-principal `res501-source`. `authenticate_receipt` requires that detached signature,
-the independently provisioned signer-file digest and reviewed package-inventory
-digest; it rejects wrong signatures, edited receipts, untrusted signers, package
-drift and wrong schema/revision/status. Trust/signature files use the same private
-storage controls and are snapshotted before verification. No private signing key
-is generated, stored or used by production adapter code. Tests use ephemeral
-synthetic Ed25519 keys only.
+The executor code authenticates receipts only against a root-owned Linux policy at
+`/etc/fpdbench/protected-executor`. The root-signed canonical policy pins the
+reviewer principal and receipt namespace, the exact allowed-signers file digest,
+the installed adapter inventory digest, the historical PR #20 and #21 revisions
+and 79-file inventory digests, and the frozen v2 source, measurement, eligibility,
+protocol, plan, and schema hashes. `authenticate_receipt` has no parameters for
+expected digests or signer files. It rejects missing or untrusted system policy,
+policy/signature mutation, a changed adapter, noncanonical or incomplete source
+receipts, signer injection, and revoked keys.
 
-**Provenance blocker:** no production reviewer trust anchor or independent approval
-of this new contract/package inventory exists yet. Authenticating a source receipt
-would prove only source-preflight provenance, never population qualification. The
-frozen producer/verifier interfaces remain synthetic-only and buffer bytes; a
-separately reviewed protected streaming execution contract is still required.
-This delivery does not relabel protected inputs as synthetic, add a restricted
-producer bypass, or infer authority from the successful synthetic key test.
+The system trust directory and files must be root-owned, outside Git, and not
+writable by group or other users. The owner installs a root `allowed_signers`
+file, signs `policy.json` in namespace `fpdbench-res544-trust-policy-v1` as
+`fpdbench-policy-owner`, and signs the reviewed source receipt with the policy's
+reviewer key and `fpdbench-res501-source-v1`. Rotation replaces the external
+reviewer key file and root-signed policy, increments `generation`, and lists
+revoked key fingerprints; verification uses only the current root-owned bundle.
+Private keys are never created or stored by adapter or test code. Tests create
+ephemeral synthetic keys only; those test keys do not provision production trust.
+
+`verify_source_snapshot` authenticates the saved receipt and rehashes the full
+81-file snapshot, all 20 source-wide scans, and every normalized phase artifact
+before any later executor may construct membership or truth. It emits no
+qualification token. It must be called in a future protected run while keeping
+the source and receipt roots private and separated.
 
 ## Validation
 
@@ -180,3 +187,6 @@ wheel/sdist smoke passed. The CLI checks were repeated after the final guide edi
 `a22f93f11cf428b7f326a93714fbcc798c99e5d0dbcab5122edb48d050b4a873`.
 Final test counts, exact delivery HEAD and exact-head CI links are recorded in the
 draft PR and protected-population workstream handoff comment.
+
+The remaining protected population execution gap is tracked in
+[`protected-population-executor-v1.md`](protected-population-executor-v1.md).
