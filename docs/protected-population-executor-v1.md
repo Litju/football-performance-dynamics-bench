@@ -1,9 +1,8 @@
 # Protected population executor boundary
 
-**State: BLOCKED / NOT_QUALIFIED.** This change hardens source-receipt trust and
-snapshot revalidation and strengthens the synthetic producer/verifier package
-rehearsal. It does not claim a complete protected population executor or qualify
-any population.
+**State: BLOCKED / NOT_QUALIFIED.** This stacked change adds a separately
+versioned, bounded-memory synthetic producer. It does not complete the protected
+population executor or qualify any population.
 
 ## Trust root
 
@@ -83,32 +82,45 @@ checks each installed inventory before exchange. The merged monolithic package
 is not accepted as the PR #20 producer.
 
 The two pinned APIs still accept complete in-memory match-byte objects, retain
-the whole cohort and return whole output artifacts. They are synthetic-only.
-They do not satisfy the required bounded-memory per-match/streaming execution
-contract, so the trusted boundary deliberately does not route a protected source
-snapshot to them.
+the whole cohort and return whole output artifacts. They remain unchanged and
+synthetic-only.
+
+The stacked streaming producer is
+res544-streaming-population-producer/1.0.0. It parses JSONL in bounded rows,
+completes the full nullable-ball drift scan before candidate or truth
+construction, uses a 41-sample rolling support window, streams all output
+artifacts to a new private Linux directory, and rejects input mutations across
+its passes. The synthetic 10 Hz output reconciles byte-for-byte with the PR #20
+scientific artifacts. It does not consume an authenticated protected snapshot,
+qualify source bytes, or call the protected adapter. Its independent source
+identity explicitly does not attest bytecode or the complete runtime; details
+and memory evidence are in
+[prospective-population-streaming-producer-v1.md](prospective-population-streaming-producer-v1.md).
 
 ## Exact blockers
 
-1. Implement separately versioned producer and verifier workers that consume the
-   authenticated snapshot with bounded per-match/streaming memory, write protected
-   output incrementally, and preserve independent code, protocol, and package
-   attestations. The frozen PR #20 and #21 packages remain historical provenance;
-   the merged public APIs cannot be relabeled or given a restricted-input bypass.
-2. Provision the root-owned policy bundle and owner/reviewer public keys outside
+1. Implement and independently review a separately authored streaming verifier.
+   Producer parity, producer hashes, and green CI are not independent verification.
+2. Attest the actual worker interpreter, imported bytecode, installed dependencies,
+   and executable closure before any real-source execution. The existing adapter
+   source inventory does not authenticate them.
+3. Provision the root-owned policy bundle and owner/reviewer public keys outside
    the repository. No production key, trust file, or protected source is present
    here, so production receipt authentication currently fails closed.
-3. Independently review the exact DRAFT PR head and its trust/execution contract
-   before any separately authorized real-source run.
+4. Independently review this exact stacked DRAFT head and the complete trust and
+   execution contract before any separately authorized real-source run.
 
 No real SkillCorner processing, qualification PASS, training, checkpoint
 selection, LOMO, scoring, or release was performed or authorized by this work.
 
 ## Synthetic validation
 
-At the implementation head, the full suite passed **529 pytest tests**. Ruff,
-format checking, strict Pyright, repository/naming validation, evidence validation,
-and reproducibility passed; the public snapshot remains
+The reviewed PR #24 baseline 6b8dd7534c49e5b3ce68dee7342da422169a9e88 passed
+**543 pytest tests** at its exact head. This stacked branch passed **555 pytest
+tests** in WSL on Python 3.14. Ruff, format checking, strict Pyright,
+repository/naming validation, evidence validation, and reproducibility passed;
+the exact-head CI status is recorded with this branch's delivery. The public
+snapshot remains
 `a22f93f11cf428b7f326a93714fbcc798c99e5d0dbcab5122edb48d050b4a873`. Wheel and
 sdist builds passed the isolated installation smoke. The pinned producer/verifier
 rehearsal reconciled **60 synthetic candidates** with three negative controls and
