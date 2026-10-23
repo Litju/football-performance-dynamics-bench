@@ -51,6 +51,9 @@ import pathlib
 import sys
 
 import fpdbench
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    streaming_population_verifier_v1,
+)
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.population_producer_v2 import (
     PopulationMatchInputV2,
     PopulationVerificationSubmissionV2,
@@ -58,6 +61,12 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.population_pr
     produce_population_draft_v2,
 )
 from fpdbench.data_sources.skillcorner import canonical_bytes
+
+verifier_authorities = streaming_population_verifier_v1.load_authorities()
+assert streaming_population_verifier_v1.VERIFIER_VERSION == (
+    "res544-streaming-population-verifier/1.0.0"
+)
+assert len(verifier_authorities.roles) == 20
 
 fixture_input = PopulationMatchInputV2("synthetic", b"{{}}", b"", b"[]")
 assert isinstance(fixture_input.metadata_json, bytes)
