@@ -229,3 +229,20 @@ review this producer, separately implement/review the verifier, add a WSL/Linux
 restricted-storage adapter with owned 0700 directories and exclusive 0600 receipts, verify all pinned source bytes
 and LFS payloads, obtain explicit real-source execution authorization, and reconcile
 both exhaustive runs. Publish only approved non-reconstructive closeout aggregates.
+
+## Separately versioned streaming producer
+
+The historical in-memory producer API above is unchanged. The stacked separately
+versioned producer is implemented in
+streaming_population_producer_v1.py as
+res544-streaming-population-producer/1.0.0, with file-backed JSONL parsing,
+full-population drift scanning before construction, a 41-sample window, and
+incremental private artifacts. It reconciles the 10 Hz synthetic scientific
+artifacts byte-for-byte with the historical producer. Its receipt provenance is
+separately versioned and explicitly does not attest bytecode or its complete
+runtime.
+
+This synthetic worker does not call the protected executor or qualify source
+bytes. It does not implement the independent verifier described above. See
+prospective-population-streaming-producer-v1.md for the streaming contract,
+memory evidence, and remaining blockers.
