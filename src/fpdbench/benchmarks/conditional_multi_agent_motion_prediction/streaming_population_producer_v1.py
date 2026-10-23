@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import os
@@ -269,13 +270,78 @@ def _input_map(
     return by_match
 
 
+def _absolute_path_parts(path: Path) -> tuple[str, ...]:
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError("population input paths must be absolute and cannot contain '..'")
+    return path.parts[1:]
+
+
+def _open_directory(
+    path: Path,
+    *,
+    private_ancestry: bool = False,
+    outside_git_worktree: bool = False,
+) -> int:
+    parts = _absolute_path_parts(path)
+    flags = (
+        (os.O_RDONLY if private_ancestry else getattr(os, "O_PATH", os.O_RDONLY))
+        | os.O_DIRECTORY
+        | os.O_CLOEXEC
+        | os.O_NOFOLLOW
+    )
+    fd = os.open("/", flags)
+    try:
+        for component in parts:
+            child_fd = os.open(component, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child_fd
+            info = os.fstat(fd)
+            if private_ancestry:
+                writable = info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+                sticky_root = info.st_uid == 0 and bool(info.st_mode & stat.S_ISVTX)
+                if info.st_uid not in {0, os.geteuid()} or (writable and not sticky_root):
+                    raise ValueError(
+                        "private output ancestors must be root/user-owned and not shared-writable"
+                    )
+            if outside_git_worktree:
+                try:
+                    os.stat(".git", dir_fd=fd, follow_symlinks=False)
+                except FileNotFoundError:
+                    pass
+                else:
+                    raise ValueError("population output must be outside a Git worktree")
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
 def _open_regular(path: Path) -> tuple[int, _FileSnapshot]:
-    fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    parts = _absolute_path_parts(path)
+    if not parts:
+        raise ValueError("population input must name a regular file")
+    parent_fd = _open_directory(path.parent)
+    try:
+        fd = os.open(
+            parts[-1],
+            os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+    finally:
+        os.close(parent_fd)
     info = os.fstat(fd)
     if not stat.S_ISREG(info.st_mode):
         os.close(fd)
         raise ValueError("population input must be a regular file")
     return fd, _file_snapshot(info, "")
+
+
+def _named_file_snapshot(path: Path) -> _FileSnapshot:
+    fd, snapshot = _open_regular(path)
+    try:
+        return snapshot
+    finally:
+        os.close(fd)
 
 
 def _file_snapshot(info: os.stat_result, sha256: str) -> _FileSnapshot:
@@ -324,7 +390,7 @@ def _read_document(path: Path) -> tuple[bytes, _FileSnapshot]:
             final = _file_snapshot(os.fstat(stream.fileno()), digest.hexdigest())
         if not _same_file(initial, final) or len(payload) != final.size:
             raise ValueError("population input changed while being read")
-        final_path = _file_snapshot(path.stat(follow_symlinks=False), "")
+        final_path = _named_file_snapshot(path)
         if not _same_file(final, final_path):
             raise ValueError("population input path changed while being read")
         return payload, final
@@ -423,7 +489,7 @@ def _tracking_samples(
         if (
             not _same_file(initial, final)
             or stats.byte_count != final.size
-            or not _same_file(final, _file_snapshot(path.stat(follow_symlinks=False), ""))
+            or not _same_file(final, _named_file_snapshot(path))
         ):
             raise ValueError("tracking input changed while being read")
         stats.raw_sha256 = raw_hash.hexdigest()
@@ -504,7 +570,7 @@ def _verify_file_unchanged(path: Path, expected: _FileSnapshot, *, limit: int | 
             or not _same_file(expected, final)
             or size != expected.size
             or digest.hexdigest() != expected.sha256
-            or not _same_file(expected, _file_snapshot(path.stat(follow_symlinks=False), ""))
+            or not _same_file(expected, _named_file_snapshot(path))
         ):
             raise ValueError("population input mutated after the mandatory drift scan")
     except BaseException:
@@ -532,7 +598,47 @@ def _verify_snapshots_unchanged(
         _verify_file_unchanged(item.phase_intervals_path, snapshot.phases, limit=MAX_DOCUMENT_BYTES)
 
 
-def _private_output_directory(path: Path) -> None:
+def _filesystem_type(fd: int) -> str:
+    buffer = ctypes.create_string_buffer(256)
+    fstatfs = ctypes.CDLL(None, use_errno=True).fstatfs
+    fstatfs.argtypes = (ctypes.c_int, ctypes.c_void_p)
+    fstatfs.restype = ctypes.c_int
+    if fstatfs(fd, ctypes.cast(buffer, ctypes.c_void_p)) != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+    width = ctypes.sizeof(ctypes.c_long)
+    magic = int.from_bytes(buffer.raw[:width], sys.byteorder, signed=False)
+    return {
+        0xEF53: "ext4",
+        0x58465342: "xfs",
+        0x9123683E: "btrfs",
+        0x01021994: "tmpfs",
+        0x794C7630: "overlay",
+        0x6969: "nfs",
+        0xFF534D42: "cifs",
+        0x01021997: "9p",
+        0x65735546: "fuse",
+        0x53464846: "drvfs",
+    }.get(magic, f"unknown:0x{magic:x}")
+
+
+def _secure_artifact_fd(fd: int) -> int:
+    try:
+        os.fchmod(fd, 0o600)
+        info = os.fstat(fd)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+        ):
+            raise ValueError("population artifact must be a user-owned regular file with mode 0600")
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _private_output_directory(path: Path) -> tuple[int, str]:
     if (
         sys.platform != "linux"
         or not path.is_absolute()
@@ -541,24 +647,76 @@ def _private_output_directory(path: Path) -> None:
         or Path("/mnt") in path.parents
     ):
         raise ValueError("absolute Linux private output path required")
-    resolved_parent = path.parent.resolve()
-    if any((parent / ".git").exists() for parent in (resolved_parent, *resolved_parent.parents)):
-        raise ValueError("population output must be outside a Git worktree")
-    path.mkdir(mode=0o700)
-    info = path.lstat()
-    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid():
-        raise ValueError("population output directory must be a user-owned directory")
-    path.chmod(0o700)
-    if stat.S_IMODE(path.stat().st_mode) != 0o700:
-        raise ValueError("population output directory must be mode 0700")
-    _sync_directory(resolved_parent)
+    if path.name in {"", ".", ".."}:
+        raise ValueError("population output must name a new directory")
+    _absolute_path_parts(path)
+    parent_fd = _open_directory(
+        path.parent,
+        private_ancestry=True,
+        outside_git_worktree=True,
+    )
+    output_fd = -1
+    try:
+        os.mkdir(path.name, mode=0o700, dir_fd=parent_fd)
+        output_fd = os.open(
+            path.name,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+        os.fchmod(output_fd, 0o700)
+        info = os.fstat(output_fd)
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) != 0o700
+        ):
+            raise ValueError("population output directory must be user-owned with mode 0700")
+        filesystem_type = _filesystem_type(output_fd)
+        os.fsync(parent_fd)
+        return output_fd, filesystem_type
+    except BaseException:
+        if output_fd >= 0:
+            os.close(output_fd)
+        raise
+    finally:
+        os.close(parent_fd)
+
+
+def _validate_input_output_separation(
+    inputs: Mapping[str, StreamingPopulationMatchInputV1],
+    output_directory: Path,
+) -> None:
+    output_parts = _absolute_path_parts(output_directory)
+    source_directories: list[str] = []
+    for item in inputs.values():
+        for source_path in (
+            item.metadata_path,
+            item.tracking_jsonl_path,
+            item.phase_intervals_path,
+        ):
+            source_parts = _absolute_path_parts(source_path)
+            if not source_parts:
+                raise ValueError("population inputs must name files")
+            source_directory_parts = source_parts[:-1]
+            shared_length = min(len(output_parts), len(source_directory_parts))
+            common_prefix = output_parts[:shared_length] == source_directory_parts[:shared_length]
+            if common_prefix:
+                raise ValueError("population input and output paths must use separate directories")
+            source_directories.append(str(source_path.parent))
+    shared_source_root = Path(os.path.commonpath(source_directories))
+    if shared_source_root != Path("/") and (
+        output_directory == shared_source_root or shared_source_root in output_directory.parents
+    ):
+        raise ValueError("population output must be outside the input directory tree")
 
 
 def _create_writer(stack: ExitStack, path: Path) -> _ArtifactWriter:
-    fd = os.open(
-        path,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
+    fd = _secure_artifact_fd(
+        os.open(
+            path,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+        )
     )
     stream = os.fdopen(fd, "wb", buffering=0)
     stack.callback(stream.close)
@@ -570,12 +728,8 @@ def _sync_file(writer: _ArtifactWriter) -> None:
     os.fsync(writer.stream.fileno())
 
 
-def _sync_directory(path: Path) -> None:
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+def _sync_directory(fd: int) -> None:
+    os.fsync(fd)
 
 
 def _verify_output_digest(path: Path, expected: str) -> str:
@@ -608,15 +762,17 @@ def _manifest_artifact_hash(
     return digest.hexdigest()
 
 
-def _write_receipt(path: Path, receipt: dict[str, object]) -> None:
+def _write_receipt(path: Path, receipt: dict[str, object], directory_fd: int) -> None:
     digest = hashlib.sha256()
     for chunk in _json_chunks(receipt):
         digest.update(chunk)
     receipt["receipt_sha256"] = digest.hexdigest()
-    fd = os.open(
-        path,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
+    fd = _secure_artifact_fd(
+        os.open(
+            path,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+        )
     )
     with os.fdopen(fd, "wb", buffering=0) as stream:
         writer = _ArtifactWriter(stream)
@@ -624,7 +780,7 @@ def _write_receipt(path: Path, receipt: dict[str, object]) -> None:
             writer.write(chunk)
         stream.flush()
         os.fsync(stream.fileno())
-    _sync_directory(path.parent)
+    _sync_directory(directory_fd)
 
 
 def _base_receipt(
@@ -633,6 +789,7 @@ def _base_receipt(
     worker_identity: Mapping[str, object],
     input_receipts: list[dict[str, object]],
     scan: BallPopulationQualificationV2,
+    filesystem_type: str,
 ) -> dict[str, object]:
     return {
         "schema_id": "fpdbench.streaming-population-producer-receipt",
@@ -650,6 +807,10 @@ def _base_receipt(
         },
         "source_byte_qualified": False,
         "independent_verification": "NOT_PERFORMED",
+        "storage_boundary": {
+            "trust": "SYNTHETIC_ONLY_NOT_TRUSTED_FOR_PROTECTED_DATA",
+            "filesystem_type": filesystem_type,
+        },
         "input_receipts": input_receipts,
         "drift_scan": asdict(scan),
     }
@@ -814,13 +975,16 @@ def _emit_manifest(
     directory: Path,
     values: dict[str, object],
     matches_path: Path,
+    directory_fd: int,
 ) -> tuple[str, str]:
     """Stream the large matches array and patch its fixed-width self-digest."""
     manifest_path = directory / _FILES["manifest"]
-    fd = os.open(
-        manifest_path,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
+    fd = _secure_artifact_fd(
+        os.open(
+            manifest_path,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+        )
     )
     digest = hashlib.sha256()
     matches_digest = hashlib.sha256()
@@ -864,7 +1028,7 @@ def _emit_manifest(
         writer.write(manifest_sha256.encode("ascii"))
         stream.flush()
         os.fsync(stream.fileno())
-    _sync_directory(directory)
+    _sync_directory(directory_fd)
     if matches_digest.hexdigest() != cast(str, values["membership_sha256"]):
         raise ValueError("population membership spool changed during manifest assembly")
     expected_artifact_hash = _manifest_artifact_hash(values, matches_path, manifest_sha256)
@@ -873,10 +1037,12 @@ def _emit_manifest(
 
 def _write_incomplete_marker(directory: Path) -> None:
     marker = directory / ".incomplete"
-    fd = os.open(
-        marker,
-        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
+    fd = _secure_artifact_fd(
+        os.open(
+            marker,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+        )
     )
     with os.fdopen(fd, "wb", buffering=0) as stream:
         stream.write(
@@ -898,14 +1064,17 @@ def _scan_receipt(
     worker_identity: Mapping[str, object],
     input_receipts: list[dict[str, object]],
     scan: BallPopulationQualificationV2,
+    directory_fd: int,
+    filesystem_type: str,
 ) -> None:
     receipt = _base_receipt(
         status="INCOMPLETE",
         worker_identity=worker_identity,
         input_receipts=input_receipts,
         scan=scan,
+        filesystem_type=filesystem_type,
     )
-    _write_receipt(directory / _FILES["receipt"], receipt)
+    _write_receipt(directory / _FILES["receipt"], receipt, directory_fd)
 
 
 def produce_streaming_population_draft_v1(
@@ -921,16 +1090,45 @@ def produce_streaming_population_draft_v1(
     roles = _roles()
     by_match = _input_map(inputs, roles)
     worker_identity = _worker_package_identity()
-    _private_output_directory(output_directory)
+    _validate_input_output_separation(by_match, output_directory)
+    output_fd, filesystem_type = _private_output_directory(output_directory)
+    try:
+        return _produce_streaming_population_draft_v1(
+            by_match,
+            output_directory,
+            output_fd,
+            filesystem_type,
+            worker_identity,
+        )
+    finally:
+        os.close(output_fd)
+
+
+def _produce_streaming_population_draft_v1(
+    by_match: Mapping[str, StreamingPopulationMatchInputV1],
+    result_directory: Path,
+    output_fd: int,
+    filesystem_type: str,
+    worker_identity: Mapping[str, object],
+) -> StreamingPopulationResultV1:
+    roles = _roles()
+    output_directory = Path(f"/proc/self/fd/{output_fd}")
     _write_incomplete_marker(output_directory)
-    _sync_directory(output_directory)
+    _sync_directory(output_fd)
     release_id = cast(str, load_source_manifest()["source_release_id"])
 
     snapshots, scan = _snapshots_and_drift(by_match, roles, release_id)
     input_receipts = _input_receipts(roles, snapshots)
     if scan.null_flag_finite_xy_count:
-        _scan_receipt(output_directory, worker_identity, input_receipts, scan)
-        raise IncompleteStreamingPopulationV1(output_directory / _FILES["receipt"])
+        _scan_receipt(
+            output_directory,
+            worker_identity,
+            input_receipts,
+            scan,
+            output_fd,
+            filesystem_type,
+        )
+        raise IncompleteStreamingPopulationV1(result_directory / _FILES["receipt"])
 
     candidate_origins = _ArrayDigest()
     diagnostic_origins = _ArrayDigest()
@@ -1109,6 +1307,7 @@ def produce_streaming_population_draft_v1(
                 worker_identity=worker_identity,
                 input_receipts=input_receipts,
                 scan=scan,
+                filesystem_type=filesystem_type,
             )
             receipt.update(
                 match_counts=match_counts,
@@ -1118,8 +1317,9 @@ def produce_streaming_population_draft_v1(
                 candidates_jsonl_sha256=candidates_hash,
                 diagnostic_census_jsonl_sha256=diagnostic_hash,
             )
-            _write_receipt(output_directory / _FILES["receipt"], receipt)
-            raise IncompleteStreamingPopulationV1(output_directory / _FILES["receipt"])
+            _write_receipt(output_directory / _FILES["receipt"], receipt, output_fd)
+            _sync_directory(output_fd)
+            raise IncompleteStreamingPopulationV1(result_directory / _FILES["receipt"])
 
         manifest_values: dict[str, object] = {
             "schema_id": "fpdbench.prospective-evaluation-population",
@@ -1153,6 +1353,7 @@ def produce_streaming_population_draft_v1(
             output_directory,
             manifest_values,
             matches_path,
+            output_fd,
         )
         matches_path.unlink()
         truth_hash = _verify_output_digest(
@@ -1165,6 +1366,7 @@ def produce_streaming_population_draft_v1(
             worker_identity=worker_identity,
             input_receipts=input_receipts,
             scan=scan,
+            filesystem_type=filesystem_type,
         )
         receipt.update(
             match_counts=match_counts,
@@ -1177,10 +1379,10 @@ def produce_streaming_population_draft_v1(
             manifest_json_sha256=manifest_artifact_hash,
             truth_jsonl_sha256=truth_hash,
         )
-        _write_receipt(output_directory / _FILES["receipt"], receipt)
+        _write_receipt(output_directory / _FILES["receipt"], receipt, output_fd)
         (output_directory / ".incomplete").unlink()
-        _sync_directory(output_directory)
-    return StreamingPopulationResultV1(output_directory)
+        _sync_directory(output_fd)
+    return StreamingPopulationResultV1(result_directory)
 
 
 def _role_for(roles: Sequence[tuple[str, str]], match_id: str) -> str:
