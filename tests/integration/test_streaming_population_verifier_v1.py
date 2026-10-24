@@ -13,6 +13,10 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    streaming_population_verifier_v1 as verifier,
+)
+
 MODULE = (
     "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.streaming_population_verifier_v1"
 )
@@ -109,6 +113,21 @@ def _run_verifier(
     return json.loads(report_path.read_text(encoding="utf-8"))
 
 
+def _run_verifier_in_process(
+    bundle,
+    case: str,
+    tmp_path: Path,
+    *,
+    input_root: Path,
+) -> dict[str, object]:
+    return verifier.verify_population(
+        input_root,
+        bundle.root / case / "artifacts",
+        bundle.producer_root,
+        tmp_path / "report.json",
+    )
+
+
 def _assert_report_entry(
     report: dict[str, object], category: str, *, record: bool = False
 ) -> dict[str, object]:
@@ -123,6 +142,17 @@ def _assert_report_entry(
         identity = entry["identity"]
         assert {"match_id", "origin_sample_id", "record_index"} <= set(identity)
     return entry
+
+
+def _replace_file_with_same_bytes(path: Path) -> None:
+    replacement = path.with_name(f".{path.name}.replacement")
+    replacement.write_bytes(path.read_bytes())
+    replacement.replace(path)
+
+
+def _mutate_file_in_place(path: Path) -> None:
+    with path.open("ab") as stream:
+        stream.write(b"\n")
 
 
 @pytest.fixture(scope="session")
@@ -200,6 +230,87 @@ def test_reconciles_isolated_pr25_outputs(fixture_bundle, tmp_path, case: str) -
     )
     assert report["runtime_gate"] == "BLOCKED"
     assert report["mismatch_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("filename", "mutation"),
+    [("metadata.json", "replace"), ("phases.json", "mutate")],
+)
+def test_contract_snapshot_changes_after_initial_read_stop_before_membership(
+    fixture_bundle, tmp_path, monkeypatch, filename: str, mutation: str
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    path = input_root / match_id / filename
+    original_scan = verifier._global_drift_scan
+
+    def mutate_then_scan(*args, **kwargs):
+        if mutation == "replace":
+            _replace_file_with_same_bytes(path)
+        else:
+            _mutate_file_in_place(path)
+        return original_scan(*args, **kwargs)
+
+    monkeypatch.setattr(verifier, "_global_drift_scan", mutate_then_scan)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is False
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
+
+
+def test_tracking_replacement_after_drift_scan_stops_second_pass(
+    fixture_bundle, tmp_path, monkeypatch
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    tracking = input_root / match_id / "tracking.jsonl"
+    original_scan = verifier._global_drift_scan
+
+    def scan_then_replace(*args, **kwargs):
+        result = original_scan(*args, **kwargs)
+        _replace_file_with_same_bytes(tracking)
+        return result
+
+    monkeypatch.setattr(verifier, "_global_drift_scan", scan_then_replace)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is True
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
+
+
+@pytest.mark.parametrize("filename", ["metadata.json", "phases.json", "tracking.jsonl"])
+def test_final_input_snapshot_rejects_changes_after_derivation(
+    fixture_bundle, tmp_path, monkeypatch, filename: str
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    path = input_root / match_id / filename
+
+    def mutate_after_derivation(*args, **kwargs):
+        return object()
+
+    def mutate_after_output_compare(*args, **kwargs):
+        if filename == "phases.json":
+            _mutate_file_in_place(path)
+        else:
+            _replace_file_with_same_bytes(path)
+        return {}
+
+    monkeypatch.setattr(verifier, "_build_expected_population", mutate_after_derivation)
+    monkeypatch.setattr(verifier, "_compare_output_set", mutate_after_output_compare)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is True
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
 
 
 def test_omitting_odd_frames_preserves_reconstructed_population(fixture_bundle) -> None:

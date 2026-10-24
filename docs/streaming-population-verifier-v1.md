@@ -30,6 +30,13 @@ cohort. Mismatch reports retain at most 1,000 record entries while preserving
 the complete total and per-category counts. Each record report includes its
 identity and expected/actual digests where those sides exist.
 
+Metadata, normalized phases, and tracking inputs are pinned by descriptor-backed
+SHA-256 and file identity snapshots. Metadata and phases are rechecked after
+the global drift scan, tracking identity is checked before its replay pass, and
+all 60 files are rehashed after artifact comparison immediately before the
+report is written. Replacement or in-place mutation fails closed with
+`INPUT_SNAPSHOT_MISMATCH`.
+
 The fixtures are in
 [`tests/fixtures/streaming-verifier-v1`](../tests/fixtures/streaming-verifier-v1/README.md).
 CI fetches PR #25's pinned commit, exposes its source package to the tests, and
