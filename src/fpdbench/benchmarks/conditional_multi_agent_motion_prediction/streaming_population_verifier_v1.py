@@ -2196,7 +2196,6 @@ def _base_receipt(
     producer_identity: Mapping[str, object],
     input_receipts: list[dict[str, object]],
     drift_scan: Mapping[str, object],
-    filesystem_type: str,
 ) -> dict[str, object]:
     return {
         "schema_id": "fpdbench.streaming-population-producer-receipt",
@@ -2216,7 +2215,6 @@ def _base_receipt(
         "independent_verification": "NOT_PERFORMED",
         "storage_boundary": {
             "trust": "SYNTHETIC_ONLY_NOT_TRUSTED_FOR_PROTECTED_DATA",
-            "filesystem_type": filesystem_type,
         },
         "input_receipts": input_receipts,
         "drift_scan": dict(drift_scan),
@@ -2317,7 +2315,6 @@ def _build_expected_population(
     input_snapshots: Mapping[str, MatchInputSnapshots],
     drift_scan: Mapping[str, object],
     producer_identity: Mapping[str, object],
-    observed_filesystem_type: str,
     expected_root: Path,
 ) -> ExpectedPopulation:
     expected_root.mkdir(mode=0o700)
@@ -2551,7 +2548,6 @@ def _build_expected_population(
             producer_identity,
             input_receipt_rows,
             drift_scan,
-            observed_filesystem_type,
         )
         receipt.update(
             match_counts=match_counts,
@@ -2565,7 +2561,7 @@ def _build_expected_population(
             truth_jsonl_sha256=truth_hash,
         )
         files["receipt.json"] = expected_root / "receipt.json"
-        hashes["receipt.json"] = _write_receipt_expected(files["receipt.json"], receipt)
+        _write_receipt_expected(files["receipt.json"], receipt)
     else:
         manifest_values = None
         (expected_root / "truth.jsonl").unlink(missing_ok=True)
@@ -2576,7 +2572,6 @@ def _build_expected_population(
             producer_identity,
             input_receipt_rows,
             drift_scan,
-            observed_filesystem_type,
         )
         receipt.update(
             match_counts=match_counts,
@@ -2597,7 +2592,7 @@ def _build_expected_population(
             },
         )
         files["receipt.json"] = expected_root / "receipt.json"
-        hashes["receipt.json"] = _write_receipt_expected(files["receipt.json"], receipt)
+        _write_receipt_expected(files["receipt.json"], receipt)
 
     match_spool_path.unlink(missing_ok=True)
     if ".incomplete" in files:
@@ -3270,43 +3265,39 @@ def _compare_jsonl(
     return expected_digest.hexdigest(), actual_digest.hexdigest()
 
 
-def _read_small_actual_receipt(path: Path) -> tuple[dict[str, object], bytes] | None:
+def _read_small_actual_receipt(path: Path) -> dict[str, object] | None:
     try:
         payload, _ = _read_bounded_document(path, "producer receipt")
-        return _as_mapping(
-            strict_json_bytes(payload, "producer receipt"), "producer receipt"
-        ), payload
+        return _as_mapping(strict_json_bytes(payload, "producer receipt"), "producer receipt")
     except (OSError, VerificationInputError):
         return None
 
 
-def _expected_receipt_filesystem_type(actual_receipt: dict[str, object] | None) -> str:
-    if actual_receipt is None:
-        return "unknown"
-    boundary = actual_receipt.get("storage_boundary")
-    if not isinstance(boundary, dict):
-        return "unknown"
-    filesystem_type = cast(dict[str, object], boundary).get("filesystem_type")
-    return filesystem_type if isinstance(filesystem_type, str) else "unknown"
+def _receipt_comparison_view(receipt: dict[str, object]) -> dict[str, object]:
+    comparison = {key: value for key, value in receipt.items() if key != "receipt_sha256"}
+    boundary = comparison.get("storage_boundary")
+    if isinstance(boundary, dict):
+        boundary_value = cast(dict[str, object], boundary)
+        comparison["storage_boundary"] = {
+            key: value for key, value in boundary_value.items() if key != "filesystem_type"
+        }
+    return comparison
 
 
 def _compare_receipt(
-    expected_path: Path,
     actual_path: Path,
     expected_value: dict[str, object],
     mismatches: MismatchCollector,
 ) -> None:
-    actual_pair = _read_small_actual_receipt(actual_path)
-    if actual_pair is None:
+    actual_value = _read_small_actual_receipt(actual_path)
+    if actual_value is None:
         mismatches.add(
             "MALFORMED_OR_MISSING_RECEIPT",
             {"artifact": "receipt.json"},
-            expected_value,
+            "valid receipt matching independently checked fields",
             None,
-            expected_sha256=_hash_stream(expected_path),
         )
         return
-    actual_value, actual_payload_bytes = actual_pair
     actual_self_hash = actual_value.get("receipt_sha256")
     actual_payload = {key: value for key, value in actual_value.items() if key != "receipt_sha256"}
     computed_self_hash = value_sha256(actual_payload)
@@ -3317,33 +3308,14 @@ def _compare_receipt(
             computed_self_hash,
             actual_self_hash,
         )
-    expected_self_hash = expected_value.get("receipt_sha256")
-    if actual_self_hash != expected_self_hash:
-        mismatches.add(
-            "RECEIPT_SELF_HASH_MISMATCH",
-            {"artifact": "receipt.json", "field": "/receipt_sha256"},
-            expected_self_hash,
-            actual_self_hash,
-        )
     _compare_values(
-        {key: value for key, value in expected_value.items() if key != "receipt_sha256"},
-        {key: value for key, value in actual_value.items() if key != "receipt_sha256"},
+        _receipt_comparison_view(expected_value),
+        _receipt_comparison_view(actual_value),
         "",
         "receipt.json",
         {"artifact": "receipt.json"},
         mismatches,
     )
-    expected_file_sha = _hash_stream(expected_path)
-    actual_file_sha = hashlib.sha256(actual_payload_bytes).hexdigest()
-    if expected_file_sha != actual_file_sha:
-        mismatches.add(
-            "RECEIPT_BYTES_MISMATCH",
-            {"artifact": "receipt.json"},
-            expected_value,
-            actual_value,
-            expected_sha256=expected_file_sha,
-            actual_sha256=actual_file_sha,
-        )
 
 
 def _compare_file_bytes(
@@ -3450,7 +3422,7 @@ def _compare_output_set(
                         actual_sha256=actual_sha,
                     )
             elif name == "receipt.json":
-                _compare_receipt(expected_path, actual_path, expected.receipt, mismatches)
+                _compare_receipt(actual_path, expected.receipt, mismatches)
                 actual_hashes[name] = _hash_stream(actual_path)
             elif name == "manifest.json":
                 _compare_manifest_structure(actual_path, expected, mismatches)
@@ -3476,11 +3448,13 @@ def _compare_output_set(
     return actual_hashes
 
 
-def _actual_output_receipt_filesystem(actual_root: Path) -> str:
-    receipt_path = actual_root / "receipt.json"
-    actual_pair = _read_small_actual_receipt(receipt_path)
-    actual_receipt = actual_pair[0] if actual_pair is not None else None
-    return _expected_receipt_filesystem_type(actual_receipt)
+def _receipt_verification_scope() -> dict[str, object]:
+    return {
+        "unverified_external_metadata": [
+            {"artifact": "receipt.json", "field": "/storage_boundary/filesystem_type"}
+        ],
+        "receipt_byte_identity": "NOT_VERIFIED",
+    }
 
 
 def _empty_report(mismatches: MismatchCollector) -> dict[str, object]:
@@ -3495,6 +3469,7 @@ def _empty_report(mismatches: MismatchCollector) -> dict[str, object]:
         "runtime_gate": "BLOCKED",
         "membership_verification_started": False,
         "producer_package_identity_sha256": PRODUCER_IDENTITY_SHA256,
+        **_receipt_verification_scope(),
         **mismatches.report_fields(),
     }
 
@@ -3646,7 +3621,6 @@ def verify_population(
         _write_report(report_path, report)
         return report
 
-    filesystem_type = _actual_output_receipt_filesystem(artifact_root)
     with tempfile.TemporaryDirectory(prefix="fpdbench-streaming-verifier-") as temporary:
         try:
             expected = _build_expected_population(
@@ -3657,7 +3631,6 @@ def verify_population(
                 input_snapshots,
                 drift_scan,
                 producer_identity,
-                filesystem_type,
                 Path(temporary) / "expected",
             )
         except InputSnapshotChanged as exc:
@@ -3723,6 +3696,7 @@ def verify_population(
         "expected_artifact_sha256": dict(sorted(expected.hashes.items())),
         "actual_artifact_sha256": dict(sorted(actual_hashes.items())),
         "storage_boundary": "SYNTHETIC_ONLY_NOT_TRUSTED_FOR_PROTECTED_DATA",
+        **_receipt_verification_scope(),
         **mismatches.report_fields(),
     }
     _write_report(report_path, report)

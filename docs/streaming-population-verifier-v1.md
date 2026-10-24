@@ -37,6 +37,12 @@ all 60 files are rehashed after artifact comparison immediately before the
 report is written. Replacement or in-place mutation fails closed with
 `INPUT_SNAPSHOT_MISMATCH`.
 
+The receipt's `storage_boundary.filesystem_type` is excluded from independent
+field comparisons because the verifier has no trusted filesystem evidence for
+it. The report labels that value as unverified external metadata and marks
+receipt byte identity `NOT_VERIFIED`; it still checks the receipt's internal
+self-hash and independently compares the remaining receipt fields.
+
 The fixtures are in
 [`tests/fixtures/streaming-verifier-v1`](../tests/fixtures/streaming-verifier-v1/README.md).
 CI fetches PR #25's pinned commit, exposes its source package to the tests, and

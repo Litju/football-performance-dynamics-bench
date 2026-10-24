@@ -419,6 +419,27 @@ def test_fabricated_self_hashed_receipt_cannot_replace_pinned_identity(
     assert report["runtime_gate"] == "BLOCKED"
 
 
+def test_self_rehashed_filesystem_type_is_reported_as_unverified(fixture_bundle, tmp_path) -> None:
+    artifacts = _copy_artifacts(fixture_bundle, "complete_10hz", tmp_path)
+    path = artifacts / "receipt.json"
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    receipt["storage_boundary"]["filesystem_type"] = "forged-self-rehashed-filesystem"
+    receipt.pop("receipt_sha256")
+    receipt["receipt_sha256"] = hashlib.sha256(_canonical(receipt)).hexdigest()
+    path.write_bytes(_canonical(receipt))
+
+    report = _run_verifier(fixture_bundle, "complete_10hz", tmp_path, artifact_root=artifacts)
+
+    assert report["status"] == "RECONCILED_NON_AUTHORITATIVE"
+    assert report["mismatch_count"] == 0
+    assert report["unverified_external_metadata"] == [
+        {"artifact": "receipt.json", "field": "/storage_boundary/filesystem_type"}
+    ]
+    assert report["receipt_byte_identity"] == "NOT_VERIFIED"
+    assert "receipt.json" not in report["expected_artifact_sha256"]
+    assert report["actual_artifact_sha256"]["receipt.json"] == _sha256_file(path)
+
+
 @pytest.mark.parametrize(
     ("artifact", "category", "mutation"),
     [
