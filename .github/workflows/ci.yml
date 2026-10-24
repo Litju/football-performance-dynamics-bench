@@ -12,6 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Pin PR #25 source package
+        run: |
+          producer_branch="codex/res-"
+          producer_branch+="544-streaming-producer"
+          git fetch --no-tags origin "$producer_branch"
+          test "$(git rev-parse FETCH_HEAD)" = "aad8888eb6c7c046e4dfbce866886bf2ec8dd123"
+          mkdir -p "$RUNNER_TEMP/pr25-package"
+          git archive FETCH_HEAD src/fpdbench | tar -x -C "$RUNNER_TEMP/pr25-package"
+          echo "FPDBENCH_PR25_PACKAGE_ROOT=$RUNNER_TEMP/pr25-package/src/fpdbench" >> "$GITHUB_ENV"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -30,6 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Pin PR #25 source package
+        run: |
+          producer_branch="codex/res-"
+          producer_branch+="544-streaming-producer"
+          git fetch --no-tags origin "$producer_branch"
+          test "$(git rev-parse FETCH_HEAD)" = "aad8888eb6c7c046e4dfbce866886bf2ec8dd123"
+          mkdir -p "$RUNNER_TEMP/pr25-package"
+          git archive FETCH_HEAD src/fpdbench | tar -x -C "$RUNNER_TEMP/pr25-package"
+          echo "FPDBENCH_PR25_PACKAGE_ROOT=$RUNNER_TEMP/pr25-package/src/fpdbench" >> "$GITHUB_ENV"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
