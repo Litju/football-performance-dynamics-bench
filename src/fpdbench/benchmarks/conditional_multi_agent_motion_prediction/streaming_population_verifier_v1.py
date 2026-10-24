@@ -45,6 +45,9 @@ SLOTS = 41
 MAX_DOCUMENT_BYTES = 16 * 1024 * 1024
 MAX_TRACKING_ROW_BYTES = 1024 * 1024
 MAX_REPORT_ENTRIES = 1000
+MAX_REPORT_DETAIL_BYTES = 256 * 1024
+MAX_REPORT_IDENTITY_FIELDS = 16
+MAX_REPORT_IDENTITY_FIELD_BYTES = 128
 MAX_MANIFEST_TOKEN_BYTES = 16 * 1024 * 1024
 FILES = {
     "manifest.json",
@@ -256,13 +259,20 @@ class Origin:
 
 
 class MismatchCollector:
-    """Bounded mismatch list with complete category totals and a suppressed count."""
+    """Bounded mismatch details with complete category totals and mismatch counts."""
 
-    def __init__(self, limit: int = MAX_REPORT_ENTRIES) -> None:
+    def __init__(
+        self,
+        limit: int = MAX_REPORT_ENTRIES,
+        detail_byte_limit: int = MAX_REPORT_DETAIL_BYTES,
+    ) -> None:
         self.limit = limit
+        self.detail_byte_limit = detail_byte_limit
         self.total = 0
         self.by_category: Counter[str] = Counter()
         self.entries: list[dict[str, object]] = []
+        self.detail_bytes = 2
+        self.detail_limit_reached = False
 
     def add(
         self,
@@ -276,18 +286,21 @@ class MismatchCollector:
     ) -> None:
         self.total += 1
         self.by_category[category] += 1
-        if len(self.entries) >= self.limit:
+        if len(self.entries) >= self.limit or self.detail_limit_reached:
             return
-        self.entries.append(
-            {
-                "category": category,
-                "identity": dict(identity),
-                "expected_sha256": expected_sha256
-                or (None if expected is None else value_sha256(expected)),
-                "actual_sha256": actual_sha256
-                or (None if actual is None else value_sha256(actual)),
-            }
-        )
+        entry: dict[str, object] = {
+            "category": category,
+            "identity": _bounded_report_identity(identity),
+            "expected_sha256": expected_sha256
+            or (None if expected is None else value_sha256(expected)),
+            "actual_sha256": actual_sha256 or (None if actual is None else value_sha256(actual)),
+        }
+        entry_bytes = len(canonical_bytes(entry)) + bool(self.entries)
+        if self.detail_bytes + entry_bytes > self.detail_byte_limit:
+            self.detail_limit_reached = True
+            return
+        self.entries.append(entry)
+        self.detail_bytes += entry_bytes
 
     def report_fields(self) -> dict[str, object]:
         return {
@@ -295,8 +308,64 @@ class MismatchCollector:
             "mismatch_counts_by_category": dict(sorted(self.by_category.items())),
             "reported_mismatch_count": len(self.entries),
             "suppressed_mismatch_count": self.total - len(self.entries),
+            "reported_mismatch_detail_bytes": self.detail_bytes,
+            "maximum_mismatch_detail_bytes": self.detail_byte_limit,
             "mismatches": self.entries,
         }
+
+
+def _streaming_json_sha256(value: object) -> str:
+    digest = hashlib.sha256()
+    encoder = json.JSONEncoder(
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    for part in encoder.iterencode(value):
+        for offset in range(0, len(part), 1024):
+            digest.update(part[offset : offset + 1024].encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _bounded_report_text(value: str) -> str | dict[str, object]:
+    digest = hashlib.sha256()
+    byte_size = 0
+    for offset in range(0, len(value), 1024):
+        block = value[offset : offset + 1024].encode("utf-8")
+        byte_size += len(block)
+        digest.update(block)
+    if byte_size <= MAX_REPORT_IDENTITY_FIELD_BYTES:
+        return value
+    return {"prefix": value[:32], "sha256": digest.hexdigest(), "truncated": True}
+
+
+def _bounded_report_identity(identity: Mapping[str, object]) -> dict[str, object]:
+    bounded: dict[str, object] = {}
+    for index, (key, value) in enumerate(identity.items()):
+        if index >= MAX_REPORT_IDENTITY_FIELDS:
+            bounded["_omitted_identity_fields"] = len(identity) - index
+            break
+        safe_key = key if len(key) <= 64 else f"field_{_streaming_json_sha256(key)}"
+        if isinstance(value, str):
+            bounded[safe_key] = _bounded_report_text(value)
+        elif type(value) is int and value.bit_length() > 256:
+            bounded[safe_key] = _bounded_report_text(str(value))
+        elif value is None or type(value) in (bool, int, float):
+            bounded[safe_key] = value
+        elif isinstance(value, dict):
+            bounded[safe_key] = {
+                "type": "object",
+                "sha256": _streaming_json_sha256(cast(dict[str, object], value)),
+            }
+        elif isinstance(value, list):
+            bounded[safe_key] = {
+                "type": "array",
+                "sha256": _streaming_json_sha256(cast(list[object], value)),
+            }
+        else:
+            bounded[safe_key] = {"type": type(value).__name__}
+    return bounded
 
 
 def canonical_bytes(value: object) -> bytes:

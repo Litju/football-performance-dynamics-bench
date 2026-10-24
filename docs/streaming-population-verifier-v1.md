@@ -26,9 +26,10 @@ masks, and scoreability.
 Candidate, diagnostic, and truth expectations are written as temporary JSONL
 streams. The manifest parser retains one match or window token at a time and
 compares the five output artifacts without loading full JSONL files or the
-cohort. Mismatch reports retain at most 1,000 record entries while preserving
-the complete total and per-category counts. Each record report includes its
-identity and expected/actual digests where those sides exist.
+cohort. Mismatch reports retain at most 1,000 record entries and 256 KiB of
+serialized detail while preserving complete mismatch totals and per-category
+counts. Oversized identity fields are replaced by a short prefix and
+deterministic digest.
 
 Metadata, normalized phases, and tracking inputs are pinned by descriptor-backed
 SHA-256 and file identity snapshots. Metadata and phases are rechecked after

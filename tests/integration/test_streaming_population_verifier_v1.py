@@ -8,6 +8,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tracemalloc
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -612,8 +613,51 @@ def test_mismatch_report_caps_entries_without_losing_total_count(fixture_bundle,
     report = _run_verifier(fixture_bundle, "resource_scale", tmp_path, artifact_root=artifacts)
     assert report["status"] == "MISMATCH"
     assert report["mismatch_counts_by_category"]["CANDIDATE_RECORD_MISMATCH"] == 1300
-    assert report["reported_mismatch_count"] == 1000
-    assert report["suppressed_mismatch_count"] == report["mismatch_count"] - 1000
+    assert report["reported_mismatch_count"] <= verifier.MAX_REPORT_ENTRIES
+    assert report["reported_mismatch_detail_bytes"] <= verifier.MAX_REPORT_DETAIL_BYTES
+    assert report["reported_mismatch_detail_bytes"] == len(_canonical(report["mismatches"]))
+    assert report["suppressed_mismatch_count"] == (
+        report["mismatch_count"] - report["reported_mismatch_count"]
+    )
+
+
+def test_mismatch_collector_bounds_long_identity_and_total_detail_bytes() -> None:
+    long_identity = "x" * verifier.MAX_MANIFEST_TOKEN_BYTES
+    collector = verifier.MismatchCollector()
+    tracemalloc.start()
+    collector.add(
+        "CANDIDATE_RECORD_MISMATCH",
+        {"origin_sample_id": long_identity},
+        "expected",
+        "actual",
+    )
+    _, peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    for index in range(2000):
+        category = "CANDIDATE_RECORD_MISMATCH" if index % 2 == 0 else "PHYSICAL_TRUTH_MISMATCH"
+        collector.add(
+            category,
+            {"artifact": "truth.jsonl", "origin_sample_id": f"{index}-" + "y" * 150},
+            "expected",
+            "actual",
+        )
+
+    report = collector.report_fields()
+    details = report["mismatches"]
+    assert report["mismatch_count"] == 2001
+    assert report["mismatch_counts_by_category"] == {
+        "CANDIDATE_RECORD_MISMATCH": 1001,
+        "PHYSICAL_TRUTH_MISMATCH": 1000,
+    }
+    assert peak_bytes < 1024 * 1024
+    assert len(details) < verifier.MAX_REPORT_ENTRIES
+    assert report["reported_mismatch_detail_bytes"] <= verifier.MAX_REPORT_DETAIL_BYTES
+    assert report["reported_mismatch_detail_bytes"] == len(_canonical(details))
+    assert report["suppressed_mismatch_count"] == 2001 - len(details)
+    identity_value = details[0]["identity"]["origin_sample_id"]
+    assert identity_value["truncated"] is True
+    assert identity_value["sha256"]
 
 
 def _measure_separate_worker(bundle, case: str, tmp_path: Path) -> dict[str, object]:
