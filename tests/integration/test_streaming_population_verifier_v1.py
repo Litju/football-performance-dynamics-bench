@@ -8,10 +8,15 @@ import shutil
 import stat
 import subprocess
 import sys
+import tracemalloc
 import zipfile
 from pathlib import Path, PurePosixPath
 
 import pytest
+
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    streaming_population_verifier_v1 as verifier,
+)
 
 MODULE = (
     "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.streaming_population_verifier_v1"
@@ -109,6 +114,21 @@ def _run_verifier(
     return json.loads(report_path.read_text(encoding="utf-8"))
 
 
+def _run_verifier_in_process(
+    bundle,
+    case: str,
+    tmp_path: Path,
+    *,
+    input_root: Path,
+) -> dict[str, object]:
+    return verifier.verify_population(
+        input_root,
+        bundle.root / case / "artifacts",
+        bundle.producer_root,
+        tmp_path / "report.json",
+    )
+
+
 def _assert_report_entry(
     report: dict[str, object], category: str, *, record: bool = False
 ) -> dict[str, object]:
@@ -123,6 +143,17 @@ def _assert_report_entry(
         identity = entry["identity"]
         assert {"match_id", "origin_sample_id", "record_index"} <= set(identity)
     return entry
+
+
+def _replace_file_with_same_bytes(path: Path) -> None:
+    replacement = path.with_name(f".{path.name}.replacement")
+    replacement.write_bytes(path.read_bytes())
+    replacement.replace(path)
+
+
+def _mutate_file_in_place(path: Path) -> None:
+    with path.open("ab") as stream:
+        stream.write(b"\n")
 
 
 @pytest.fixture(scope="session")
@@ -200,6 +231,87 @@ def test_reconciles_isolated_pr25_outputs(fixture_bundle, tmp_path, case: str) -
     )
     assert report["runtime_gate"] == "BLOCKED"
     assert report["mismatch_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("filename", "mutation"),
+    [("metadata.json", "replace"), ("phases.json", "mutate")],
+)
+def test_contract_snapshot_changes_after_initial_read_stop_before_membership(
+    fixture_bundle, tmp_path, monkeypatch, filename: str, mutation: str
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    path = input_root / match_id / filename
+    original_scan = verifier._global_drift_scan
+
+    def mutate_then_scan(*args, **kwargs):
+        if mutation == "replace":
+            _replace_file_with_same_bytes(path)
+        else:
+            _mutate_file_in_place(path)
+        return original_scan(*args, **kwargs)
+
+    monkeypatch.setattr(verifier, "_global_drift_scan", mutate_then_scan)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is False
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
+
+
+def test_tracking_replacement_after_drift_scan_stops_second_pass(
+    fixture_bundle, tmp_path, monkeypatch
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    tracking = input_root / match_id / "tracking.jsonl"
+    original_scan = verifier._global_drift_scan
+
+    def scan_then_replace(*args, **kwargs):
+        result = original_scan(*args, **kwargs)
+        _replace_file_with_same_bytes(tracking)
+        return result
+
+    monkeypatch.setattr(verifier, "_global_drift_scan", scan_then_replace)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is True
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
+
+
+@pytest.mark.parametrize("filename", ["metadata.json", "phases.json", "tracking.jsonl"])
+def test_final_input_snapshot_rejects_changes_after_derivation(
+    fixture_bundle, tmp_path, monkeypatch, filename: str
+) -> None:
+    input_root = tmp_path / "inputs"
+    shutil.copytree(fixture_bundle.root / "complete_10hz/inputs", input_root)
+    match_id = fixture_bundle.manifest["modified_match_id"]
+    path = input_root / match_id / filename
+
+    def mutate_after_derivation(*args, **kwargs):
+        return object()
+
+    def mutate_after_output_compare(*args, **kwargs):
+        if filename == "phases.json":
+            _mutate_file_in_place(path)
+        else:
+            _replace_file_with_same_bytes(path)
+        return {}
+
+    monkeypatch.setattr(verifier, "_build_expected_population", mutate_after_derivation)
+    monkeypatch.setattr(verifier, "_compare_output_set", mutate_after_output_compare)
+    report = _run_verifier_in_process(
+        fixture_bundle, "complete_10hz", tmp_path, input_root=input_root
+    )
+    assert report["status"] == "INPUT_SNAPSHOT_MISMATCH"
+    assert report["membership_verification_started"] is True
+    _assert_report_entry(report, "INPUT_SNAPSHOT_MISMATCH")
 
 
 def test_omitting_odd_frames_preserves_reconstructed_population(fixture_bundle) -> None:
@@ -306,6 +418,27 @@ def test_fabricated_self_hashed_receipt_cannot_replace_pinned_identity(
     assert entry["identity"]["field"].startswith("/worker_package_identity")
     assert report["producer_source_package_verified"] is True
     assert report["runtime_gate"] == "BLOCKED"
+
+
+def test_self_rehashed_filesystem_type_is_reported_as_unverified(fixture_bundle, tmp_path) -> None:
+    artifacts = _copy_artifacts(fixture_bundle, "complete_10hz", tmp_path)
+    path = artifacts / "receipt.json"
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    receipt["storage_boundary"]["filesystem_type"] = "forged-self-rehashed-filesystem"
+    receipt.pop("receipt_sha256")
+    receipt["receipt_sha256"] = hashlib.sha256(_canonical(receipt)).hexdigest()
+    path.write_bytes(_canonical(receipt))
+
+    report = _run_verifier(fixture_bundle, "complete_10hz", tmp_path, artifact_root=artifacts)
+
+    assert report["status"] == "RECONCILED_NON_AUTHORITATIVE"
+    assert report["mismatch_count"] == 0
+    assert report["unverified_external_metadata"] == [
+        {"artifact": "receipt.json", "field": "/storage_boundary/filesystem_type"}
+    ]
+    assert report["receipt_byte_identity"] == "NOT_VERIFIED"
+    assert "receipt.json" not in report["expected_artifact_sha256"]
+    assert report["actual_artifact_sha256"]["receipt.json"] == _sha256_file(path)
 
 
 @pytest.mark.parametrize(
@@ -480,8 +613,51 @@ def test_mismatch_report_caps_entries_without_losing_total_count(fixture_bundle,
     report = _run_verifier(fixture_bundle, "resource_scale", tmp_path, artifact_root=artifacts)
     assert report["status"] == "MISMATCH"
     assert report["mismatch_counts_by_category"]["CANDIDATE_RECORD_MISMATCH"] == 1300
-    assert report["reported_mismatch_count"] == 1000
-    assert report["suppressed_mismatch_count"] == report["mismatch_count"] - 1000
+    assert report["reported_mismatch_count"] <= verifier.MAX_REPORT_ENTRIES
+    assert report["reported_mismatch_detail_bytes"] <= verifier.MAX_REPORT_DETAIL_BYTES
+    assert report["reported_mismatch_detail_bytes"] == len(_canonical(report["mismatches"]))
+    assert report["suppressed_mismatch_count"] == (
+        report["mismatch_count"] - report["reported_mismatch_count"]
+    )
+
+
+def test_mismatch_collector_bounds_long_identity_and_total_detail_bytes() -> None:
+    long_identity = "x" * verifier.MAX_MANIFEST_TOKEN_BYTES
+    collector = verifier.MismatchCollector()
+    tracemalloc.start()
+    collector.add(
+        "CANDIDATE_RECORD_MISMATCH",
+        {"origin_sample_id": long_identity},
+        "expected",
+        "actual",
+    )
+    _, peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    for index in range(2000):
+        category = "CANDIDATE_RECORD_MISMATCH" if index % 2 == 0 else "PHYSICAL_TRUTH_MISMATCH"
+        collector.add(
+            category,
+            {"artifact": "truth.jsonl", "origin_sample_id": f"{index}-" + "y" * 150},
+            "expected",
+            "actual",
+        )
+
+    report = collector.report_fields()
+    details = report["mismatches"]
+    assert report["mismatch_count"] == 2001
+    assert report["mismatch_counts_by_category"] == {
+        "CANDIDATE_RECORD_MISMATCH": 1001,
+        "PHYSICAL_TRUTH_MISMATCH": 1000,
+    }
+    assert peak_bytes < 1024 * 1024
+    assert len(details) < verifier.MAX_REPORT_ENTRIES
+    assert report["reported_mismatch_detail_bytes"] <= verifier.MAX_REPORT_DETAIL_BYTES
+    assert report["reported_mismatch_detail_bytes"] == len(_canonical(details))
+    assert report["suppressed_mismatch_count"] == 2001 - len(details)
+    identity_value = details[0]["identity"]["origin_sample_id"]
+    assert identity_value["truncated"] is True
+    assert identity_value["sha256"]
 
 
 def _measure_separate_worker(bundle, case: str, tmp_path: Path) -> dict[str, object]:

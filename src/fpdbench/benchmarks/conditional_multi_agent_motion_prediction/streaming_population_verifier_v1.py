@@ -45,6 +45,9 @@ SLOTS = 41
 MAX_DOCUMENT_BYTES = 16 * 1024 * 1024
 MAX_TRACKING_ROW_BYTES = 1024 * 1024
 MAX_REPORT_ENTRIES = 1000
+MAX_REPORT_DETAIL_BYTES = 256 * 1024
+MAX_REPORT_IDENTITY_FIELDS = 16
+MAX_REPORT_IDENTITY_FIELD_BYTES = 128
 MAX_MANIFEST_TOKEN_BYTES = 16 * 1024 * 1024
 FILES = {
     "manifest.json",
@@ -127,6 +130,10 @@ class VerificationInputError(ValueError):
     """An input or authority could not be safely interpreted under the frozen contract."""
 
 
+class InputSnapshotChanged(VerificationInputError):
+    """A pinned source file changed identity or bytes during verification."""
+
+
 class CanonicalArrayDigest:
     """Incremental SHA-256 for the canonical JSON array used by the v2 wire format."""
 
@@ -152,6 +159,41 @@ class InputPaths:
     metadata: Path
     tracking: Path
     phases: Path
+
+
+@dataclass(frozen=True, slots=True)
+class InputFileSnapshot:
+    sha256: str
+    byte_size: int
+    device: int
+    inode: int
+    mode: int
+    mtime_ns: int
+    ctime_ns: int
+
+    def matches_stat(self, info: os.stat_result) -> bool:
+        return (
+            self.device,
+            self.inode,
+            self.mode,
+            self.byte_size,
+            self.mtime_ns,
+            self.ctime_ns,
+        ) == (
+            info.st_dev,
+            info.st_ino,
+            info.st_mode,
+            info.st_size,
+            info.st_mtime_ns,
+            info.st_ctime_ns,
+        )
+
+
+@dataclass(slots=True)
+class MatchInputSnapshots:
+    metadata: InputFileSnapshot
+    phases: InputFileSnapshot
+    tracking: InputFileSnapshot | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,13 +259,20 @@ class Origin:
 
 
 class MismatchCollector:
-    """Bounded mismatch list with complete category totals and a suppressed count."""
+    """Bounded mismatch details with complete category totals and mismatch counts."""
 
-    def __init__(self, limit: int = MAX_REPORT_ENTRIES) -> None:
+    def __init__(
+        self,
+        limit: int = MAX_REPORT_ENTRIES,
+        detail_byte_limit: int = MAX_REPORT_DETAIL_BYTES,
+    ) -> None:
         self.limit = limit
+        self.detail_byte_limit = detail_byte_limit
         self.total = 0
         self.by_category: Counter[str] = Counter()
         self.entries: list[dict[str, object]] = []
+        self.detail_bytes = 2
+        self.detail_limit_reached = False
 
     def add(
         self,
@@ -237,18 +286,21 @@ class MismatchCollector:
     ) -> None:
         self.total += 1
         self.by_category[category] += 1
-        if len(self.entries) >= self.limit:
+        if len(self.entries) >= self.limit or self.detail_limit_reached:
             return
-        self.entries.append(
-            {
-                "category": category,
-                "identity": dict(identity),
-                "expected_sha256": expected_sha256
-                or (None if expected is None else value_sha256(expected)),
-                "actual_sha256": actual_sha256
-                or (None if actual is None else value_sha256(actual)),
-            }
-        )
+        entry: dict[str, object] = {
+            "category": category,
+            "identity": _bounded_report_identity(identity),
+            "expected_sha256": expected_sha256
+            or (None if expected is None else value_sha256(expected)),
+            "actual_sha256": actual_sha256 or (None if actual is None else value_sha256(actual)),
+        }
+        entry_bytes = len(canonical_bytes(entry)) + bool(self.entries)
+        if self.detail_bytes + entry_bytes > self.detail_byte_limit:
+            self.detail_limit_reached = True
+            return
+        self.entries.append(entry)
+        self.detail_bytes += entry_bytes
 
     def report_fields(self) -> dict[str, object]:
         return {
@@ -256,8 +308,64 @@ class MismatchCollector:
             "mismatch_counts_by_category": dict(sorted(self.by_category.items())),
             "reported_mismatch_count": len(self.entries),
             "suppressed_mismatch_count": self.total - len(self.entries),
+            "reported_mismatch_detail_bytes": self.detail_bytes,
+            "maximum_mismatch_detail_bytes": self.detail_byte_limit,
             "mismatches": self.entries,
         }
+
+
+def _streaming_json_sha256(value: object) -> str:
+    digest = hashlib.sha256()
+    encoder = json.JSONEncoder(
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    for part in encoder.iterencode(value):
+        for offset in range(0, len(part), 1024):
+            digest.update(part[offset : offset + 1024].encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _bounded_report_text(value: str) -> str | dict[str, object]:
+    digest = hashlib.sha256()
+    byte_size = 0
+    for offset in range(0, len(value), 1024):
+        block = value[offset : offset + 1024].encode("utf-8")
+        byte_size += len(block)
+        digest.update(block)
+    if byte_size <= MAX_REPORT_IDENTITY_FIELD_BYTES:
+        return value
+    return {"prefix": value[:32], "sha256": digest.hexdigest(), "truncated": True}
+
+
+def _bounded_report_identity(identity: Mapping[str, object]) -> dict[str, object]:
+    bounded: dict[str, object] = {}
+    for index, (key, value) in enumerate(identity.items()):
+        if index >= MAX_REPORT_IDENTITY_FIELDS:
+            bounded["_omitted_identity_fields"] = len(identity) - index
+            break
+        safe_key = key if len(key) <= 64 else f"field_{_streaming_json_sha256(key)}"
+        if isinstance(value, str):
+            bounded[safe_key] = _bounded_report_text(value)
+        elif type(value) is int and value.bit_length() > 256:
+            bounded[safe_key] = _bounded_report_text(str(value))
+        elif value is None or type(value) in (bool, int, float):
+            bounded[safe_key] = value
+        elif isinstance(value, dict):
+            bounded[safe_key] = {
+                "type": "object",
+                "sha256": _streaming_json_sha256(cast(dict[str, object], value)),
+            }
+        elif isinstance(value, list):
+            bounded[safe_key] = {
+                "type": "array",
+                "sha256": _streaming_json_sha256(cast(list[object], value)),
+            }
+        else:
+            bounded[safe_key] = {"type": type(value).__name__}
+    return bounded
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -343,6 +451,29 @@ def _open_regular_nofollow(path: Path) -> tuple[int, os.stat_result]:
     return fd, info
 
 
+def _stat_identity(info: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return (
+        info.st_dev,
+        info.st_ino,
+        info.st_mode,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
+
+
+def _snapshot_from_stat(digest: str, byte_size: int, info: os.stat_result) -> InputFileSnapshot:
+    return InputFileSnapshot(
+        digest,
+        byte_size,
+        info.st_dev,
+        info.st_ino,
+        info.st_mode,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
+
+
 def _read_bounded_document(path: Path, label: str) -> tuple[bytes, os.stat_result]:
     fd, before = _open_regular_nofollow(path)
     try:
@@ -351,12 +482,8 @@ def _read_bounded_document(path: Path, label: str) -> tuple[bytes, os.stat_resul
             after = os.fstat(stream.fileno())
         if len(payload) > MAX_DOCUMENT_BYTES:
             raise VerificationInputError(f"{label} exceeds the {MAX_DOCUMENT_BYTES}-byte limit")
-        if (before.st_dev, before.st_ino, before.st_size) != (
-            after.st_dev,
-            after.st_ino,
-            after.st_size,
-        ) or len(payload) != after.st_size:
-            raise VerificationInputError(f"{label} changed while being read")
+        if _stat_identity(before) != _stat_identity(after) or len(payload) != after.st_size:
+            raise InputSnapshotChanged(f"{label} changed while being read")
         return payload, after
     finally:
         try:
@@ -365,28 +492,34 @@ def _read_bounded_document(path: Path, label: str) -> tuple[bytes, os.stat_resul
             pass
 
 
-def _sha256_file(path: Path) -> tuple[str, int]:
+def _file_snapshot(
+    path: Path,
+    expected_snapshot: InputFileSnapshot | None = None,
+) -> InputFileSnapshot:
     fd, before = _open_regular_nofollow(path)
     digest = hashlib.sha256()
     size = 0
     try:
+        if expected_snapshot is not None and not expected_snapshot.matches_stat(before):
+            raise InputSnapshotChanged("worker input identity changed since its first scan")
         with os.fdopen(fd, "rb") as stream:
             while block := stream.read(1024 * 1024):
                 size += len(block)
                 digest.update(block)
             after = os.fstat(stream.fileno())
-        if (before.st_dev, before.st_ino, before.st_size) != (
-            after.st_dev,
-            after.st_ino,
-            after.st_size,
-        ) or size != after.st_size:
-            raise VerificationInputError("worker input changed while being hashed")
-        return digest.hexdigest(), size
+        if _stat_identity(before) != _stat_identity(after) or size != after.st_size:
+            raise InputSnapshotChanged("worker input changed while being hashed")
+        return _snapshot_from_stat(digest.hexdigest(), size, after)
     finally:
         try:
             os.close(fd)
         except OSError:
             pass
+
+
+def _sha256_file(path: Path) -> tuple[str, int]:
+    snapshot = _file_snapshot(path)
+    return snapshot.sha256, snapshot.byte_size
 
 
 def _authority_root() -> Path:
@@ -664,8 +797,14 @@ def _read_tracking(
     contract: MatchContract,
     authorities: Authorities,
     stats: dict[str, object],
+    expected_snapshot: InputFileSnapshot | None = None,
 ) -> Iterator[dict[str, object]]:
-    fd, before = _open_regular_nofollow(path)
+    try:
+        fd, before = _open_regular_nofollow(path)
+    except OSError as exc:
+        if expected_snapshot is not None:
+            raise InputSnapshotChanged("tracking input disappeared between scans") from exc
+        raise
     raw_digest = hashlib.sha256()
     retained_digest = CanonicalArrayDigest()
     byte_count = frame_count = retained_count = 0
@@ -673,6 +812,8 @@ def _read_tracking(
     previous_period: int | None = None
     previous_time: int | None = None
     try:
+        if expected_snapshot is not None and not expected_snapshot.matches_stat(before):
+            raise InputSnapshotChanged("tracking input identity changed between scans")
         with os.fdopen(fd, "rb") as stream:
             while line := stream.readline(MAX_TRACKING_ROW_BYTES + 1):
                 if len(line) > MAX_TRACKING_ROW_BYTES or not line.strip():
@@ -721,12 +862,11 @@ def _read_tracking(
                 previous_period = period
                 previous_time = timestamp
             after = os.fstat(stream.fileno())
-        if (before.st_dev, before.st_ino, before.st_size) != (
-            after.st_dev,
-            after.st_ino,
-            after.st_size,
-        ) or after.st_size != byte_count:
-            raise VerificationInputError("tracking input changed during the scan")
+        if _stat_identity(before) != _stat_identity(after) or after.st_size != byte_count:
+            raise InputSnapshotChanged("tracking input changed during the scan")
+        snapshot = _snapshot_from_stat(raw_digest.hexdigest(), byte_count, after)
+        if expected_snapshot is not None and snapshot != expected_snapshot:
+            raise InputSnapshotChanged("tracking input changed between scans")
     finally:
         try:
             os.close(fd)
@@ -738,12 +878,15 @@ def _read_tracking(
         raw_byte_count=byte_count,
         raw_sha256=raw_digest.hexdigest(),
         retained_samples_sha256=retained_digest.hexdigest(),
+        file_snapshot=snapshot,
     )
 
 
-def _read_input_document(path: Path, label: str) -> tuple[bytes, object, str]:
-    payload, _ = _read_bounded_document(path, label)
-    return payload, strict_json_bytes(payload, label), hashlib.sha256(payload).hexdigest()
+def _read_input_document(path: Path, label: str) -> tuple[bytes, object, InputFileSnapshot]:
+    payload, info = _read_bounded_document(path, label)
+    digest = hashlib.sha256(payload).hexdigest()
+    snapshot = _snapshot_from_stat(digest, len(payload), info)
+    return payload, strict_json_bytes(payload, label), snapshot
 
 
 def _metadata_periods(metadata: dict[str, object]) -> dict[int, tuple[int, int]]:
@@ -828,7 +971,7 @@ def _appearance_metadata(
 def load_input_contracts(
     input_root: Path,
     authorities: Authorities,
-) -> tuple[dict[str, MatchContract], dict[str, dict[str, str | int]]]:
+) -> tuple[dict[str, MatchContract], dict[str, MatchInputSnapshots]]:
     _open_root_fd = _open_directory_nofollow(input_root)
     os.close(_open_root_fd)
     match_ids = authorities.match_order
@@ -848,15 +991,15 @@ def load_input_contracts(
         )
 
     contracts: dict[str, MatchContract] = {}
-    metadata_receipts: dict[str, dict[str, str | int]] = {}
+    input_snapshots: dict[str, MatchInputSnapshots] = {}
     for role, match_id in authorities.roles:
         directory = input_root / match_id
         metadata_path = directory / "metadata.json"
         phase_path = directory / "phases.json"
-        metadata_raw, metadata_value, metadata_digest = _read_input_document(
+        _, metadata_value, metadata_snapshot = _read_input_document(
             metadata_path, f"metadata for {match_id}"
         )
-        phase_raw, phase_value, phase_digest = _read_input_document(
+        _, phase_value, phase_snapshot = _read_input_document(
             phase_path, f"phase intervals for {match_id}"
         )
         metadata = _as_mapping(metadata_value, "match metadata")
@@ -914,18 +1057,13 @@ def load_input_contracts(
             pitch_length=pitch_length,
             pitch_width=pitch_width,
         )
-        metadata_receipts[match_id] = {
-            "sha256": metadata_digest,
-            "byte_size": len(metadata_raw),
-            "phase_sha256": phase_digest,
-            "phase_byte_size": len(phase_raw),
-        }
-    return contracts, metadata_receipts
+        input_snapshots[match_id] = MatchInputSnapshots(metadata_snapshot, phase_snapshot)
+    return contracts, input_snapshots
 
 
 def _global_drift_scan(
     contracts: Mapping[str, MatchContract],
-    metadata_receipts: Mapping[str, dict[str, str | int]],
+    input_snapshots: dict[str, MatchInputSnapshots],
     input_root: Path,
     authorities: Authorities,
 ) -> tuple[dict[str, SourceReceipt], dict[str, object], int]:
@@ -952,16 +1090,18 @@ def _global_drift_scan(
                     and ball.get("y_m") is not None
                 ):
                     drift_count += 1
-        raw = metadata_receipts[match_id]
+        snapshots = input_snapshots[match_id]
+        tracking_snapshot = cast(InputFileSnapshot, stats["file_snapshot"])
+        snapshots.tracking = tracking_snapshot
         raw_sha256 = cast(str, stats["raw_sha256"])
         source_receipts[match_id] = SourceReceipt(
             match_id=match_id,
-            metadata_sha256=cast(str, raw["sha256"]),
-            metadata_bytes=cast(int, raw["byte_size"]),
+            metadata_sha256=snapshots.metadata.sha256,
+            metadata_bytes=snapshots.metadata.byte_size,
             tracking_sha256=raw_sha256,
             tracking_bytes=cast(int, stats["raw_byte_count"]),
-            phase_sha256=cast(str, raw["phase_sha256"]),
-            phase_bytes=cast(int, raw["phase_byte_size"]),
+            phase_sha256=snapshots.phases.sha256,
+            phase_bytes=snapshots.phases.byte_size,
             source_frame_count=cast(int, stats["source_frame_count"]),
             retained_sample_count=cast(int, stats["retained_sample_count"]),
             retained_samples_sha256=cast(str, stats["retained_samples_sha256"]),
@@ -976,6 +1116,44 @@ def _global_drift_scan(
         "source_release_hash": SOURCE_RELEASE_HASH,
     }
     return source_receipts, drift_scan, drift_count
+
+
+def _validate_input_snapshots(
+    input_root: Path,
+    authorities: Authorities,
+    input_snapshots: Mapping[str, MatchInputSnapshots],
+    *,
+    include_tracking: bool,
+) -> None:
+    for _, match_id in authorities.roles:
+        snapshots = input_snapshots[match_id]
+        paths = (
+            ("metadata.json", snapshots.metadata),
+            ("phases.json", snapshots.phases),
+        )
+        for filename, expected in paths:
+            try:
+                actual = _file_snapshot(input_root / match_id / filename, expected)
+            except OSError as exc:
+                raise InputSnapshotChanged(
+                    f"{filename} became unavailable for match {match_id}"
+                ) from exc
+            if actual != expected:
+                raise InputSnapshotChanged(f"{filename} changed for match {match_id}")
+        if include_tracking:
+            expected_tracking = snapshots.tracking
+            if expected_tracking is None:
+                raise InputSnapshotChanged(f"tracking snapshot missing for match {match_id}")
+            try:
+                actual_tracking = _file_snapshot(
+                    input_root / match_id / "tracking.jsonl", expected_tracking
+                )
+            except OSError as exc:
+                raise InputSnapshotChanged(
+                    f"tracking.jsonl became unavailable for match {match_id}"
+                ) from exc
+            if actual_tracking != expected_tracking:
+                raise InputSnapshotChanged(f"tracking.jsonl changed for match {match_id}")
 
 
 def _active_player_ids(contract: MatchContract, period: int, source_frame: int) -> set[int]:
@@ -2087,7 +2265,6 @@ def _base_receipt(
     producer_identity: Mapping[str, object],
     input_receipts: list[dict[str, object]],
     drift_scan: Mapping[str, object],
-    filesystem_type: str,
 ) -> dict[str, object]:
     return {
         "schema_id": "fpdbench.streaming-population-producer-receipt",
@@ -2107,7 +2284,6 @@ def _base_receipt(
         "independent_verification": "NOT_PERFORMED",
         "storage_boundary": {
             "trust": "SYNTHETIC_ONLY_NOT_TRUSTED_FOR_PROTECTED_DATA",
-            "filesystem_type": filesystem_type,
         },
         "input_receipts": input_receipts,
         "drift_scan": dict(drift_scan),
@@ -2205,9 +2381,9 @@ def _build_expected_population(
     contracts: Mapping[str, MatchContract],
     authorities: Authorities,
     source_receipts: Mapping[str, SourceReceipt],
+    input_snapshots: Mapping[str, MatchInputSnapshots],
     drift_scan: Mapping[str, object],
     producer_identity: Mapping[str, object],
-    observed_filesystem_type: str,
     expected_root: Path,
 ) -> ExpectedPopulation:
     expected_root.mkdir(mode=0o700)
@@ -2259,12 +2435,16 @@ def _build_expected_population(
             diagnostic_warnings: Counter[str] = Counter()
             first_window = True
             second_pass_stats: dict[str, object] = {}
+            tracking_snapshot = input_snapshots[match_id].tracking
+            if tracking_snapshot is None:
+                raise InputSnapshotChanged(f"tracking snapshot missing for match {match_id}")
 
             sample_iter = _read_tracking(
                 input_root / match_id / "tracking.jsonl",
                 contract,
                 authorities,
                 second_pass_stats,
+                expected_snapshot=tracking_snapshot,
             )
             for origin, support in _events(sample_iter, contract):
                 identity = origin.identity
@@ -2361,10 +2541,9 @@ def _build_expected_population(
                 or second_pass_stats.get("raw_sha256") != source_receipts[match_id].tracking_sha256
                 or second_pass_stats.get("retained_samples_sha256")
                 != source_receipts[match_id].retained_samples_sha256
+                or second_pass_stats.get("file_snapshot") != tracking_snapshot
             ):
-                raise VerificationInputError(
-                    f"tracking input changed between passes for {match_id}"
-                )
+                raise InputSnapshotChanged(f"tracking input changed between passes for {match_id}")
 
             matches.write(b"]}")
             matches_digest.update(b"]}")
@@ -2438,7 +2617,6 @@ def _build_expected_population(
             producer_identity,
             input_receipt_rows,
             drift_scan,
-            observed_filesystem_type,
         )
         receipt.update(
             match_counts=match_counts,
@@ -2452,7 +2630,7 @@ def _build_expected_population(
             truth_jsonl_sha256=truth_hash,
         )
         files["receipt.json"] = expected_root / "receipt.json"
-        hashes["receipt.json"] = _write_receipt_expected(files["receipt.json"], receipt)
+        _write_receipt_expected(files["receipt.json"], receipt)
     else:
         manifest_values = None
         (expected_root / "truth.jsonl").unlink(missing_ok=True)
@@ -2463,7 +2641,6 @@ def _build_expected_population(
             producer_identity,
             input_receipt_rows,
             drift_scan,
-            observed_filesystem_type,
         )
         receipt.update(
             match_counts=match_counts,
@@ -2484,7 +2661,7 @@ def _build_expected_population(
             },
         )
         files["receipt.json"] = expected_root / "receipt.json"
-        hashes["receipt.json"] = _write_receipt_expected(files["receipt.json"], receipt)
+        _write_receipt_expected(files["receipt.json"], receipt)
 
     match_spool_path.unlink(missing_ok=True)
     if ".incomplete" in files:
@@ -3157,43 +3334,39 @@ def _compare_jsonl(
     return expected_digest.hexdigest(), actual_digest.hexdigest()
 
 
-def _read_small_actual_receipt(path: Path) -> tuple[dict[str, object], bytes] | None:
+def _read_small_actual_receipt(path: Path) -> dict[str, object] | None:
     try:
         payload, _ = _read_bounded_document(path, "producer receipt")
-        return _as_mapping(
-            strict_json_bytes(payload, "producer receipt"), "producer receipt"
-        ), payload
+        return _as_mapping(strict_json_bytes(payload, "producer receipt"), "producer receipt")
     except (OSError, VerificationInputError):
         return None
 
 
-def _expected_receipt_filesystem_type(actual_receipt: dict[str, object] | None) -> str:
-    if actual_receipt is None:
-        return "unknown"
-    boundary = actual_receipt.get("storage_boundary")
-    if not isinstance(boundary, dict):
-        return "unknown"
-    filesystem_type = cast(dict[str, object], boundary).get("filesystem_type")
-    return filesystem_type if isinstance(filesystem_type, str) else "unknown"
+def _receipt_comparison_view(receipt: dict[str, object]) -> dict[str, object]:
+    comparison = {key: value for key, value in receipt.items() if key != "receipt_sha256"}
+    boundary = comparison.get("storage_boundary")
+    if isinstance(boundary, dict):
+        boundary_value = cast(dict[str, object], boundary)
+        comparison["storage_boundary"] = {
+            key: value for key, value in boundary_value.items() if key != "filesystem_type"
+        }
+    return comparison
 
 
 def _compare_receipt(
-    expected_path: Path,
     actual_path: Path,
     expected_value: dict[str, object],
     mismatches: MismatchCollector,
 ) -> None:
-    actual_pair = _read_small_actual_receipt(actual_path)
-    if actual_pair is None:
+    actual_value = _read_small_actual_receipt(actual_path)
+    if actual_value is None:
         mismatches.add(
             "MALFORMED_OR_MISSING_RECEIPT",
             {"artifact": "receipt.json"},
-            expected_value,
+            "valid receipt matching independently checked fields",
             None,
-            expected_sha256=_hash_stream(expected_path),
         )
         return
-    actual_value, actual_payload_bytes = actual_pair
     actual_self_hash = actual_value.get("receipt_sha256")
     actual_payload = {key: value for key, value in actual_value.items() if key != "receipt_sha256"}
     computed_self_hash = value_sha256(actual_payload)
@@ -3204,33 +3377,14 @@ def _compare_receipt(
             computed_self_hash,
             actual_self_hash,
         )
-    expected_self_hash = expected_value.get("receipt_sha256")
-    if actual_self_hash != expected_self_hash:
-        mismatches.add(
-            "RECEIPT_SELF_HASH_MISMATCH",
-            {"artifact": "receipt.json", "field": "/receipt_sha256"},
-            expected_self_hash,
-            actual_self_hash,
-        )
     _compare_values(
-        {key: value for key, value in expected_value.items() if key != "receipt_sha256"},
-        {key: value for key, value in actual_value.items() if key != "receipt_sha256"},
+        _receipt_comparison_view(expected_value),
+        _receipt_comparison_view(actual_value),
         "",
         "receipt.json",
         {"artifact": "receipt.json"},
         mismatches,
     )
-    expected_file_sha = _hash_stream(expected_path)
-    actual_file_sha = hashlib.sha256(actual_payload_bytes).hexdigest()
-    if expected_file_sha != actual_file_sha:
-        mismatches.add(
-            "RECEIPT_BYTES_MISMATCH",
-            {"artifact": "receipt.json"},
-            expected_value,
-            actual_value,
-            expected_sha256=expected_file_sha,
-            actual_sha256=actual_file_sha,
-        )
 
 
 def _compare_file_bytes(
@@ -3337,7 +3491,7 @@ def _compare_output_set(
                         actual_sha256=actual_sha,
                     )
             elif name == "receipt.json":
-                _compare_receipt(expected_path, actual_path, expected.receipt, mismatches)
+                _compare_receipt(actual_path, expected.receipt, mismatches)
                 actual_hashes[name] = _hash_stream(actual_path)
             elif name == "manifest.json":
                 _compare_manifest_structure(actual_path, expected, mismatches)
@@ -3363,11 +3517,13 @@ def _compare_output_set(
     return actual_hashes
 
 
-def _actual_output_receipt_filesystem(actual_root: Path) -> str:
-    receipt_path = actual_root / "receipt.json"
-    actual_pair = _read_small_actual_receipt(receipt_path)
-    actual_receipt = actual_pair[0] if actual_pair is not None else None
-    return _expected_receipt_filesystem_type(actual_receipt)
+def _receipt_verification_scope() -> dict[str, object]:
+    return {
+        "unverified_external_metadata": [
+            {"artifact": "receipt.json", "field": "/storage_boundary/filesystem_type"}
+        ],
+        "receipt_byte_identity": "NOT_VERIFIED",
+    }
 
 
 def _empty_report(mismatches: MismatchCollector) -> dict[str, object]:
@@ -3382,6 +3538,7 @@ def _empty_report(mismatches: MismatchCollector) -> dict[str, object]:
         "runtime_gate": "BLOCKED",
         "membership_verification_started": False,
         "producer_package_identity_sha256": PRODUCER_IDENTITY_SHA256,
+        **_receipt_verification_scope(),
         **mismatches.report_fields(),
     }
 
@@ -3420,6 +3577,30 @@ def _authority_pin_report(error: BaseException) -> dict[str, object]:
     return report
 
 
+def _input_snapshot_report(
+    mismatches: MismatchCollector,
+    error: InputSnapshotChanged,
+    *,
+    membership_started: bool,
+    drift_scan: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    mismatches.add(
+        "INPUT_SNAPSHOT_MISMATCH",
+        {"scope": "all-pinned-source-files"},
+        "unchanged descriptor-backed file identities and SHA-256 digests",
+        str(error),
+    )
+    report = _empty_report(mismatches)
+    report.update(
+        status="INPUT_SNAPSHOT_MISMATCH",
+        producer_source_package_verified=True,
+        membership_verification_started=membership_started,
+    )
+    if drift_scan is not None:
+        report["global_drift_scan"] = dict(drift_scan)
+    return report
+
+
 def verify_population(
     input_root: Path,
     artifact_root: Path,
@@ -3451,13 +3632,17 @@ def verify_population(
         return report
 
     try:
-        contracts, metadata_receipts = load_input_contracts(input_root, authorities)
+        contracts, input_snapshots = load_input_contracts(input_root, authorities)
         source_receipts, drift_scan, drift_count = _global_drift_scan(
             contracts,
-            metadata_receipts,
+            input_snapshots,
             input_root,
             authorities,
         )
+    except InputSnapshotChanged as exc:
+        report = _input_snapshot_report(mismatches, exc, membership_started=False)
+        _write_report(report_path, report)
+        return report
     except (OSError, VerificationInputError) as exc:
         mismatches.add(
             "INVALID_SYNTHETIC_INPUT",
@@ -3468,6 +3653,23 @@ def verify_population(
         report = _empty_report(mismatches)
         report["status"] = "INVALID_INPUT"
         report["producer_source_package_verified"] = True
+        _write_report(report_path, report)
+        return report
+
+    try:
+        _validate_input_snapshots(
+            input_root,
+            authorities,
+            input_snapshots,
+            include_tracking=drift_count > 0,
+        )
+    except InputSnapshotChanged as exc:
+        report = _input_snapshot_report(
+            mismatches,
+            exc,
+            membership_started=False,
+            drift_scan=drift_scan,
+        )
         _write_report(report_path, report)
         return report
 
@@ -3488,7 +3690,6 @@ def verify_population(
         _write_report(report_path, report)
         return report
 
-    filesystem_type = _actual_output_receipt_filesystem(artifact_root)
     with tempfile.TemporaryDirectory(prefix="fpdbench-streaming-verifier-") as temporary:
         try:
             expected = _build_expected_population(
@@ -3496,11 +3697,20 @@ def verify_population(
                 contracts,
                 authorities,
                 source_receipts,
+                input_snapshots,
                 drift_scan,
                 producer_identity,
-                filesystem_type,
                 Path(temporary) / "expected",
             )
+        except InputSnapshotChanged as exc:
+            report = _input_snapshot_report(
+                mismatches,
+                exc,
+                membership_started=True,
+                drift_scan=drift_scan,
+            )
+            _write_report(report_path, report)
+            return report
         except (OSError, VerificationInputError, ValueError, TypeError) as exc:
             mismatches.add(
                 "INDEPENDENT_DERIVATION_FAILED",
@@ -3519,6 +3729,19 @@ def verify_population(
             return report
 
         actual_hashes = _compare_output_set(artifact_root, expected, mismatches)
+        try:
+            _validate_input_snapshots(
+                input_root, authorities, input_snapshots, include_tracking=True
+            )
+        except InputSnapshotChanged as exc:
+            report = _input_snapshot_report(
+                mismatches,
+                exc,
+                membership_started=True,
+                drift_scan=drift_scan,
+            )
+            _write_report(report_path, report)
+            return report
 
     status = "RECONCILED_NON_AUTHORITATIVE" if mismatches.total == 0 else "MISMATCH"
     report = {
@@ -3542,6 +3765,7 @@ def verify_population(
         "expected_artifact_sha256": dict(sorted(expected.hashes.items())),
         "actual_artifact_sha256": dict(sorted(actual_hashes.items())),
         "storage_boundary": "SYNTHETIC_ONLY_NOT_TRUSTED_FOR_PROTECTED_DATA",
+        **_receipt_verification_scope(),
         **mismatches.report_fields(),
     }
     _write_report(report_path, report)

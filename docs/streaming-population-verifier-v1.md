@@ -26,9 +26,23 @@ masks, and scoreability.
 Candidate, diagnostic, and truth expectations are written as temporary JSONL
 streams. The manifest parser retains one match or window token at a time and
 compares the five output artifacts without loading full JSONL files or the
-cohort. Mismatch reports retain at most 1,000 record entries while preserving
-the complete total and per-category counts. Each record report includes its
-identity and expected/actual digests where those sides exist.
+cohort. Mismatch reports retain at most 1,000 record entries and 256 KiB of
+serialized detail while preserving complete mismatch totals and per-category
+counts. Oversized identity fields are replaced by a short prefix and
+deterministic digest.
+
+Metadata, normalized phases, and tracking inputs are pinned by descriptor-backed
+SHA-256 and file identity snapshots. Metadata and phases are rechecked after
+the global drift scan, tracking identity is checked before its replay pass, and
+all 60 files are rehashed after artifact comparison immediately before the
+report is written. Replacement or in-place mutation fails closed with
+`INPUT_SNAPSHOT_MISMATCH`.
+
+The receipt's `storage_boundary.filesystem_type` is excluded from independent
+field comparisons because the verifier has no trusted filesystem evidence for
+it. The report labels that value as unverified external metadata and marks
+receipt byte identity `NOT_VERIFIED`; it still checks the receipt's internal
+self-hash and independently compares the remaining receipt fields.
 
 The fixtures are in
 [`tests/fixtures/streaming-verifier-v1`](../tests/fixtures/streaming-verifier-v1/README.md).
