@@ -302,7 +302,8 @@ def execute(kind, worker, request):
 
 
 def write_new(path, value):
-    with Path(path).open("xb") as stream:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "wb") as stream:
         os.fchmod(stream.fileno(), 0o600)
         stream.write(canonical(value) + b"\n")
         stream.flush()

@@ -226,6 +226,37 @@ def test_startup_flags_required(tmp_path):
     assert "require Python" in result.stderr
 
 
+def test_evidence_is_private_from_creation(tmp_path):
+    script = """
+import os, runpy, stat, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+original = os.fchmod
+def check_creation_mode(fd, mode):
+    assert stat.S_IMODE(os.fstat(fd).st_mode) == 0o600
+    original(fd, mode)
+os.fchmod = check_creation_mode
+os.umask(0)
+path = Path(sys.argv[2])
+module['write_new'](path, {'synthetic': True})
+assert stat.S_IMODE(path.stat().st_mode) == 0o600
+try:
+    module['write_new'](path, {})
+except FileExistsError:
+    pass
+else:
+    raise AssertionError('existing evidence overwritten')
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), str(tmp_path / "evidence.json")],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize(
     "probe", ["post_mutation", "import_mutation", "escape", "native_mapping", "worker_error"]
 )
