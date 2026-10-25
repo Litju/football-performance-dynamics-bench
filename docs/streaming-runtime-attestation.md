@@ -130,3 +130,55 @@ Before any separately authorized production execution, remaining work is:
 
 No production key was provisioned, protected SkillCorner input accessed,
 integration branch pushed, or empirical gate enabled.
+
+## Validation record
+
+Implementation commit: `4e8a3e25f1b6bfe9dca25ad74d9671fa19709e98`, on the existing
+integration branch, directly after the completed unified
+integration. The follow-up documentation commit records validation only.
+Validation used Linux and CPython 3.12.13; no new dependency was installed.
+
+The final focused command was:
+
+```sh
+.venv/bin/pytest -q tests/integration/test_streaming_runtime_attestation.py
+```
+
+It passed **23 tests**, with no skips, including a native-mapping change using
+the host's system libuuid. The poisoned-cache test includes a positive control
+showing that ordinary Python executes the poisoned cache before the attested
+launcher successfully ignores it. A mutation-probe setup error encountered
+during development was corrected before the final targeted validation.
+
+Ruff checking, Ruff formatting (129 Python files), strict Pyright (zero errors),
+repository and naming validation, evidence validation (232 references / 63
+digests), and public reproducibility checking passed. The public snapshot remains
+`a22f93f11cf428b7f326a93714fbcc798c99e5d0dbcab5122edb48d050b4a873`.
+`git diff --exit-code ab37fd1aad44dca844d94b362bc3fdf104411b64 -- src benchmarks`
+passed: all package code and frozen scientific authorities remain byte-identical.
+Wheel/sdist smoke was not repeated because package code and packaging
+configuration did not change; the launcher is a separately controlled repository
+tool, not a new wheel entry point.
+
+The original full run completed both unchanged resource-scaling checks
+successfully. It reported 617 passed and two failures: the development probe
+setup error noted above, and a branch-name literal added to these notes that
+violated the repository's structured-provenance naming rule. Both were fixed.
+The clean regression rerun reused the two successful expensive scaling checks:
+
+```sh
+FPDBENCH_PR25_PACKAGE_ROOT="$PWD/.pytest_cache/pr25-source/src/fpdbench" \
+  .venv/bin/pytest -q \
+  --deselect tests/integration/test_streaming_population_verifier_v1.py::test_source_and_artifact_scaling_keeps_worker_memory_bounded \
+  --deselect tests/unit/test_streaming_population_producer_v1.py::test_separate_worker_memory_stays_bounded_at_10x_input_scale
+```
+
+That package root was extracted with `git archive` from the existing local
+`aad8888eb6c7c046e4dfbce866886bf2ec8dd123` commit. It is an ignored synthetic
+fixture copy, not a new branch or worktree. No fetch, checkout or push was used.
+
+The clean rerun passed **618 tests, 2 deselected in 333.91 seconds**, including
+all 23 final attestation tests. Together with the two previously successful
+unchanged scaling checks, all **620 current test cases** have successful coverage.
+No production qualification is implied. Final repository/naming validation,
+whitespace checks, and the unchanged-source/authority comparison also passed.
