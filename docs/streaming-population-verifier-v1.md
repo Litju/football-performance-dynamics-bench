@@ -16,6 +16,10 @@ cannot change that identity. Executable-runtime attestation remains a separate
 mandatory gate and is `NOT_PROVIDED`; the report always keeps the runtime gate
 `BLOCKED`.
 
+The integrated workers now have a separate
+[synthetic pre-import runtime launcher](streaming-runtime-attestation.md). Its
+evidence does not upgrade worker receipts or open the production runtime gate.
+
 Before reconciling membership or truth, the verifier reads every raw 10 Hz
 tracking row for all 20 pinned matches, reconstructs retained 5 Hz samples, and
 checks the global nullable-ball-flag finite-coordinate drift gate. It then

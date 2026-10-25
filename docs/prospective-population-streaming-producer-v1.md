@@ -3,7 +3,12 @@
 **State: synthetic-only, UNQUALIFIED.** This worker is separately versioned
 from the in-memory PR #20 producer. It does not authenticate a source receipt,
 call the protected executor, qualify a population, or open an empirical gate.
-The independent streaming verifier remains a separate implementation task.
+The independent streaming verifier is now integrated; its non-authoritative
+reconciliation keeps the production runtime gate blocked.
+
+The integrated workers now have a separate
+[synthetic pre-import runtime launcher](streaming-runtime-attestation.md). Its
+evidence does not upgrade worker receipts or open the production runtime gate.
 
 ## Inputs and pass order
 
@@ -120,8 +125,8 @@ tree separation, and increased frame/candidate/output volume.
 
 ## Remaining blockers
 
-- No independent streaming verifier exists for this worker. Synthetic parity
-  and producer-generated hashes are not independent verification.
+- The integrated independent streaming verifier reconciles synthetic artifacts
+  only; it does not establish protected-population qualification.
 - The existing source-only adapter inventory does not authenticate executed
   bytecode or the complete runtime. A separately controlled pre-import runtime
   and dependency attestation is still required.

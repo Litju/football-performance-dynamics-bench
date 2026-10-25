@@ -97,18 +97,27 @@ identity explicitly does not attest bytecode or the complete runtime; details
 and memory evidence are in
 [prospective-population-streaming-producer-v1.md](prospective-population-streaming-producer-v1.md).
 
+The integrated workers now have a separate
+[synthetic pre-import runtime launcher](streaming-runtime-attestation.md). Its
+evidence does not upgrade worker receipts or open the production runtime gate.
+
 ## Exact blockers
 
-1. Implement and independently review a separately authored streaming verifier.
-   Producer parity, producer hashes, and green CI are not independent verification.
-2. Attest the actual worker interpreter, imported bytecode, installed dependencies,
-   and executable closure before any real-source execution. The existing adapter
-   source inventory does not authenticate them.
-3. Provision the root-owned policy bundle and owner/reviewer public keys outside
-   the repository. No production key, trust file, or protected source is present
-   here, so production receipt authentication currently fails closed.
-4. Independently review this exact stacked DRAFT head and the complete trust and
-   execution contract before any separately authorized real-source run.
+The independent streaming verifier, PR #26 repairs and scoped re-review are
+complete at unified integration `ab37fd1aad44dca844d94b362bc3fdf104411b64`.
+Remaining production blockers are:
+
+1. Independently review the new pre-import runtime launcher and its execution
+   contract. The completed PR #26 review does not cover this new implementation.
+2. Establish externally trusted pre-startup interpreter, dependency and executable
+   closure verification, with immutable runtime storage. The synthetic launcher
+   provides consistency evidence under a trusted bootstrap, not production trust.
+3. Provision the root-owned signed policy bundle and owner/reviewer public keys
+   outside the repository under separate authorization; bind separately approved
+   integrated worker runtime manifests into that policy.
+4. Complete protected storage, authenticated immutable source handoff, real-source
+   resource evidence and qualification review before any separately authorized
+   real-source run.
 
 No real SkillCorner processing, qualification PASS, training, checkpoint
 selection, LOMO, scoring, or release was performed or authorized by this work.
