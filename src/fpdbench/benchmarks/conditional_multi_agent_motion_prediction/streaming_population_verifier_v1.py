@@ -3543,7 +3543,19 @@ def _empty_report(mismatches: MismatchCollector) -> dict[str, object]:
     }
 
 
-def _write_report(path: Path, report: dict[str, object]) -> None:
+def _validate_report_destination(path: Path, protected_roots: tuple[Path, ...]) -> None:
+    destinations = (path.absolute(), path.resolve())
+    for root in protected_roots:
+        if any(
+            destination.is_relative_to(protected)
+            for destination in destinations
+            for protected in (root.absolute(), root.resolve())
+        ):
+            raise VerificationInputError("report destination must be outside all evidence trees")
+
+
+def _write_report(path: Path, report: dict[str, object], protected_roots: tuple[Path, ...]) -> None:
+    _validate_report_destination(path, protected_roots)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = canonical_bytes(report)
     descriptor, temporary_name = tempfile.mkstemp(prefix=".verify-report-", dir=path.parent)
@@ -3608,12 +3620,14 @@ def verify_population(
     report_path: Path,
 ) -> dict[str, object]:
     """Reconstruct and reconcile PR #25 outputs without importing its code."""
+    protected_roots = (input_root, artifact_root, producer_package_root)
+    _validate_report_destination(report_path, protected_roots)
     mismatches = MismatchCollector()
     try:
         authorities = load_authorities()
     except (OSError, VerificationInputError) as exc:
         report = _authority_pin_report(exc)
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
 
     try:
@@ -3628,7 +3642,7 @@ def verify_population(
         report = _empty_report(mismatches)
         report["status"] = "PRODUCER_PROVENANCE_MISMATCH"
         report["producer_source_package_verified"] = False
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
 
     try:
@@ -3641,7 +3655,7 @@ def verify_population(
         )
     except InputSnapshotChanged as exc:
         report = _input_snapshot_report(mismatches, exc, membership_started=False)
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
     except (OSError, VerificationInputError) as exc:
         mismatches.add(
@@ -3653,7 +3667,7 @@ def verify_population(
         report = _empty_report(mismatches)
         report["status"] = "INVALID_INPUT"
         report["producer_source_package_verified"] = True
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
 
     try:
@@ -3670,7 +3684,7 @@ def verify_population(
             membership_started=False,
             drift_scan=drift_scan,
         )
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
 
     if drift_count:
@@ -3687,7 +3701,7 @@ def verify_population(
             drift_scan=drift_scan,
             membership_verification_started=False,
         )
-        _write_report(report_path, report)
+        _write_report(report_path, report, protected_roots)
         return report
 
     with tempfile.TemporaryDirectory(prefix="fpdbench-streaming-verifier-") as temporary:
@@ -3709,7 +3723,7 @@ def verify_population(
                 membership_started=True,
                 drift_scan=drift_scan,
             )
-            _write_report(report_path, report)
+            _write_report(report_path, report, protected_roots)
             return report
         except (OSError, VerificationInputError, ValueError, TypeError) as exc:
             mismatches.add(
@@ -3725,7 +3739,7 @@ def verify_population(
                 drift_scan=drift_scan,
                 membership_verification_started=True,
             )
-            _write_report(report_path, report)
+            _write_report(report_path, report, protected_roots)
             return report
 
         actual_hashes = _compare_output_set(artifact_root, expected, mismatches)
@@ -3740,7 +3754,7 @@ def verify_population(
                 membership_started=True,
                 drift_scan=drift_scan,
             )
-            _write_report(report_path, report)
+            _write_report(report_path, report, protected_roots)
             return report
 
     status = "RECONCILED_NON_AUTHORITATIVE" if mismatches.total == 0 else "MISMATCH"
@@ -3768,7 +3782,7 @@ def verify_population(
         **_receipt_verification_scope(),
         **mismatches.report_fields(),
     }
-    _write_report(report_path, report)
+    _write_report(report_path, report, protected_roots)
     return report
 
 
@@ -3781,6 +3795,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--producer-package-root", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
     args = parser.parse_args(argv)
+    protected_roots = (args.input_root, args.artifact_root, args.producer_package_root)
+    try:
+        _validate_report_destination(args.report, protected_roots)
+    except (OSError, VerificationInputError, ValueError) as exc:
+        parser.error(str(exc))
     try:
         report = verify_population(
             args.input_root,
@@ -3798,7 +3817,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         report = _empty_report(collector)
         report["status"] = "VERIFIER_ERROR"
-        _write_report(args.report, report)
+        _write_report(args.report, report, protected_roots)
     print(
         json.dumps(
             {

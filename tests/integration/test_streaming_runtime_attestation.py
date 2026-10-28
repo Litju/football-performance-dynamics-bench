@@ -319,3 +319,18 @@ def test_manifest_self_hash_is_not_enough(runtime, tmp_path):
     assert result.returncode == 1
     assert not report["worker_import_started"]
     assert report["error"] == "manifest pin mismatch"
+
+
+@pytest.mark.parametrize("tree", ["input_root", "artifact_root", "producer_package_root"])
+def test_launcher_rejects_report_inside_evidence(runtime, synthetic, tmp_path, tree):
+    root, _, _ = runtime
+    request = _verifier_request(synthetic, root, tmp_path)
+    protected = Path(request[tree])
+    target = next(path for path in protected.rglob("*") if path.is_file())
+    before = target.read_bytes()
+    request["report"] = str(target)
+    result, evidence = _run(runtime, tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED"
+    assert "outside all evidence trees" in evidence["error"]
+    assert target.read_bytes() == before

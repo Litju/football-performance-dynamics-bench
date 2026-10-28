@@ -727,3 +727,155 @@ def test_source_and_artifact_scaling_keeps_worker_memory_bounded(fixture_bundle,
         <= small_memory["tracemalloc_peak_bytes"] + 16 * 1024 * 1024
     )
     assert large_memory["rss_peak_bytes"] <= small_memory["rss_peak_bytes"] + 64 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    "tree,filename", [(0, "metadata.json"), (1, "receipt.json"), (2, "worker.py")]
+)
+@pytest.mark.parametrize("entry", ["api", "cli", "writer"])
+@pytest.mark.parametrize("symlink_parent", [False, True])
+def test_report_destination_cannot_overwrite_evidence(
+    tmp_path, monkeypatch, tree, filename, entry, symlink_parent
+) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    for root in roots:
+        root.mkdir()
+    target = roots[tree] / filename
+    original = b"original evidence bytes\n"
+    target.write_bytes(original)
+    report = target
+    if symlink_parent:
+        alias = tmp_path / "alias"
+        alias.symlink_to(roots[tree], target_is_directory=True)
+        report = alias / filename
+
+    def unexpected_read():
+        pytest.fail("destination must be rejected before reading authorities")
+
+    monkeypatch.setattr(verifier, "load_authorities", unexpected_read)
+    before = {path: path.read_bytes() for root in roots for path in root.rglob("*")}
+    if entry == "cli":
+        with pytest.raises(SystemExit) as exc:
+            verifier.main(
+                [
+                    "--input-root",
+                    str(roots[0]),
+                    "--artifact-root",
+                    str(roots[1]),
+                    "--producer-package-root",
+                    str(roots[2]),
+                    "--report",
+                    str(report),
+                ]
+            )
+        assert exc.value.code == 2
+    else:
+        with pytest.raises(verifier.VerificationInputError, match="outside all evidence trees"):
+            if entry == "api":
+                verifier.verify_population(*roots, report)
+            else:
+                verifier._write_report(report, {"status": "VERIFIER_ERROR"}, roots)
+    assert {path: path.read_bytes() for root in roots for path in root.rglob("*")} == before
+
+
+@pytest.mark.parametrize("entry", ["api", "cli"])
+def test_report_rejects_new_directories_inside_evidence(tmp_path, entry) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    report = roots[0] / "new-directory" / "report.json"
+    with pytest.raises((verifier.VerificationInputError, SystemExit)):
+        if entry == "api":
+            verifier.verify_population(*roots, report)
+        else:
+            verifier.main(
+                [
+                    "--input-root",
+                    str(roots[0]),
+                    "--artifact-root",
+                    str(roots[1]),
+                    "--producer-package-root",
+                    str(roots[2]),
+                    "--report",
+                    str(report),
+                ]
+            )
+    assert not roots[0].exists()
+
+
+@pytest.mark.parametrize("error_stage", ["authority", "provenance", "cli"])
+def test_error_reports_work_in_separate_directory(tmp_path, monkeypatch, error_stage) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    for root in roots:
+        root.mkdir()
+        (root / "evidence").write_bytes(b"preserved")
+    report = tmp_path / "reports" / "error.json"
+
+    def fail(*args):
+        raise verifier.VerificationInputError("synthetic error")
+
+    if error_stage == "authority":
+        monkeypatch.setattr(verifier, "load_authorities", fail)
+    elif error_stage == "provenance":
+        monkeypatch.setattr(verifier, "verify_producer_source_package", fail)
+    else:
+        monkeypatch.setattr(verifier, "verify_population", fail)
+    assert (
+        verifier.main(
+            [
+                "--input-root",
+                str(roots[0]),
+                "--artifact-root",
+                str(roots[1]),
+                "--producer-package-root",
+                str(roots[2]),
+                "--report",
+                str(report),
+            ]
+        )
+        == 1
+    )
+    assert (
+        json.loads(report.read_bytes())["status"]
+        == {
+            "authority": "AUTHORITY_MISMATCH",
+            "provenance": "PRODUCER_PROVENANCE_MISMATCH",
+            "cli": "VERIFIER_ERROR",
+        }[error_stage]
+    )
+    for root in roots:
+        assert list(root.iterdir()) == [root / "evidence"]
+        assert (root / "evidence").read_bytes() == b"preserved"
+
+
+def test_cli_exception_rechecks_symlinked_report_parent(tmp_path, monkeypatch) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    for root in roots:
+        root.mkdir()
+    target = roots[0] / "metadata.json"
+    target.write_bytes(b"preserved")
+    safe = tmp_path / "reports"
+    safe.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(safe, target_is_directory=True)
+
+    def fail(*args):
+        alias.unlink()
+        alias.symlink_to(roots[0], target_is_directory=True)
+        raise ValueError("synthetic CLI exception")
+
+    monkeypatch.setattr(verifier, "verify_population", fail)
+    with pytest.raises(verifier.VerificationInputError, match="outside all evidence trees"):
+        verifier.main(
+            [
+                "--input-root",
+                str(roots[0]),
+                "--artifact-root",
+                str(roots[1]),
+                "--producer-package-root",
+                str(roots[2]),
+                "--report",
+                str(alias / target.name),
+            ]
+        )
+    assert target.read_bytes() == b"preserved"
+    assert list(roots[0].iterdir()) == [target]
+    assert not list(safe.iterdir())
