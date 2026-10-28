@@ -879,3 +879,37 @@ def test_cli_exception_rechecks_symlinked_report_parent(tmp_path, monkeypatch) -
     assert target.read_bytes() == b"preserved"
     assert list(roots[0].iterdir()) == [target]
     assert not list(safe.iterdir())
+
+
+@pytest.mark.parametrize(
+    "module,helper",
+    [
+        (MODULE, "_open_regular_nofollow"),
+        (MODULE.replace("verifier", "producer"), "_open_regular"),
+    ],
+)
+def test_regular_file_helpers_reject_fifo_without_writer(tmp_path, module, helper) -> None:
+    fifo = tmp_path / "input.fifo"
+    os.mkfifo(fifo)
+    script = "\n".join(
+        [
+            "import importlib, sys",
+            "from pathlib import Path",
+            "worker = importlib.import_module(sys.argv[1])",
+            "try:",
+            "    getattr(worker, sys.argv[2])(Path(sys.argv[3]))",
+            "except ValueError as exc:",
+            "    assert 'must be a regular file' in str(exc), str(exc)",
+            "else:",
+            "    raise AssertionError('FIFO accepted as a regular file')",
+        ]
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script, module, helper, str(fifo)],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert stat.S_ISFIFO(fifo.stat().st_mode)

@@ -439,7 +439,7 @@ def _open_regular_nofollow(path: Path) -> tuple[int, os.stat_result]:
     try:
         fd = os.open(
             parts[-1],
-            os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW,
+            os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK,
             dir_fd=parent_fd,
         )
     finally:

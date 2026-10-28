@@ -111,7 +111,9 @@ def test_integrated_workers(runtime, synthetic, tmp_path, kind):
             "output_directory": str(tmp_path / "population"),
         }
     else:
-        request = _verifier_request(synthetic, root, tmp_path)
+        request = _verifier_request(
+            synthetic, Path(os.environ["FPDBENCH_PR25_PACKAGE_ROOT"]), tmp_path
+        )
     result, report = _run(runtime, tmp_path, request, kind=kind)
     assert result.returncode == 0, (result.stderr, report)
     assert report["status"] == "SYNTHETIC_RUNTIME_CONSISTENT"
@@ -207,7 +209,8 @@ def test_poisoned_cache_is_never_executed(runtime, synthetic, tmp_path):
         timeout=30,
     )
     assert control.returncode != 0 and "POISONED CACHE EXECUTED" in control.stderr
-    result, report = _run(runtime, tmp_path, _verifier_request(synthetic, root, tmp_path))
+    request = _verifier_request(synthetic, Path(os.environ["FPDBENCH_PR25_PACKAGE_ROOT"]), tmp_path)
+    result, report = _run(runtime, tmp_path, request)
     assert result.returncode == 0, (result.stderr, report)
     assert report["worker_status"] == "RECONCILED_NON_AUTHORITATIVE"
 
