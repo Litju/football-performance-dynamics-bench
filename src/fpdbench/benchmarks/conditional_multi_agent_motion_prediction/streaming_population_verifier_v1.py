@@ -19,6 +19,7 @@ import stat
 import tempfile
 from collections import Counter, deque
 from collections.abc import Iterator, Mapping, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, TextIO, cast
@@ -3554,21 +3555,69 @@ def _validate_report_destination(path: Path, protected_roots: tuple[Path, ...]) 
             raise VerificationInputError("report destination must be outside all evidence trees")
 
 
+def _validate_report_directory(
+    directories: Sequence[tuple[int, str, int]], protected_roots: tuple[Path, ...]
+) -> None:
+    protected = set[tuple[int, int]]()
+    for root in protected_roots:
+        try:
+            info = root.stat()
+        except FileNotFoundError:
+            continue
+        protected.add((info.st_dev, info.st_ino))
+    for parent_fd, name, child_fd in directories:
+        info = os.fstat(child_fd)
+        if not os.path.samestat(info, os.stat(name, dir_fd=parent_fd, follow_symlinks=False)):
+            raise VerificationInputError("report directory changed during publication")
+        if (info.st_dev, info.st_ino) in protected:
+            raise VerificationInputError("report destination must be outside all evidence trees")
+
+
 def _write_report(path: Path, report: dict[str, object], protected_roots: tuple[Path, ...]) -> None:
     _validate_report_destination(path, protected_roots)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = path.absolute()
+    parts = _absolute_parts(path.parent)
     payload = canonical_bytes(report)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=".verify-report-", dir=path.parent)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-    except BaseException:
-        temporary.unlink(missing_ok=True)
-        raise
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW
+    with ExitStack() as stack:
+        directory_fd = _open_directory_nofollow(Path("/"))
+        stack.callback(os.close, directory_fd)
+        directories: list[tuple[int, str, int]] = []
+        for part in parts:
+            try:
+                child_fd = os.open(part, flags, dir_fd=directory_fd)
+            except FileNotFoundError:
+                os.mkdir(part, mode=0o700, dir_fd=directory_fd)
+                os.fsync(directory_fd)
+                child_fd = os.open(part, flags, dir_fd=directory_fd)
+            stack.callback(os.close, child_fd)
+            directories.append((directory_fd, part, child_fd))
+            directory_fd = child_fd
+        _validate_report_directory(directories, protected_roots)
+        temporary_name = f".verify-report-{os.urandom(16).hex()}"
+        descriptor = os.open(
+            temporary_name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=directory_fd,
+        )
+        stack.callback(os.close, descriptor)
+        try:
+            with os.fdopen(descriptor, "wb", closefd=False) as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(descriptor)
+            _validate_report_directory(directories, protected_roots)
+            os.replace(temporary_name, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            os.fsync(directory_fd)
+            _validate_report_directory(directories, protected_roots)
+        finally:
+            try:
+                os.unlink(temporary_name, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+            else:
+                os.fsync(directory_fd)
 
 
 def _authority_pin_report(error: BaseException) -> dict[str, object]:

@@ -913,3 +913,214 @@ def test_regular_file_helpers_reject_fifo_without_writer(tmp_path, module, helpe
     )
     assert result.returncode == 0, result.stderr
     assert stat.S_ISFIFO(fifo.stat().st_mode)
+
+
+@pytest.mark.parametrize(
+    "tree,filename", [(0, "metadata.json"), (1, "receipt.json"), (2, "worker.py")]
+)
+def test_report_parent_symlink_swap_after_validation_is_rejected(
+    tmp_path, monkeypatch, tree, filename
+) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    for root in roots:
+        root.mkdir()
+    target = roots[tree] / filename
+    target.write_bytes(b"original evidence")
+    safe = tmp_path / "reports"
+    safe.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(safe, target_is_directory=True)
+    validate = verifier._validate_report_destination
+
+    def swap_after_validation(path, protected_roots):
+        validate(path, protected_roots)
+        alias.unlink()
+        alias.symlink_to(roots[tree], target_is_directory=True)
+
+    monkeypatch.setattr(verifier, "_validate_report_destination", swap_after_validation)
+    with pytest.raises((OSError, verifier.VerificationInputError)):
+        verifier._write_report(alias / filename, {"status": "RECONCILED_NON_AUTHORITATIVE"}, roots)
+    assert target.read_bytes() == b"original evidence"
+    assert list(roots[tree].iterdir()) == [target]
+    assert not list(safe.iterdir())
+
+
+@pytest.mark.parametrize(
+    "tree,filename", [(0, "metadata.json"), (1, "receipt.json"), (2, "worker.py")]
+)
+@pytest.mark.parametrize("timing", ["before_creation", "after_creation", "at_publication"])
+@pytest.mark.parametrize("entry", ["writer", "authority", "cli"])
+def test_report_parent_replacement_cannot_redirect_publication(
+    tmp_path, monkeypatch, tree, filename, timing, entry, capsys
+) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    for root in roots:
+        root.mkdir()
+    target = roots[tree] / filename
+    target.write_bytes(b"original evidence")
+    parent = tmp_path / "reports"
+    parent.mkdir()
+    parked = tmp_path / "original-reports"
+    before = {path: path.read_bytes() for root in roots for path in root.rglob("*")}
+    open_file = os.open
+    replace_file = os.replace
+    captured = []
+    swapped = []
+
+    def swap():
+        parent.rename(parked)
+        parent.symlink_to(roots[tree], target_is_directory=True)
+        swapped.append(True)
+
+    def intercept_open(path, flags, mode=0o777, *, dir_fd=None):
+        is_report = Path(path).name.startswith(".verify-report-")
+        if is_report and timing == "before_creation":
+            swap()
+        descriptor = open_file(path, flags, mode, dir_fd=dir_fd)
+        if is_report:
+            captured.append(descriptor)
+            if timing == "after_creation":
+                swap()
+        return descriptor
+
+    def intercept_replace(source, destination, *, src_dir_fd=None, dst_dir_fd=None):
+        if timing == "at_publication":
+            swap()
+        return replace_file(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    def fail(*args):
+        raise verifier.VerificationInputError("synthetic early error")
+
+    monkeypatch.setattr(os, "open", intercept_open)
+    monkeypatch.setattr(os, "replace", intercept_replace)
+    if entry == "authority":
+        monkeypatch.setattr(verifier, "load_authorities", fail)
+    elif entry == "cli":
+        monkeypatch.setattr(verifier, "verify_population", fail)
+    with pytest.raises((OSError, verifier.VerificationInputError)):
+        if entry == "writer":
+            verifier._write_report(
+                parent / filename, {"status": "RECONCILED_NON_AUTHORITATIVE"}, roots
+            )
+        elif entry == "authority":
+            verifier.verify_population(*roots, parent / filename)
+        else:
+            verifier.main(
+                [
+                    "--input-root",
+                    str(roots[0]),
+                    "--artifact-root",
+                    str(roots[1]),
+                    "--producer-package-root",
+                    str(roots[2]),
+                    "--report",
+                    str(parent / filename),
+                ]
+            )
+    assert swapped
+    assert {path: path.read_bytes() for root in roots for path in root.rglob("*")} == before
+    assert not list(parked.glob(".verify-report-*"))
+    assert not capsys.readouterr().out
+    for descriptor in captured:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+
+@pytest.mark.parametrize("failure", [None, "file_sync", "replace"])
+def test_report_publication_uses_one_directory_descriptor_and_cleans_up(
+    tmp_path, monkeypatch, failure
+) -> None:
+    roots = tuple(tmp_path / name for name in ("inputs", "artifacts", "package"))
+    parent = tmp_path / "reports"
+    parent.mkdir()
+    report_path = parent / "report.json"
+    report_path.write_bytes(b"previous report")
+    open_file, replace_file, sync = os.open, os.replace, os.fsync
+    descriptors = []
+    temporary = []
+    synced = []
+    replaced = []
+
+    def intercept_open(path, flags, mode=0o777, *, dir_fd=None):
+        descriptor = open_file(path, flags, mode, dir_fd=dir_fd)
+        descriptors.append(descriptor)
+        if flags & os.O_CREAT:
+            assert dir_fd is not None and not Path(path).is_absolute()
+            required = os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+            assert flags & required == required
+            assert stat.S_IMODE(os.fstat(descriptor).st_mode) == 0o600
+            temporary.append((descriptor, dir_fd))
+        return descriptor
+
+    def intercept_sync(descriptor):
+        synced.append(descriptor)
+        if failure == "file_sync" and temporary and descriptor == temporary[0][0]:
+            raise OSError("synthetic file sync failure")
+        return sync(descriptor)
+
+    def intercept_replace(source, destination, *, src_dir_fd=None, dst_dir_fd=None):
+        assert src_dir_fd == dst_dir_fd == temporary[0][1]
+        assert not Path(source).is_absolute() and destination == report_path.name
+        assert temporary[0][0] in synced
+        replaced.append(True)
+        if failure == "replace":
+            raise OSError("synthetic replace failure")
+        return replace_file(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+
+    monkeypatch.setattr(os, "open", intercept_open)
+    monkeypatch.setattr(os, "fsync", intercept_sync)
+    monkeypatch.setattr(os, "replace", intercept_replace)
+    report = {"status": "RECONCILED_NON_AUTHORITATIVE"}
+    if failure:
+        with pytest.raises(OSError, match="synthetic"):
+            verifier._write_report(report_path, report, roots)
+        assert report_path.read_bytes() == b"previous report"
+    else:
+        verifier._write_report(report_path, report, roots)
+        assert json.loads(report_path.read_bytes()) == report
+        assert replaced
+    assert temporary[0][1] in synced
+    assert list(parent.iterdir()) == [report_path]
+    for descriptor in descriptors:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+
+@pytest.mark.parametrize("timing", ["before_creation", "after_creation"])
+def test_reconciled_verification_cannot_succeed_after_report_parent_swap(
+    fixture_bundle, tmp_path, monkeypatch, timing
+) -> None:
+    case = fixture_bundle.root / "complete_10hz"
+    roots = (case / "inputs", case / "artifacts", fixture_bundle.producer_root)
+    before = {
+        path: path.read_bytes() for root in roots for path in root.rglob("*") if path.is_file()
+    }
+    target = next(roots[0].glob("*/metadata.json"))
+    parent = tmp_path / "reports"
+    parent.mkdir()
+    parked = tmp_path / "original-reports"
+    open_file = os.open
+    swapped = []
+
+    def swap():
+        parent.rename(parked)
+        parent.symlink_to(target.parent, target_is_directory=True)
+        swapped.append(True)
+
+    def intercept_open(path, flags, mode=0o777, *, dir_fd=None):
+        is_report = Path(path).name.startswith(".verify-report-")
+        if is_report and timing == "before_creation":
+            swap()
+        descriptor = open_file(path, flags, mode, dir_fd=dir_fd)
+        if is_report and timing == "after_creation":
+            swap()
+        return descriptor
+
+    monkeypatch.setattr(os, "open", intercept_open)
+    with pytest.raises(verifier.VerificationInputError, match="directory changed"):
+        verifier.verify_population(*roots, parent / target.name)
+    assert swapped
+    assert {
+        path: path.read_bytes() for root in roots for path in root.rglob("*") if path.is_file()
+    } == before
+    assert not list(parked.iterdir())
