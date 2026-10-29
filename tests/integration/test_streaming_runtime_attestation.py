@@ -1,0 +1,681 @@
+"""Only synthetic inputs and caller pins; no production trust or protected data."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import py_compile
+import shutil
+import subprocess
+import sys
+import sysconfig
+import zipfile
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).parents[2]
+LAUNCHER = REPO / "tools/attest_streaming_runtime.py"
+FLAGS = ["-I", "-S", "-B", "-X", "pycache_prefix=/dev/null"]
+WORKER = "benchmarks/conditional_multi_agent_motion_prediction/streaming_population_verifier_v1.py"
+
+
+def _canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+
+
+def _command(*args, env=None, flags=FLAGS):
+    return subprocess.run(
+        [sys.executable, *flags, str(LAUNCHER), *map(str, args)],
+        env={} if env is None else env,
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+
+
+@pytest.fixture
+def runtime(tmp_path):
+    root = tmp_path / "fpdbench"
+    shutil.copytree(REPO / "src/fpdbench", root, ignore=shutil.ignore_patterns("__pycache__"))
+    manifest = tmp_path / "runtime.json"
+    result = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert result.returncode == 0, result.stderr
+    return root, manifest, result.stdout.strip()
+
+
+@pytest.fixture(scope="module")
+def synthetic(tmp_path_factory):
+    root = tmp_path_factory.mktemp("runtime-synthetic")
+    with zipfile.ZipFile(
+        REPO / "tests/fixtures/streaming-verifier-v1/pr25-synthetic-fixtures.zip"
+    ) as archive:
+        for name in archive.namelist():
+            if name.startswith("complete_10hz/"):
+                archive.extract(name, root)
+    return root / "complete_10hz"
+
+
+def _run(runtime, tmp_path, request, *, kind="verifier", env=None):
+    root, manifest, pin = runtime
+    request_path = tmp_path / "request.json"
+    request_path.write_bytes(_canonical(request))
+    evidence = tmp_path / "evidence.json"
+    result = _command(
+        "run",
+        "--manifest",
+        manifest,
+        "--package-root",
+        root,
+        "--expected-sha256",
+        pin,
+        "--worker",
+        kind,
+        "--request",
+        request_path,
+        "--evidence",
+        evidence,
+        env=env,
+    )
+    assert evidence.exists(), result.stderr
+    report = json.loads(evidence.read_bytes())
+    if "snapshot_difference" in report:
+        print("snapshot_difference=" + _canonical(report["snapshot_difference"]).decode())
+    assert report["runtime_gate"] == "BLOCKED"
+    assert report["qualification"] == "NOT_PERFORMED"
+    return result, report
+
+
+def _verifier_request(synthetic, root, tmp_path):
+    return {
+        "input_root": str(synthetic / "inputs"),
+        "artifact_root": str(synthetic / "artifacts"),
+        "producer_package_root": str(root),
+        "report": str(tmp_path / "verification.json"),
+    }
+
+
+@pytest.mark.parametrize("kind", ["producer", "verifier"])
+def test_integrated_workers(runtime, synthetic, tmp_path, kind):
+    root, manifest, _ = runtime
+    if kind == "producer":
+        request = {
+            "inputs": [
+                {
+                    "match_id": directory.name,
+                    "metadata_path": str(directory / "metadata.json"),
+                    "tracking_jsonl_path": str(directory / "tracking.jsonl"),
+                    "phase_intervals_path": str(directory / "phases.json"),
+                }
+                for directory in sorted((synthetic / "inputs").iterdir())
+            ],
+            "output_directory": str(tmp_path / "population"),
+        }
+    else:
+        request = _verifier_request(
+            synthetic, Path(os.environ["FPDBENCH_PR25_PACKAGE_ROOT"]), tmp_path
+        )
+    result, report = _run(runtime, tmp_path, request, kind=kind)
+    assert result.returncode == 0, (result.stderr, report)
+    assert report["status"] == "SYNTHETIC_RUNTIME_CONSISTENT"
+    expected = "UNQUALIFIED" if kind == "producer" else "RECONCILED_NON_AUTHORITATIVE"
+    assert report["worker_status"] == expected
+    inventory = json.loads(manifest.read_bytes())
+    assert inventory["third_party_dependencies"] == []
+    assert inventory["interpreter"]["resolved_path"] in inventory["files"]
+    required = ("_datetime", "_heapq", "_queue", "_socket", "_ssl", "array", "binascii", "select")
+    bootstrap = inventory["bootstrap_modules"]
+    assert {"urllib.request", "concurrent.futures.thread", *required} <= bootstrap.keys()
+    native = inventory["native_files"]
+    extensions = []
+    for name in required:
+        origin = bootstrap[name]
+        if origin not in {"built-in", "frozen", None}:
+            assert native[origin] == inventory["files"][origin]
+            extensions.append(name)
+    openssl_count = 0
+    for path, digest in native.items():
+        if Path(path).name in {"libssl.so.3", "libcrypto.so.3"}:
+            assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest
+            openssl_count += 1
+    assert "snapshot_difference" not in report
+    print(
+        "bootstrap_native_inventory="
+        + _canonical(
+            {
+                "worker": kind,
+                "native_entries": len(native),
+                "file_backed_stdlib_extensions": sorted(extensions),
+                "dynamic_openssl_objects_hashed": openssl_count,
+            }
+        ).decode()
+    )
+    if kind == "verifier":
+        assert not any(name.startswith("fpdbench") for name in report["imports"])
+        verification = json.loads((tmp_path / "verification.json").read_bytes())
+        assert verification["runtime_gate"] == "BLOCKED"
+    else:
+        for filename in (
+            "manifest.json",
+            "candidates.jsonl",
+            "diagnostic-census.jsonl",
+            "truth.jsonl",
+        ):
+            assert (tmp_path / "population" / filename).read_bytes() == (
+                synthetic / "artifacts" / filename
+            ).read_bytes()
+
+
+@pytest.mark.parametrize("field", ["interpreter", "files", "native_files", "environment"])
+def test_runtime_pin_mismatch_rejected_before_import(runtime, tmp_path, field):
+    root, manifest, _ = runtime
+    value = json.loads(manifest.read_bytes())
+    if field == "interpreter":
+        value[field]["version"] = "forged"
+    elif field == "environment":
+        value[field]["TZ"] = "forged"
+    else:
+        value[field][next(iter(value[field]))] = "0" * 64
+    manifest.write_bytes(_canonical(value))
+    # Even a recalculated caller pin cannot make the observed runtime match forged evidence.
+    runtime = root, manifest, hashlib.sha256(_canonical(value)).hexdigest()
+    result, report = _run(runtime, tmp_path, {})
+    assert result.returncode == 1
+    assert not report["worker_import_started"]
+    assert "pre-import" in report["error"]
+
+
+@pytest.mark.parametrize(
+    "mutation", ["source", "initializer", "resource", "extra", "symlink", "pyc"]
+)
+def test_package_changes_rejected_before_import(runtime, tmp_path, mutation):
+    root, _, _ = runtime
+    if mutation == "source":
+        (root / WORKER).write_text("raise RuntimeError('MUST NOT EXECUTE')")
+    elif mutation == "initializer":
+        (root / "__init__.py").write_text("raise RuntimeError('MUST NOT EXECUTE')")
+    elif mutation == "resource":
+        (root / "data_states/skillcorner_5hz_v2.json").write_text("{}")
+    elif mutation == "extra":
+        (root / "unexpected.py").write_text("raise RuntimeError('MUST NOT EXECUTE')")
+    elif mutation == "symlink":
+        target = root / WORKER
+        target.unlink()
+        target.symlink_to(REPO / "src/fpdbench" / WORKER)
+    else:
+        (root / "unexpected.pyc").write_bytes(b"not bytecode")
+    result, report = _run(runtime, tmp_path, {})
+    assert result.returncode == 1
+    assert not report["worker_import_started"]
+
+
+def test_poisoned_cache_is_never_executed(runtime, synthetic, tmp_path):
+    root, _, _ = runtime
+    source = root / WORKER
+    original = source.read_bytes()
+    timestamp = source.stat().st_mtime_ns
+    # A valid timestamp cache with the same size and mtime would be accepted by Python normally.
+    poison = b"raise RuntimeError('POISONED CACHE EXECUTED')\n"
+    source.write_bytes(poison + b" " * (len(original) - len(poison)))
+    os.utime(source, ns=(timestamp, timestamp))
+    py_compile.compile(str(source), doraise=True)
+    source.write_bytes(original)
+    os.utime(source, ns=(timestamp, timestamp))
+    control = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-S",
+            "-c",
+            "import importlib.util,sys; "
+            "s=importlib.util.spec_from_file_location('poison_control',sys.argv[1]); "
+            "s.loader.exec_module(importlib.util.module_from_spec(s))",
+            str(source),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert control.returncode != 0 and "POISONED CACHE EXECUTED" in control.stderr
+    request = _verifier_request(synthetic, Path(os.environ["FPDBENCH_PR25_PACKAGE_ROOT"]), tmp_path)
+    result, report = _run(runtime, tmp_path, request)
+    assert result.returncode == 0, (result.stderr, report)
+    assert report["worker_status"] == "RECONCILED_NON_AUTHORITATIVE"
+
+
+@pytest.mark.parametrize("variable", ["PYTHONPATH", "LD_LIBRARY_PATH", "OPENSSL_CONF"])
+def test_environment_injection_rejected_before_import(runtime, tmp_path, variable):
+    result, report = _run(runtime, tmp_path, {}, env={variable: str(tmp_path)})
+    assert result.returncode == 1
+    assert not report["worker_import_started"]
+    assert "unexpected names" in report["error"]
+
+
+def test_startup_flags_required(tmp_path):
+    result = _command("capture", flags=["-I", "-S", "-B"])
+    assert result.returncode != 0
+    assert "require Python" in result.stderr
+
+
+def test_evidence_is_private_from_creation(tmp_path):
+    script = """
+import os, runpy, stat, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+original = os.fchmod
+def check_creation_mode(fd, mode):
+    assert stat.S_IMODE(os.fstat(fd).st_mode) == 0o600
+    original(fd, mode)
+os.fchmod = check_creation_mode
+os.umask(0)
+path = Path(sys.argv[2])
+module['write_new'](path, {'synthetic': True})
+assert stat.S_IMODE(path.stat().st_mode) == 0o600
+try:
+    module['write_new'](path, {})
+except FileExistsError:
+    pass
+else:
+    raise AssertionError('existing evidence overwritten')
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), str(tmp_path / "evidence.json")],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "probe", ["post_mutation", "import_mutation", "escape", "native_mapping", "worker_error"]
+)
+def test_execution_failures_never_emit_success(runtime, tmp_path, probe):
+    root, manifest, _ = runtime
+    marker = tmp_path / "must-not-execute"
+    helper = root / "late_helper.py"
+    helper.write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\n")
+    if probe == "post_mutation":
+        body = f"Path({str(helper)!r}).write_text('changed')\n    return {{'status': 'PROBE'}}"
+    elif probe == "import_mutation":
+        body = f"Path({str(helper)!r}).write_text('changed')\n    import fpdbench.late_helper"
+    elif probe == "escape":
+        (root.parent / "outside_inventory.py").write_text(
+            f"from pathlib import Path\nPath({str(marker)!r}).touch()\n"
+        )
+        body = "import outside_inventory"
+    elif probe == "native_mapping":
+        library = Path("/lib") / sysconfig.get_config_var("MULTIARCH") / "libuuid.so.1"
+        if not library.exists():
+            pytest.skip("native-mapping probe requires the system libuuid")
+        body = (
+            f"import ctypes\n    ctypes.CDLL({str(library.resolve())!r})"
+            "\n    return {'status': 'PROBE'}"
+        )
+    else:
+        body = "raise RuntimeError('synthetic worker failure')"
+    (root / WORKER).write_text(
+        "from pathlib import Path\ndef verify_population(*args):\n    " + body + "\n"
+    )
+    manifest.unlink()
+    captured = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert captured.returncode == 0, captured.stderr
+    runtime = root, manifest, captured.stdout.strip()
+    request = {
+        key: str(tmp_path)
+        for key in ("input_root", "artifact_root", "producer_package_root", "report")
+    }
+    result, report = _run(runtime, tmp_path, request)
+    assert result.returncode == 1
+    assert report["status"] == "REJECTED"
+    assert report["worker_execution_started"]
+    assert not marker.exists()
+    expected = {
+        "post_mutation": "post-execution runtime manifest mismatch",
+        "import_mutation": "source changed before compilation",
+        "escape": "import outside runtime inventory",
+        "native_mapping": "post-execution runtime manifest mismatch",
+        "worker_error": "synthetic worker failure",
+    }
+    assert expected[probe] in report["error"]
+
+
+def test_manifest_self_hash_is_not_enough(runtime, tmp_path):
+    root, manifest, pin = runtime
+    value = json.loads(manifest.read_bytes())
+    value["authority"] = "PRODUCTION"
+    manifest.write_bytes(_canonical(value))
+    result, report = _run((root, manifest, pin), tmp_path, {})
+    assert result.returncode == 1
+    assert not report["worker_import_started"]
+    assert report["error"] == "manifest pin mismatch"
+
+
+@pytest.mark.parametrize("tree", ["input_root", "artifact_root", "producer_package_root"])
+def test_launcher_rejects_report_inside_evidence(runtime, synthetic, tmp_path, tree):
+    root, _, _ = runtime
+    request = _verifier_request(synthetic, root, tmp_path)
+    protected = Path(request[tree])
+    target = next(path for path in protected.rglob("*") if path.is_file())
+    before = target.read_bytes()
+    request["report"] = str(target)
+    result, evidence = _run(runtime, tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED"
+    assert "outside all evidence trees" in evidence["error"]
+    assert target.read_bytes() == before
+
+
+def _native_mapping_result(mapping, machine="x86_64"):
+    script = """
+import json, os, runpy, sys
+from pathlib import Path
+from types import SimpleNamespace
+module = runpy.run_path(sys.argv[1])
+def maps(self):
+    assert self == Path('/proc/self/maps')
+    return sys.argv[2]
+Path.read_text = maps
+os.uname = lambda: SimpleNamespace(machine=sys.argv[3])
+module['native_files'].__globals__['read_regular'] = lambda path: b'synthetic native bytes'
+try:
+    result = {'status': 'accepted', 'files': module['native_files']()}
+except ValueError as exc:
+    result = {'status': 'rejected', 'error': str(exc)}
+print(json.dumps(result))
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), mapping, machine],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+@pytest.mark.parametrize(
+    "mapping,kind",
+    [
+        ("ffffffffff600000-ffffffffff601000 rwxp 00000000 00:00 0 [vsyscall]", "vsyscall"),
+        ("7f001000-7f002000 rwxp 00000000 00:00 0", "anonymous"),
+        ("7f001000-7f002000 r-xp 00000000 00:00 0 [anon:secret-label-token]", "unknown"),
+    ],
+)
+def test_rejected_native_mapping_diagnostic_is_sanitized(mapping, kind):
+    result = _native_mapping_result(mapping)
+    assert result["status"] == "rejected"
+    prefix, payload = result["error"].split(": ", 1)
+    assert prefix == "unidentified executable mapping"
+    classification = json.loads(payload)
+    assert classification == {
+        "kind": kind,
+        "permissions": mapping.split()[1],
+        "x86_64": True,
+        "fixed_address": kind == "vsyscall",
+        "zero_offset": True,
+        "zero_device": True,
+        "zero_inode": True,
+    }
+    assert "secret-label-token" not in json.dumps(result)
+    assert "7f001000" not in json.dumps(result)
+
+
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        "7fff0000-7fff2000 r-xp 00000000 00:00 0 [vdso]",
+        "ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]",
+    ],
+)
+def test_recognized_kernel_mappings_are_not_file_inventories(mapping):
+    assert _native_mapping_result(mapping) == {"status": "accepted", "files": {}}
+
+
+@pytest.mark.parametrize(
+    "mapping,machine",
+    [
+        ("7f001000-7f002000 r-xp 00000000 00:00 0", "x86_64"),
+        ("7f001000-7f002000 rwxp 00000000 00:00 0", "x86_64"),
+        ("7f001000-7f002000 r-xp 00000000 00:00 0 [unknown]", "x86_64"),
+        ("ffffffffff500000-ffffffffff501000 --xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff602000 --xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 rwxp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xs 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00001000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:01 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 1 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall] extra", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "aarch64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "i686"),
+    ],
+)
+def test_unexpected_executable_mappings_remain_rejected(mapping, machine):
+    result = _native_mapping_result(mapping, machine)
+    assert result["status"] == "rejected"
+    assert result["error"].startswith("unidentified executable mapping: ")
+
+
+def test_deleted_native_mapping_remains_rejected():
+    result = _native_mapping_result("7f001000-7f002000 r-xp 00000000 00:01 1 /native.so (deleted)")
+    assert result == {"status": "rejected", "error": "deleted native mapping"}
+
+
+def test_file_backed_native_mapping_remains_hashed():
+    result = _native_mapping_result("7f001000-7f002000 r-xp 00000000 00:01 1 /native.so")
+    assert result == {
+        "status": "accepted",
+        "files": {"/native.so": hashlib.sha256(b"synthetic native bytes").hexdigest()},
+    }
+
+
+def test_snapshot_difference_is_sanitized_and_does_not_mutate_inputs():
+    extension = str(
+        Path(sysconfig.get_config_var("DESTSHARED")).resolve()
+        / ("_decimal" + sysconfig.get_config_var("EXT_SUFFIX"))
+    )
+    ssl_library = str(Path(sys.base_prefix) / "lib/libssl.so.3")
+    before = {
+        "files": {extension: "a" * 64, "/private/changed-source": "a", "/private/removed": "a"},
+        "native_files": {"/private/removed-native": "a", "/private/changed-native": "a"},
+        "environment": {"LANG": "private-before-value"},
+        "private-top-level-label": "before",
+    }
+    after = {
+        "files": {extension: "a" * 64, "/private/changed-source": "b", "/private/added": "a"},
+        "native_files": {
+            extension: "a" * 64,
+            "/usr/lib/locale/C.utf8/LC_NUMERIC": "b",
+            "/private/libssl.so.3": "c",
+            ssl_library: "d",
+            "/private/changed-native": "b",
+        },
+        "environment": {"LANG": "private-after-value"},
+        "private-top-level-label": "after",
+    }
+    maps = (
+        f"1000-2000 r-xp 00000000 00:00 1 {extension}\n"
+        "2000-3000 r--p 00000000 00:00 1 /usr/lib/locale/C.utf8/LC_NUMERIC\n"
+        "3000-4000 r-xp 00000000 00:00 1 /private/libssl.so.3\n"
+        f"5000-6000 r-xp 00000000 00:00 1 {ssl_library}\n"
+        "4000-5000 rw-p 00000000 00:00 1 /private/unrelated-map\n"
+    )
+    script = """
+import json, runpy, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+before, after = json.loads(sys.argv[2])
+original = json.dumps([before, after], sort_keys=True)
+sys.modules.pop('_decimal', None)
+def maps(self):
+    assert self == Path('/proc/self/maps')
+    return sys.argv[3]
+Path.read_text = maps
+result = module['snapshot_difference'](before, after)
+assert json.dumps([before, after], sort_keys=True) == original
+assert result == module['snapshot_difference'](before, after)
+print(json.dumps(result))
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), json.dumps([before, after]), maps],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    difference = json.loads(result.stdout)
+    assert difference["changed_fields"] == ["environment", "files", "native_files"]
+    assert difference["other_changed_field_count"] == 1
+    assert difference["inventories"] == {
+        "files": {"before": 3, "after": 3, "added": 1, "removed": 1, "modified": 1},
+        "native_files": {"before": 2, "after": 5, "added": 4, "removed": 1, "modified": 1},
+    }
+    assert difference["added_native_classifications"] == [
+        {
+            "kind": "known_system_library:libssl.so.3",
+            "mapping": "executable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+        {
+            "kind": "other_file_backed",
+            "mapping": "executable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+        {
+            "kind": "pinned_stdlib_extension:_decimal",
+            "mapping": "executable",
+            "previously_pinned": True,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+        {
+            "kind": "system_locale_data",
+            "mapping": "nonexecutable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+    ]
+    assert difference["suppressed_classification_count"] == 0
+    assert "private" not in result.stdout and "LC_NUMERIC" not in result.stdout
+    assert extension not in result.stdout and ssl_library not in result.stdout
+
+
+@pytest.mark.parametrize("empty_diagnostic", [False, True])
+def test_post_execution_diagnostics_cannot_authorize_a_mismatch(
+    tmp_path, monkeypatch, empty_diagnostic
+):
+    launcher = tmp_path / "attest.py"
+    source = LAUNCHER.read_text()
+    if empty_diagnostic:
+        source = source.replace(
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+            "def snapshot_difference(before, after):\n    return {}\n\n"
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+        )
+    launcher.write_text(source)
+    monkeypatch.setattr(sys.modules[__name__], "LAUNCHER", launcher)
+    root = tmp_path / "fpdbench"
+    shutil.copytree(REPO / "src/fpdbench", root, ignore=shutil.ignore_patterns("__pycache__"))
+    helper = root / "changed.py"
+    helper.write_text("before", encoding="utf-8")
+    (root / WORKER).write_text(
+        "from pathlib import Path\n"
+        "def verify_population(*args):\n"
+        f"    Path({str(helper)!r}).write_text('after', encoding='utf-8')\n"
+        "    return {'status': 'PROBE'}\n"
+    )
+    manifest = tmp_path / "runtime.json"
+    captured = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert captured.returncode == 0, captured.stderr
+    request = {
+        key: str(tmp_path)
+        for key in ("input_root", "artifact_root", "producer_package_root", "report")
+    }
+    result, evidence = _run((root, manifest, captured.stdout.strip()), tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED" and evidence["runtime_gate"] == "BLOCKED"
+    assert evidence["worker_execution_started"] is True
+    assert evidence["error"] == "post-execution runtime manifest mismatch"
+    if empty_diagnostic:
+        assert evidence["snapshot_difference"] == {}
+    else:
+        assert "files" in evidence["snapshot_difference"]["changed_fields"]
+        assert evidence["snapshot_difference"]["inventories"]["files"]["modified"] == 1
+
+
+def test_bootstrap_preloads_without_worker_import_network_or_threads():
+    script = """
+import runpy, socket, sys, threading
+from pathlib import Path
+before = len(list(Path('/proc/self/task').iterdir()))
+def forbidden(*args, **kwargs):
+    raise AssertionError('bootstrap attempted network or thread startup')
+socket.socket.connect = forbidden
+socket.socket.connect_ex = forbidden
+socket.create_connection = forbidden
+socket.getaddrinfo = forbidden
+threading.Thread.start = forbidden
+module = runpy.run_path(sys.argv[1])
+bootstrap = dict(module['BOOTSTRAP_MODULES'])
+assert 'urllib.request' in bootstrap
+assert 'concurrent.futures.thread' in bootstrap
+assert module['ThreadPoolExecutor'] is bootstrap['concurrent.futures.thread'].ThreadPoolExecutor
+assert not any(name == 'fpdbench' or name.startswith('fpdbench.') for name in sys.modules)
+assert len(list(Path('/proc/self/task').iterdir())) == before
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER)],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mapped_native_file_mutation_remains_rejected(tmp_path, monkeypatch):
+    library = Path("/lib") / sysconfig.get_config_var("MULTIARCH") / "libuuid.so.1"
+    assert library.exists(), "native mutation regression requires the system libuuid"
+    copied_library = tmp_path / "synthetic-native.so"
+    shutil.copyfile(library.resolve(), copied_library)
+    launcher = tmp_path / "attest.py"
+    launcher.write_text(
+        LAUNCHER.read_text().replace(
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+            f"_native_fixture = ctypes.CDLL({str(copied_library)!r})\n"
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+        )
+    )
+    monkeypatch.setattr(sys.modules[__name__], "LAUNCHER", launcher)
+    root = tmp_path / "fpdbench"
+    shutil.copytree(REPO / "src/fpdbench", root, ignore=shutil.ignore_patterns("__pycache__"))
+    (root / WORKER).write_text(
+        "from pathlib import Path\n"
+        "def verify_population(*args):\n"
+        f"    with Path({str(copied_library)!r}).open('ab') as stream:\n"
+        "        stream.write(b'synthetic mutation')\n"
+        "    return {'status': 'PROBE'}\n"
+    )
+    manifest = tmp_path / "runtime.json"
+    captured = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert captured.returncode == 0, captured.stderr
+    request = {
+        key: str(tmp_path)
+        for key in ("input_root", "artifact_root", "producer_package_root", "report")
+    }
+    result, evidence = _run((root, manifest, captured.stdout.strip()), tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED" and evidence["runtime_gate"] == "BLOCKED"
+    assert evidence["error"] == "post-execution runtime manifest mismatch"
+    assert evidence["snapshot_difference"]["changed_fields"] == ["native_files"]
+    assert evidence["snapshot_difference"]["inventories"]["native_files"]["modified"] == 1

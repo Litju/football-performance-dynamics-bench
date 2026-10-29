@@ -12,6 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Pin PR #25 source package
+        run: |
+          git fetch --no-tags origin aad8888eb6c7c046e4dfbce866886bf2ec8dd123
+          test "$(git rev-parse FETCH_HEAD)" = "aad8888eb6c7c046e4dfbce866886bf2ec8dd123"
+          mkdir -p "$RUNNER_TEMP/pr25-package"
+          git archive FETCH_HEAD src/fpdbench | tar -x -C "$RUNNER_TEMP/pr25-package"
+          echo "FPDBENCH_PR25_PACKAGE_ROOT=$RUNNER_TEMP/pr25-package/src/fpdbench" >> "$GITHUB_ENV"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -19,9 +26,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked --all-groups
+      - name: Capture isolated runtime before validation
+        run: |
+          env -i .venv/bin/python -I -S -B -X pycache_prefix=/dev/null \
+            tools/attest_streaming_runtime.py capture \
+            --manifest "$RUNNER_TEMP/runtime-preflight.json" \
+            --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
+      - name: Focused producer runtime diagnostic
+        run: uv run pytest -q -s 'tests/integration/test_streaming_runtime_attestation.py::test_integrated_workers[producer]'
       - run: uv run pytest
       - run: uv run fpdbench validate-naming
       - run: uv run fpdbench validate
@@ -30,6 +45,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Pin PR #25 source package
+        run: |
+          git fetch --no-tags origin aad8888eb6c7c046e4dfbce866886bf2ec8dd123
+          test "$(git rev-parse FETCH_HEAD)" = "aad8888eb6c7c046e4dfbce866886bf2ec8dd123"
+          mkdir -p "$RUNNER_TEMP/pr25-package"
+          git archive FETCH_HEAD src/fpdbench | tar -x -C "$RUNNER_TEMP/pr25-package"
+          echo "FPDBENCH_PR25_PACKAGE_ROOT=$RUNNER_TEMP/pr25-package/src/fpdbench" >> "$GITHUB_ENV"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -37,9 +59,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked --all-groups
+      - name: Capture isolated runtime before validation
+        run: |
+          env -i .venv/bin/python -I -S -B -X pycache_prefix=/dev/null \
+            tools/attest_streaming_runtime.py capture \
+            --manifest "$RUNNER_TEMP/runtime-preflight.json" \
+            --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
+      - name: Focused producer runtime diagnostic
+        run: uv run pytest -q -s 'tests/integration/test_streaming_runtime_attestation.py::test_integrated_workers[producer]'
       - run: uv run pytest
       - run: uv run fpdbench validate-naming
       - run: uv run fpdbench validate
