@@ -124,6 +124,33 @@ def test_integrated_workers(runtime, synthetic, tmp_path, kind):
     inventory = json.loads(manifest.read_bytes())
     assert inventory["third_party_dependencies"] == []
     assert inventory["interpreter"]["resolved_path"] in inventory["files"]
+    required = ("_datetime", "_heapq", "_queue", "_socket", "_ssl", "array", "binascii", "select")
+    bootstrap = inventory["bootstrap_modules"]
+    assert {"urllib.request", "concurrent.futures.thread", *required} <= bootstrap.keys()
+    native = inventory["native_files"]
+    extensions = []
+    for name in required:
+        origin = bootstrap[name]
+        if origin not in {"built-in", "frozen", None}:
+            assert native[origin] == inventory["files"][origin]
+            extensions.append(name)
+    openssl_count = 0
+    for path, digest in native.items():
+        if Path(path).name in {"libssl.so.3", "libcrypto.so.3"}:
+            assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest
+            openssl_count += 1
+    assert "snapshot_difference" not in report
+    print(
+        "bootstrap_native_inventory="
+        + _canonical(
+            {
+                "worker": kind,
+                "native_entries": len(native),
+                "file_backed_stdlib_extensions": sorted(extensions),
+                "dynamic_openssl_objects_hashed": openssl_count,
+            }
+        ).decode()
+    )
     if kind == "verifier":
         assert not any(name.startswith("fpdbench") for name in report["imports"])
         verification = json.loads((tmp_path / "verification.json").read_bytes())
@@ -584,3 +611,71 @@ def test_post_execution_diagnostics_cannot_authorize_a_mismatch(
     else:
         assert "files" in evidence["snapshot_difference"]["changed_fields"]
         assert evidence["snapshot_difference"]["inventories"]["files"]["modified"] == 1
+
+
+def test_bootstrap_preloads_without_worker_import_network_or_threads():
+    script = """
+import runpy, socket, sys, threading
+from pathlib import Path
+before = len(list(Path('/proc/self/task').iterdir()))
+def forbidden(*args, **kwargs):
+    raise AssertionError('bootstrap attempted network or thread startup')
+socket.socket.connect = forbidden
+socket.socket.connect_ex = forbidden
+socket.create_connection = forbidden
+socket.getaddrinfo = forbidden
+threading.Thread.start = forbidden
+module = runpy.run_path(sys.argv[1])
+bootstrap = dict(module['BOOTSTRAP_MODULES'])
+assert 'urllib.request' in bootstrap
+assert 'concurrent.futures.thread' in bootstrap
+assert module['ThreadPoolExecutor'] is bootstrap['concurrent.futures.thread'].ThreadPoolExecutor
+assert not any(name == 'fpdbench' or name.startswith('fpdbench.') for name in sys.modules)
+assert len(list(Path('/proc/self/task').iterdir())) == before
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER)],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mapped_native_file_mutation_remains_rejected(tmp_path, monkeypatch):
+    library = Path("/lib") / sysconfig.get_config_var("MULTIARCH") / "libuuid.so.1"
+    assert library.exists(), "native mutation regression requires the system libuuid"
+    copied_library = tmp_path / "synthetic-native.so"
+    shutil.copyfile(library.resolve(), copied_library)
+    launcher = tmp_path / "attest.py"
+    launcher.write_text(
+        LAUNCHER.read_text().replace(
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+            f"_native_fixture = ctypes.CDLL({str(copied_library)!r})\n"
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+        )
+    )
+    monkeypatch.setattr(sys.modules[__name__], "LAUNCHER", launcher)
+    root = tmp_path / "fpdbench"
+    shutil.copytree(REPO / "src/fpdbench", root, ignore=shutil.ignore_patterns("__pycache__"))
+    (root / WORKER).write_text(
+        "from pathlib import Path\n"
+        "def verify_population(*args):\n"
+        f"    with Path({str(copied_library)!r}).open('ab') as stream:\n"
+        "        stream.write(b'synthetic mutation')\n"
+        "    return {'status': 'PROBE'}\n"
+    )
+    manifest = tmp_path / "runtime.json"
+    captured = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert captured.returncode == 0, captured.stderr
+    request = {
+        key: str(tmp_path)
+        for key in ("input_root", "artifact_root", "producer_package_root", "report")
+    }
+    result, evidence = _run((root, manifest, captured.stdout.strip()), tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED" and evidence["runtime_gate"] == "BLOCKED"
+    assert evidence["error"] == "post-execution runtime manifest mismatch"
+    assert evidence["snapshot_difference"]["changed_fields"] == ["native_files"]
+    assert evidence["snapshot_difference"]["inventories"]["native_files"]["modified"] == 1

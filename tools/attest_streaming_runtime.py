@@ -25,6 +25,8 @@ import json
 import os
 import stat
 import sysconfig
+import urllib.request  # noqa: F401 - pin HTTP/SSL dependencies before the first snapshot.
+from concurrent.futures import ThreadPoolExecutor  # noqa: F401 - pin thread-pool dependencies.
 from pathlib import Path
 
 STARTUP_PATH = list(sys.path)
