@@ -35,6 +35,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
+      - name: Focused producer runtime diagnostic
+        run: uv run pytest -q -s 'tests/integration/test_streaming_runtime_attestation.py::test_integrated_workers[producer]'
       - run: uv run pytest
       - run: uv run fpdbench validate-naming
       - run: uv run fpdbench validate
@@ -66,6 +68,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
+      - name: Focused producer runtime diagnostic
+        run: uv run pytest -q -s 'tests/integration/test_streaming_runtime_attestation.py::test_integrated_workers[producer]'
       - run: uv run pytest
       - run: uv run fpdbench validate-naming
       - run: uv run fpdbench validate

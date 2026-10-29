@@ -139,6 +139,79 @@ def native_files():
     return {path: digest(read_regular(path)) for path in sorted(paths)}
 
 
+def snapshot_difference(before, after):
+    safe_fields = set(
+        (
+            "schema authority package_root interpreter bootstrap_modules kernel python_flags "
+            "python_xoptions cwd sys_path startup_path environment files native_files "
+            "third_party_dependencies bytecode_policy"
+        ).split()
+    )
+    changed = {key for key in before.keys() | after.keys() if before.get(key) != after.get(key)}
+    result = {
+        "changed_fields": sorted(changed & safe_fields),
+        "other_changed_field_count": len(changed - safe_fields),
+        "inventories": {},
+    }
+    for name in ("files", "native_files"):
+        old, new = before[name], after[name]
+        result["inventories"][name] = {
+            "before": len(old),
+            "after": len(new),
+            "added": len(new.keys() - old.keys()),
+            "removed": len(old.keys() - new.keys()),
+            "modified": sum(old[key] != new[key] for key in old.keys() & new.keys()),
+        }
+    added = after["native_files"].keys() - before["native_files"].keys()
+    mapped, executable = set(), set()
+    for line in Path("/proc/self/maps").read_text().splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) == 6 and fields[5] in added:
+            mapped.add(fields[5])
+            if "x" in fields[1]:
+                executable.add(fields[5])
+    extension_root = Path(sysconfig.get_config_var("DESTSHARED")).resolve(strict=True)
+    classifications = {}
+    for path in added:
+        entry = Path(path)
+        module = entry.name.partition(".")[0]
+        pinned = before["files"].get(path) == after["native_files"][path]
+        if (
+            pinned
+            and entry.parent == extension_root
+            and module in sys.stdlib_module_names
+            and any(
+                entry.name == module + suffix for suffix in importlib.machinery.EXTENSION_SUFFIXES
+            )
+        ):
+            kind = "pinned_stdlib_extension:" + module
+        elif entry.is_relative_to("/usr/lib/locale") or entry.is_relative_to("/usr/share/locale"):
+            kind = "system_locale_data"
+        else:
+            kind = "previously_pinned_file" if pinned else "other_file_backed"
+        mode = (
+            "executable" if path in executable else "nonexecutable" if path in mapped else "absent"
+        )
+        imported = (
+            kind.startswith("pinned_stdlib_extension:")
+            and getattr(getattr(sys.modules.get(module), "__spec__", None), "origin", None) == path
+        )
+        key = (kind, mode, pinned, imported)
+        classifications[key] = classifications.get(key, 0) + 1
+    result["added_native_classifications"] = [
+        {
+            "kind": kind,
+            "mapping": mode,
+            "previously_pinned": pinned,
+            "loaded_as_stdlib_module": imported,
+            "count": count,
+        }
+        for (kind, mode, pinned, imported), count in sorted(classifications.items())[:16]
+    ]
+    result["suppressed_classification_count"] = max(0, len(classifications) - 16)
+    return result
+
+
 def environment():
     # Capture provenance without writing arbitrary environment values (possibly credentials).
     allowed = {"PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ"}
@@ -394,7 +467,9 @@ def main():
         evidence["worker_status"] = execute(args.worker, worker, json.loads(request_bytes))
         # Remove only our package search path for the identical post-execution snapshot.
         sys.path.remove(str(root.parent))
-        if snapshot(root) != manifest:
+        post = snapshot(root)
+        if post != manifest:
+            evidence["snapshot_difference"] = snapshot_difference(manifest, post)
             raise ValueError("post-execution runtime manifest mismatch")
         evidence["imports"] = finder.imported
         evidence["status"] = "SYNTHETIC_RUNTIME_CONSISTENT"

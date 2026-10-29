@@ -80,6 +80,8 @@ def _run(runtime, tmp_path, request, *, kind="verifier", env=None):
     )
     assert evidence.exists(), result.stderr
     report = json.loads(evidence.read_bytes())
+    if "snapshot_difference" in report:
+        print("snapshot_difference=" + _canonical(report["snapshot_difference"]).decode())
     assert report["runtime_gate"] == "BLOCKED"
     assert report["qualification"] == "NOT_PERFORMED"
     return result, report
@@ -442,3 +444,133 @@ def test_file_backed_native_mapping_remains_hashed():
         "status": "accepted",
         "files": {"/native.so": hashlib.sha256(b"synthetic native bytes").hexdigest()},
     }
+
+
+def test_snapshot_difference_is_sanitized_and_does_not_mutate_inputs():
+    extension = str(
+        Path(sysconfig.get_config_var("DESTSHARED")).resolve()
+        / ("_decimal" + sysconfig.get_config_var("EXT_SUFFIX"))
+    )
+    before = {
+        "files": {extension: "a" * 64, "/private/changed-source": "a", "/private/removed": "a"},
+        "native_files": {"/private/removed-native": "a", "/private/changed-native": "a"},
+        "environment": {"LANG": "private-before-value"},
+        "private-top-level-label": "before",
+    }
+    after = {
+        "files": {extension: "a" * 64, "/private/changed-source": "b", "/private/added": "a"},
+        "native_files": {
+            extension: "a" * 64,
+            "/usr/lib/locale/C.utf8/LC_NUMERIC": "b",
+            "/private/secret-native-label.so": "c",
+            "/private/changed-native": "b",
+        },
+        "environment": {"LANG": "private-after-value"},
+        "private-top-level-label": "after",
+    }
+    maps = (
+        f"1000-2000 r-xp 00000000 00:00 1 {extension}\n"
+        "2000-3000 r--p 00000000 00:00 1 /usr/lib/locale/C.utf8/LC_NUMERIC\n"
+        "3000-4000 r-xp 00000000 00:00 1 /private/secret-native-label.so\n"
+        "4000-5000 rw-p 00000000 00:00 1 /private/unrelated-map\n"
+    )
+    script = """
+import json, runpy, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+before, after = json.loads(sys.argv[2])
+original = json.dumps([before, after], sort_keys=True)
+sys.modules.pop('_decimal', None)
+def maps(self):
+    assert self == Path('/proc/self/maps')
+    return sys.argv[3]
+Path.read_text = maps
+result = module['snapshot_difference'](before, after)
+assert json.dumps([before, after], sort_keys=True) == original
+assert result == module['snapshot_difference'](before, after)
+print(json.dumps(result))
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), json.dumps([before, after]), maps],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    difference = json.loads(result.stdout)
+    assert difference["changed_fields"] == ["environment", "files", "native_files"]
+    assert difference["other_changed_field_count"] == 1
+    assert difference["inventories"] == {
+        "files": {"before": 3, "after": 3, "added": 1, "removed": 1, "modified": 1},
+        "native_files": {"before": 2, "after": 4, "added": 3, "removed": 1, "modified": 1},
+    }
+    assert difference["added_native_classifications"] == [
+        {
+            "kind": "other_file_backed",
+            "mapping": "executable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+        {
+            "kind": "pinned_stdlib_extension:_decimal",
+            "mapping": "executable",
+            "previously_pinned": True,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+        {
+            "kind": "system_locale_data",
+            "mapping": "nonexecutable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
+    ]
+    assert difference["suppressed_classification_count"] == 0
+    assert "private" not in result.stdout and "LC_NUMERIC" not in result.stdout
+    assert extension not in result.stdout
+
+
+@pytest.mark.parametrize("empty_diagnostic", [False, True])
+def test_post_execution_diagnostics_cannot_authorize_a_mismatch(
+    tmp_path, monkeypatch, empty_diagnostic
+):
+    launcher = tmp_path / "attest.py"
+    source = LAUNCHER.read_text()
+    if empty_diagnostic:
+        source = source.replace(
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+            "def snapshot_difference(before, after):\n    return {}\n\n"
+            "BOOTSTRAP_MODULES = sorted(sys.modules.items())",
+        )
+    launcher.write_text(source)
+    monkeypatch.setattr(sys.modules[__name__], "LAUNCHER", launcher)
+    root = tmp_path / "fpdbench"
+    shutil.copytree(REPO / "src/fpdbench", root, ignore=shutil.ignore_patterns("__pycache__"))
+    helper = root / "changed.py"
+    helper.write_text("before", encoding="utf-8")
+    (root / WORKER).write_text(
+        "from pathlib import Path\n"
+        "def verify_population(*args):\n"
+        f"    Path({str(helper)!r}).write_text('after', encoding='utf-8')\n"
+        "    return {'status': 'PROBE'}\n"
+    )
+    manifest = tmp_path / "runtime.json"
+    captured = _command("capture", "--manifest", manifest, "--package-root", root)
+    assert captured.returncode == 0, captured.stderr
+    request = {
+        key: str(tmp_path)
+        for key in ("input_root", "artifact_root", "producer_package_root", "report")
+    }
+    result, evidence = _run((root, manifest, captured.stdout.strip()), tmp_path, request)
+    assert result.returncode == 1
+    assert evidence["status"] == "REJECTED" and evidence["runtime_gate"] == "BLOCKED"
+    assert evidence["worker_execution_started"] is True
+    assert evidence["error"] == "post-execution runtime manifest mismatch"
+    if empty_diagnostic:
+        assert evidence["snapshot_difference"] == {}
+    else:
+        assert "files" in evidence["snapshot_difference"]["changed_fields"]
+        assert evidence["snapshot_difference"]["inventories"]["files"]["modified"] == 1
