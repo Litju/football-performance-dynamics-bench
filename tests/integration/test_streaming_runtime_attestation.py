@@ -451,6 +451,7 @@ def test_snapshot_difference_is_sanitized_and_does_not_mutate_inputs():
         Path(sysconfig.get_config_var("DESTSHARED")).resolve()
         / ("_decimal" + sysconfig.get_config_var("EXT_SUFFIX"))
     )
+    ssl_library = str(Path(sys.base_prefix) / "lib/libssl.so.3")
     before = {
         "files": {extension: "a" * 64, "/private/changed-source": "a", "/private/removed": "a"},
         "native_files": {"/private/removed-native": "a", "/private/changed-native": "a"},
@@ -462,7 +463,8 @@ def test_snapshot_difference_is_sanitized_and_does_not_mutate_inputs():
         "native_files": {
             extension: "a" * 64,
             "/usr/lib/locale/C.utf8/LC_NUMERIC": "b",
-            "/private/secret-native-label.so": "c",
+            "/private/libssl.so.3": "c",
+            ssl_library: "d",
             "/private/changed-native": "b",
         },
         "environment": {"LANG": "private-after-value"},
@@ -471,7 +473,8 @@ def test_snapshot_difference_is_sanitized_and_does_not_mutate_inputs():
     maps = (
         f"1000-2000 r-xp 00000000 00:00 1 {extension}\n"
         "2000-3000 r--p 00000000 00:00 1 /usr/lib/locale/C.utf8/LC_NUMERIC\n"
-        "3000-4000 r-xp 00000000 00:00 1 /private/secret-native-label.so\n"
+        "3000-4000 r-xp 00000000 00:00 1 /private/libssl.so.3\n"
+        f"5000-6000 r-xp 00000000 00:00 1 {ssl_library}\n"
         "4000-5000 rw-p 00000000 00:00 1 /private/unrelated-map\n"
     )
     script = """
@@ -503,9 +506,16 @@ print(json.dumps(result))
     assert difference["other_changed_field_count"] == 1
     assert difference["inventories"] == {
         "files": {"before": 3, "after": 3, "added": 1, "removed": 1, "modified": 1},
-        "native_files": {"before": 2, "after": 4, "added": 3, "removed": 1, "modified": 1},
+        "native_files": {"before": 2, "after": 5, "added": 4, "removed": 1, "modified": 1},
     }
     assert difference["added_native_classifications"] == [
+        {
+            "kind": "known_system_library:libssl.so.3",
+            "mapping": "executable",
+            "previously_pinned": False,
+            "loaded_as_stdlib_module": False,
+            "count": 1,
+        },
         {
             "kind": "other_file_backed",
             "mapping": "executable",
@@ -530,7 +540,7 @@ print(json.dumps(result))
     ]
     assert difference["suppressed_classification_count"] == 0
     assert "private" not in result.stdout and "LC_NUMERIC" not in result.stdout
-    assert extension not in result.stdout
+    assert extension not in result.stdout and ssl_library not in result.stdout
 
 
 @pytest.mark.parametrize("empty_diagnostic", [False, True])

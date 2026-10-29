@@ -185,6 +185,11 @@ def snapshot_difference(before, after):
             )
         ):
             kind = "pinned_stdlib_extension:" + module
+        elif entry.name in {"libssl.so.3", "libcrypto.so.3"} and any(
+            entry.is_relative_to(root)
+            for root in (Path("/usr/lib"), Path("/lib"), Path(sys.base_prefix) / "lib")
+        ):
+            kind = "known_system_library:" + entry.name
         elif entry.is_relative_to("/usr/lib/locale") or entry.is_relative_to("/usr/share/locale"):
             kind = "system_locale_data"
         else:
