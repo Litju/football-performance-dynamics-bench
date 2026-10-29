@@ -26,6 +26,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked --all-groups
+      - name: Capture isolated runtime before validation
+        run: |
+          env -i .venv/bin/python -I -S -B -X pycache_prefix=/dev/null \
+            tools/attest_streaming_runtime.py capture \
+            --manifest "$RUNNER_TEMP/runtime-preflight.json" \
+            --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
@@ -51,6 +57,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked --all-groups
+      - name: Capture isolated runtime before validation
+        run: |
+          env -i .venv/bin/python -I -S -B -X pycache_prefix=/dev/null \
+            tools/attest_streaming_runtime.py capture \
+            --manifest "$RUNNER_TEMP/runtime-preflight.json" \
+            --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright

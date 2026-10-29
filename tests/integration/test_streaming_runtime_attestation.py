@@ -337,3 +337,59 @@ def test_launcher_rejects_report_inside_evidence(runtime, synthetic, tmp_path, t
     assert evidence["status"] == "REJECTED"
     assert "outside all evidence trees" in evidence["error"]
     assert target.read_bytes() == before
+
+
+def _native_mapping_result(mapping, machine="x86_64"):
+    script = """
+import json, os, runpy, sys
+from pathlib import Path
+from types import SimpleNamespace
+module = runpy.run_path(sys.argv[1])
+def maps(self):
+    assert self == Path('/proc/self/maps')
+    return sys.argv[2]
+Path.read_text = maps
+os.uname = lambda: SimpleNamespace(machine=sys.argv[3])
+module['native_files'].__globals__['read_regular'] = lambda path: b'synthetic native bytes'
+try:
+    result = {'status': 'accepted', 'files': module['native_files']()}
+except ValueError as exc:
+    result = {'status': 'rejected', 'error': str(exc)}
+print(json.dumps(result))
+"""
+    result = subprocess.run(
+        [sys.executable, *FLAGS, "-c", script, str(LAUNCHER), mapping, machine],
+        env={},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+@pytest.mark.parametrize(
+    "mapping,kind",
+    [
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "vsyscall"),
+        ("7f001000-7f002000 rwxp 00000000 00:00 0", "anonymous"),
+        ("7f001000-7f002000 r-xp 00000000 00:00 0 [anon:secret-label-token]", "unknown"),
+    ],
+)
+def test_rejected_native_mapping_diagnostic_is_sanitized(mapping, kind):
+    result = _native_mapping_result(mapping)
+    assert result["status"] == "rejected"
+    prefix, payload = result["error"].split(": ", 1)
+    assert prefix == "unidentified executable mapping"
+    classification = json.loads(payload)
+    assert classification == {
+        "kind": kind,
+        "permissions": mapping.split()[1],
+        "x86_64": True,
+        "fixed_address": kind == "vsyscall",
+        "zero_offset": True,
+        "zero_device": True,
+        "zero_inode": True,
+    }
+    assert "secret-label-token" not in json.dumps(result)
+    assert "7f001000" not in json.dumps(result)

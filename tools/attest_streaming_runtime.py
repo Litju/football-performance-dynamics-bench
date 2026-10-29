@@ -105,7 +105,27 @@ def native_files():
                 raise ValueError("deleted native mapping")
             paths.add(fields[5])
         elif "x" in fields[1] and (len(fields) < 6 or fields[5] != "[vdso]"):
-            raise ValueError("unidentified executable mapping")
+            # Report only fixed classifications and canonical-field checks, never raw mappings.
+            classification = {
+                "kind": (
+                    "vsyscall"
+                    if len(fields) == 6 and fields[5] == "[vsyscall]"
+                    else "anonymous"
+                    if len(fields) < 6
+                    else "unknown"
+                ),
+                "permissions": fields[1]
+                if len(fields[1]) == 4 and all(c in "rwxps-" for c in fields[1])
+                else "invalid",
+                "x86_64": os.uname().machine == "x86_64",
+                "fixed_address": fields[0] == "ffffffffff600000-ffffffffff601000",
+                "zero_offset": fields[2] == "00000000",
+                "zero_device": fields[3] == "00:00",
+                "zero_inode": fields[4] == "0",
+            }
+            raise ValueError(
+                "unidentified executable mapping: " + canonical(classification).decode()
+            )
     return {path: digest(read_regular(path)) for path in sorted(paths)}
 
 
