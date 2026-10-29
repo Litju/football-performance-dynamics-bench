@@ -105,6 +105,16 @@ def native_files():
                 raise ValueError("deleted native mapping")
             paths.add(fields[5])
         elif "x" in fields[1] and (len(fields) < 6 or fields[5] != "[vdso]"):
+            # This fixed kernel pseudo-map is not a file-backed native executable.
+            if os.uname().machine == "x86_64" and fields == [
+                "ffffffffff600000-ffffffffff601000",
+                "--xp",
+                "00000000",
+                "00:00",
+                "0",
+                "[vsyscall]",
+            ]:
+                continue
             # Report only fixed classifications and canonical-field checks, never raw mappings.
             classification = {
                 "kind": (

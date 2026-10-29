@@ -371,7 +371,7 @@ print(json.dumps(result))
 @pytest.mark.parametrize(
     "mapping,kind",
     [
-        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "vsyscall"),
+        ("ffffffffff600000-ffffffffff601000 rwxp 00000000 00:00 0 [vsyscall]", "vsyscall"),
         ("7f001000-7f002000 rwxp 00000000 00:00 0", "anonymous"),
         ("7f001000-7f002000 r-xp 00000000 00:00 0 [anon:secret-label-token]", "unknown"),
     ],
@@ -393,3 +393,52 @@ def test_rejected_native_mapping_diagnostic_is_sanitized(mapping, kind):
     }
     assert "secret-label-token" not in json.dumps(result)
     assert "7f001000" not in json.dumps(result)
+
+
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        "7fff0000-7fff2000 r-xp 00000000 00:00 0 [vdso]",
+        "ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]",
+    ],
+)
+def test_recognized_kernel_mappings_are_not_file_inventories(mapping):
+    assert _native_mapping_result(mapping) == {"status": "accepted", "files": {}}
+
+
+@pytest.mark.parametrize(
+    "mapping,machine",
+    [
+        ("7f001000-7f002000 r-xp 00000000 00:00 0", "x86_64"),
+        ("7f001000-7f002000 rwxp 00000000 00:00 0", "x86_64"),
+        ("7f001000-7f002000 r-xp 00000000 00:00 0 [unknown]", "x86_64"),
+        ("ffffffffff500000-ffffffffff501000 --xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff602000 --xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 rwxp 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xs 00000000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00001000 00:00 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:01 0 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 1 [vsyscall]", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall] extra", "x86_64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "aarch64"),
+        ("ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0 [vsyscall]", "i686"),
+    ],
+)
+def test_unexpected_executable_mappings_remain_rejected(mapping, machine):
+    result = _native_mapping_result(mapping, machine)
+    assert result["status"] == "rejected"
+    assert result["error"].startswith("unidentified executable mapping: ")
+
+
+def test_deleted_native_mapping_remains_rejected():
+    result = _native_mapping_result("7f001000-7f002000 r-xp 00000000 00:01 1 /native.so (deleted)")
+    assert result == {"status": "rejected", "error": "deleted native mapping"}
+
+
+def test_file_backed_native_mapping_remains_hashed():
+    result = _native_mapping_result("7f001000-7f002000 r-xp 00000000 00:01 1 /native.so")
+    assert result == {
+        "status": "accepted",
+        "files": {"/native.so": hashlib.sha256(b"synthetic native bytes").hexdigest()},
+    }
