@@ -1,11 +1,11 @@
 # Public SkillCorner research population admission, version 1.0.0
 
-Status: PROPOSED FOR OWNER RATIFICATION AFTER FULL RECONCILIATION.
+Status: OWNER RATIFIED for the exact private manifest identified in the owner decision.
 
 Contract identity: `fpdbench.public-skillcorner-research-admission/1.0.0`.
 This separately governed local public-data research contract does not amend the
 protected qualification contract, its trust policies, synthetic-only rejection,
-blocked empirical API, frozen scientific authorities, or RES-339 execution gate.
+blocked empirical API, frozen scientific authorities, or the protected execution gate.
 
 The existing independently authored scientific verifier reconstructs source
 canonicalization, origin enumeration, candidate rules, scene identities, fixed
@@ -72,12 +72,13 @@ After reviewing the reconciled private manifest and aggregate report, ratify thi
 version 1.0.0 amendment and its exact content-addressed research population for a
 **separate research-only empirical track**, and explicitly authorize the frozen
 baseline experiment cells/budgets/selection rules under that track. Record that
-decision in RES-339 before any baseline training, checkpoint selection, LOMO or
+decision in the experiment plan issue before any baseline training, checkpoint selection, LOMO or
 predictive scoring. The ratification must identify the research manifest digest
 and retain provider-extrapolation/unknown-phase limitations. Metric definitions,
 targets, masks, LOMO methodology and scientific thresholds do not change.
 
-Until that explicit decision, RES-339 empirical execution remains blocked and
-RES-501 protected status remains NOT_QUALIFIED. Research reconciliation does not
+The owner has authorized the frozen deterministic baselines on this research track;
+protected learned-model execution remains blocked and protected status remains
+NOT_QUALIFIED. Research reconciliation does not
 authorize raw redistribution or imply production authentication, external
 tamperproof custody, independent human approval, or protected qualification.
