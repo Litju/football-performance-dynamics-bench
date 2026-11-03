@@ -32,8 +32,19 @@ worker environment is created with `uv sync --group research-training`.
 
 ## Results
 
-Campaign status: pending. No real fits, evaluation-role scoring, learned LOMO, or
-held-out evaluation claims are included in this report. Results will be added
-here as validation-set-only aggregates after the frozen campaign completes.
-The previously supplied descriptive evaluation references are not training
-targets or checkpoint-selection criteria.
+Campaign status as of 2026-11-03: `RES338_COLAB_EXECUTION_BLOCKED` before the first
+fit. Verified GPU fits: 0/18. Selected checkpoints and validation results: 0.
+
+Execution did not start because the current project data-rights policy does not
+allow cloud hosting of the row-level source-derived feature caches before written
+SkillCorner clarification, and no Colab runtime/browser control is available in
+the connected execution environment. The original v2 CPU plan remains unchanged;
+no CPU/GPU equivalence or GPU result is claimed. The source, existing feature
+caches, and partial preparation remain in private local storage. Only non-row-level
+identity and recovery metadata was placed in the owner-only Drive folder.
+
+No evaluation-role scoring, learned LOMO, or held-out evaluation was run. The
+protected RES-501 population gate remains `NOT_QUALIFIED`. The previously supplied
+descriptive evaluation references are not training targets or checkpoint
+selection criteria. Validation-only aggregates will be added here only after all
+18 frozen fits complete and their private checkpoints and receipts verify.
