@@ -105,7 +105,7 @@ REPO = Path(__file__).resolve().parents[1]
 SOURCE_ROOT_DEFAULT = Path("/srv/fpdbench-private/source/skillcorner-v1")
 RESEARCH_ROOT_DEFAULT = Path("/srv/fpdbench-private/evidence/research-population-v1-e9850a7")
 TOY_PREFLIGHT_PATH = Path(
-    "/srv/fpdbench-private/evidence/res338-toy-preflight-v1/toy-preflight.json"
+    "/srv/fpdbench-private/evidence/res338-toy-preflight-v2/toy-preflight.json"
 )
 
 _FEATURE_ARRAYS = (
@@ -1293,6 +1293,7 @@ def _verify_toy_preflight(
         or report.get("runtime_sha256") != runtime_sha256
         or report.get("synthetic_optimization_steps") != MAX_STEPS
         or report.get("synthetic_validation_checks") != MAX_STEPS // VALIDATION_CADENCE
+        or report.get("synthetic_full_cadence_forced") is not True
         or float(report.get("synthetic_fit_cpu_seconds", math.inf)) > FIT_CPU_BUDGET_SECONDS
         or int(report.get("synthetic_peak_rss_bytes", MAX_WORKER_RSS_BYTES + 1))
         > int(report.get("effective_worker_memory_limit_bytes", MAX_WORKER_RSS_BYTES))
@@ -1551,6 +1552,7 @@ def run_campaign(
                     for key in (
                         "synthetic_optimization_steps",
                         "synthetic_validation_checks",
+                        "synthetic_full_cadence_forced",
                         "synthetic_fit_cpu_seconds",
                         "synthetic_fit_wall_seconds",
                         "synthetic_peak_rss_bytes",

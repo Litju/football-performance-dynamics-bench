@@ -22,7 +22,7 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.learned_deeps
 
 RESEARCH_ROOT = trainer.RESEARCH_ROOT_DEFAULT
 SOURCE_ROOT = trainer.SOURCE_ROOT_DEFAULT
-OUTPUT_ROOT = Path("/srv/fpdbench-private/evidence/res338-toy-preflight-v1")
+OUTPUT_ROOT = Path("/srv/fpdbench-private/evidence/res338-toy-preflight-v2")
 TOY_POOL_SIZE = 32
 DISK_PROBE_BYTES = 64 * 1024**2
 
@@ -128,7 +128,7 @@ def run() -> dict[str, object]:
         metric = original_metrics(*args, **kwargs)
         check_index = validation_calls // len(validation_ids)
         validation_calls += 1
-        metric["ade_m"] = float(metric["ade_m"]) - (check_index + 1) * 1e-9
+        metric["ade_m"] = float(metric["ade_m"]) + (50 - check_index) * 1_000_000.0
         return metric
 
     trainer._fit_match_metrics = worst_case_validation  # type: ignore[assignment]
@@ -203,6 +203,7 @@ def run() -> dict[str, object]:
         ),
         "synthetic_optimization_steps": fit["optimizer_steps"],
         "synthetic_validation_checks": len(cast(list[object], fit["validation_history"])),
+        "synthetic_full_cadence_forced": True,
         "synthetic_fit_cpu_seconds": fit["fit_cpu_seconds"],
         "synthetic_fit_wall_seconds": fit["fit_wall_seconds"],
         "synthetic_peak_rss_bytes": fit["peak_rss_bytes"],
