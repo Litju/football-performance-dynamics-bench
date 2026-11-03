@@ -60,4 +60,8 @@ The scorer now requires that restricted authority. Before metric computation it 
 
 The repository does not contain SkillCorner payload rows, derived window identities, truth hashes or the exhaustive candidate-origin enumeration, so it does not contain a population-manifest instance. [The protected population qualification blocker](https://linear.app/alignerr-cmj/issue/fe554f95-1ae8-406c-9dd7-a73d91711e51), owned by Julio Rodriguez, remains the unresolved blocker for materializing and independently qualifying the restricted artifact from authorized source data. It must use the revised population schema v1.1.0 and current plan digest, independently verify that both representation-specific truth panels derive from identical physical truth and observed per-player origin XY (including nonzero origins), and verify their common masks and membership. The v1.0.0 population artifact and result records are not accepted by the revised APIs; filenames retain the v1 schema-family name. The validator ensures a supplied manifest matches the pinned identities and scorer payloads; it cannot prove an external producer enumerated every source candidate. That blocker must verify exhaustive enumeration before any training, validation selection, LOMO scoring or evaluation scoring.
 
+The [restricted source qualification](prospective-population-qualification.md) failed because
+all 20 pinned matches contain ball detection flags rejected by the frozen measurement transform.
+No population authority was sealed; construction and independent population verification remain blocked.
+
 No training, empirical scoring, private qualification truth inspection or row-level redistribution was performed to freeze this plan.
