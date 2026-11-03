@@ -61,7 +61,13 @@ def test_no_final_truth_is_unscoreable():
         runner.score_scene(support, truth)
 
 
-def test_stream_scoring_binds_reconstructed_truth(tmp_path):
+def test_stream_scoring_binds_reconstructed_truth(tmp_path, monkeypatch):
+    from fpdbench.eligibility import skillcorner
+
+    def protected_gate(*args, **kwargs):
+        raise AssertionError("research scoring must not call protected admission")
+
+    monkeypatch.setattr(skillcorner, "evaluate_skillcorner_window_v2", protected_gate)
     research = runner.research
     inputs = tmp_path / "inputs"
     fixture = TOOLS.parent / "tests/fixtures/streaming-verifier-v1/pr25-synthetic-fixtures.zip"
