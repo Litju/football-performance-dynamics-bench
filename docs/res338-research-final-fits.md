@@ -44,7 +44,7 @@ caches, and partial preparation remain in private local storage. Only non-row-le
 identity and recovery metadata was placed in the owner-only Drive folder.
 
 No evaluation-role scoring, learned LOMO, or held-out evaluation was run. The
-protected RES-501 population gate remains `NOT_QUALIFIED`. The previously supplied
+protected population gate remains `NOT_QUALIFIED`. The previously supplied
 descriptive evaluation references are not training targets or checkpoint
 selection criteria. Validation-only aggregates will be added here only after all
 18 frozen fits complete and their private checkpoints and receipts verify.
