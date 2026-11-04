@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
+from research_population_v1 import training_validation_source_roles  # noqa: E402
 from research_population_verifier_v1 import _scoped_authorities  # noqa: E402
 
 
@@ -20,3 +21,11 @@ def test_training_validation_authorities_exclude_evaluation_matches() -> None:
     assert len(selected) == 16
     assert selected == set(authorities.match_order)
     assert len(authorities.match_order) == 16
+
+
+def test_source_role_lookup_uses_the_frozen_training_validation_roles() -> None:
+    roles = training_validation_source_roles()
+
+    assert len(roles) == 16
+    assert list(roles.values()).count("training") == 12
+    assert list(roles.values()).count("validation") == 4

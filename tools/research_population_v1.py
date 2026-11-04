@@ -124,6 +124,16 @@ def training_validation_resource_estimate(reference: dict, free: int) -> dict:
     }
 
 
+def training_validation_source_roles() -> dict[str, str]:
+    from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+        streaming_population_producer_v1 as producer,
+    )
+
+    return {
+        str(match): role for role, match in producer._roles() if role in {"training", "validation"}
+    }
+
+
 def produce(inputs: Path, match: str, output: Path) -> dict:
     from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
         streaming_population_producer_v1 as p,
@@ -352,7 +362,7 @@ def run(
         authority = p._authority()
         if reference.get("source_commit") != authority["upstream"]["pinned_commit"]:
             raise ValueError("training-validation source commit differs from the pinned release")
-        roles_in_source = {str(match): role for role, match in p._roles()}
+        roles_in_source = training_validation_source_roles()
         reference_roles = cast(dict[str, list[str]], reference["roles"])
         role_counts_expected = {"training": 12, "validation": 4}
         if reference_roles != {
