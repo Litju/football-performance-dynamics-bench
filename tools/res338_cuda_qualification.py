@@ -42,15 +42,15 @@ VALIDATION_CADENCE = trainer.VALIDATION_CADENCE
 
 def _inputs(rng: np.random.Generator, batch_size: int, regime: str) -> ModelInputs:
     payloads = []
-    for _ in range(batch_size):
+    for scene_index in range(batch_size):
         payload: dict[str, np.ndarray] = {
-            "target_history": rng.normal(0, 4, (2, TARGET_PLAYERS, 78)).astype(np.float32),
+            "target_history": rng.normal(0, 4, (TARGET_PLAYERS, 78)).astype(np.float32),
             "history_team_tracks": rng.normal(0, 4, (2, SYNTHETIC_POOL_SIZE, 78)).astype(
                 np.float32
             ),
             "history_team_mask": np.ones((2, SYNTHETIC_POOL_SIZE), dtype=np.bool_),
             "history_ball": rng.normal(0, 4, 78).astype(np.float32),
-            "target_side": np.asarray([1.0, -1.0], dtype=np.float32),
+            "target_side": np.asarray(1.0 if scene_index % 2 == 0 else -1.0, dtype=np.float32),
         }
         if regime != "history_only":
             payload["future_ball"] = rng.normal(0, 4, 45).astype(np.float32)
@@ -65,10 +65,10 @@ def _inputs(rng: np.random.Generator, batch_size: int, regime: str) -> ModelInpu
 
 def _truth_and_mask(rng: np.random.Generator, batch_size: int) -> tuple[Tensor, Tensor]:
     truth = torch.from_numpy(
-        rng.normal(0, 10, (batch_size, 2, TARGET_PLAYERS, FUTURE_SAMPLES, 2)).astype(np.float32)
+        rng.normal(0, 10, (batch_size, TARGET_PLAYERS, FUTURE_SAMPLES, 2)).astype(np.float32)
     )
     mask = torch.from_numpy(
-        (rng.random((batch_size, 2, TARGET_PLAYERS, FUTURE_SAMPLES)) > 0.05).astype(np.bool_)
+        (rng.random((batch_size, TARGET_PLAYERS, FUTURE_SAMPLES)) > 0.05).astype(np.bool_)
     )
     mask[..., -1] = True
     return truth, mask
