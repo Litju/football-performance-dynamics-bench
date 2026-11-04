@@ -43,8 +43,9 @@ does not claim bitwise equivalence between CPU and GPU results.
 - Synthetic CPU/GPU qualification must pass before any real fit. For every
   information regime, compare fixed synthetic predictions and masked ADE at
   `rtol=1e-4, atol=1e-5`; compare gradients and one AdamW update at
-  `rtol=1e-3, atol=1e-5`. Two 100-step replays on the same GPU runtime and seed
-  must produce byte-identical model state and prediction arrays.
+  `rtol=1e-3, atol=1e-5` with dropout disabled so the comparison isolates
+  backend math. Two 100-step training-mode replays on the same GPU runtime and
+  seed must produce byte-identical model state and prediction arrays.
 - Maximum GPU allocated memory per worker is 8 GiB. Record the peak for each fit.
 - Colab local disk must retain at least an 8 GiB reserve after staging source,
   generating the paired producer/verifier outputs, and building all sixteen caches.

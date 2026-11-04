@@ -96,8 +96,7 @@ def _compare_cpu_gpu(regime: str) -> dict[str, float]:
     ).cpu()
     torch.testing.assert_close(gpu_loss, cpu_loss, rtol=RTOL_OUTPUT, atol=ATOL_OUTPUT)
 
-    cpu_model.train()
-    gpu_model.train()
+    # Compare backend math with dropout disabled; replay below tests training-mode dropout.
     cpu_optimizer = make_optimizer(cpu_model)
     gpu_optimizer = make_optimizer(gpu_model)
     cpu_optimizer.zero_grad(set_to_none=True)
