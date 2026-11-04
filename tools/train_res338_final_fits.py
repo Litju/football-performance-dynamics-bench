@@ -1726,7 +1726,7 @@ def _verify_toy_preflight(
             or report.get("synthetic_validation_checks") != MAX_STEPS // VALIDATION_CADENCE
             or report.get("synthetic_full_cadence_forced") is not True
             or float(report.get("synthetic_fit_cpu_seconds", math.inf)) > FIT_CPU_BUDGET_SECONDS
-            or float(report.get("synthetic_fit_gpu_wall_seconds", math.inf))
+            or float(report.get("synthetic_fit_wall_seconds", math.inf))
             > GPU_FIT_WALL_BUDGET_SECONDS
             or int(report.get("synthetic_peak_rss_bytes", MAX_WORKER_RSS_BYTES + 1))
             > MAX_WORKER_RSS_BYTES
