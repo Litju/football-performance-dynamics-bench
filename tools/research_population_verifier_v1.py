@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import hashlib
 import io
 import json
 import os
 import stat
+from collections.abc import Sequence
 from pathlib import Path
 
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
@@ -62,12 +64,55 @@ def normalize(source_csv: bytes, metadata_bytes: bytes) -> tuple[bytes, bytes]:
     return phases, lineage
 
 
-def check_source(source: Path, inputs: Path, normalization: Path) -> dict:
-    """Independently bind all raw bytes and C inputs to frozen source identities."""
-    authority = v.load_authorities().source
-    records = [authority["source_index"]] + [
-        r for m in authority["available_matches"] for r in m["files"]
+def _scoped_authorities(scope: str):
+    authorities = v.load_authorities()
+    if scope == "full":
+        return authorities
+    if scope != "training-validation":
+        raise ValueError("unknown research population scope")
+    role_by_match = {match_id: role for role, match_id in authorities.roles}
+    source_order = [
+        str(match_id)
+        for match_id in authorities.source["selected_source_matches"]
+        if role_by_match[str(match_id)] in {"training", "validation"}
     ]
+    roles = tuple((role_by_match[match_id], match_id) for match_id in source_order)
+    source = dict(authorities.source)
+    source["selected_source_matches"] = [int(match_id) for match_id in source_order]
+    return dataclasses.replace(
+        authorities,
+        source=source,
+        roles=roles,
+        match_order=tuple(match_id for _, match_id in roles),
+    )
+
+
+def check_source(
+    source: Path,
+    inputs: Path,
+    normalization: Path,
+    *,
+    scope: str = "full",
+    match_ids: Sequence[str] | None = None,
+) -> dict:
+    """Independently bind all raw bytes and C inputs to frozen source identities."""
+    authorities = _scoped_authorities(scope)
+    authority = authorities.source
+    selected = list(authorities.match_order)
+    if match_ids is not None and list(match_ids) != selected:
+        raise ValueError("source check match list differs from the frozen research roles")
+    if scope == "full":
+        records = [authority["source_index"]] + [
+            r for m in authority["available_matches"] for r in m["files"]
+        ]
+    else:
+        selected_set = set(selected)
+        records = [
+            record
+            for match in authority["available_matches"]
+            if str(match["match_id"]) in selected_set
+            for record in match["files"]
+        ]
     expected = {r["repository_path"] for r in records}
     expected_dirs = {str(p) for name in expected for p in Path(name).parents if str(p) != "."}
     actual = set()
@@ -83,7 +128,8 @@ def check_source(source: Path, inputs: Path, normalization: Path) -> dict:
             actual.add(path.relative_to(source).as_posix())
         elif not path.is_dir() or path.relative_to(source).as_posix() not in expected_dirs:
             raise ValueError("unexpected source path")
-    if actual != expected or len(expected) != 81:
+    expected_file_count = 81 if scope == "full" else 4 * len(selected)
+    if actual != expected or len(expected) != expected_file_count:
         raise ValueError("source inventory differs")
     receipts = []
     for record in records:
@@ -109,7 +155,7 @@ def check_source(source: Path, inputs: Path, normalization: Path) -> dict:
             {"path": record["repository_path"], "sha256": sha.hexdigest(), "bytes": size}
         )
     normalization_receipts = []
-    for match in authority["selected_source_matches"]:
+    for match in selected:
         prefix = source / f"data/matches/{match}/{match}"
         metadata = v._read_bounded_document(
             prefix.with_name(prefix.name + "_match.json"), "metadata"
@@ -134,14 +180,18 @@ def check_source(source: Path, inputs: Path, normalization: Path) -> dict:
             }
         )
     return {
+        "scope": scope,
+        "match_ids": selected,
         "source_files": receipts,
         "normalization": "INDEPENDENTLY_REDERIVED",
         "normalization_receipts": normalization_receipts,
     }
 
 
-def derive(inputs: Path, match: str, output: Path) -> dict:
-    authorities = v.load_authorities()
+def derive(inputs: Path, match: str, output: Path, *, scope: str = "full") -> dict:
+    authorities = _scoped_authorities(scope)
+    if match not in authorities.match_order:
+        raise ValueError("match is outside the selected research scope")
     contracts, snapshots = v.load_input_contracts(inputs, authorities)
     contract = contracts[match]
     stats: dict = {}
@@ -231,17 +281,26 @@ def main() -> None:
     check.add_argument("inputs", type=Path)
     check.add_argument("normalization", type=Path)
     check.add_argument("output", type=Path)
+    check.add_argument("--scope", choices=("full", "training-validation"), default="full")
+    check.add_argument("--match-id", action="append")
     worker = modes.add_parser("derive")
     worker.add_argument("inputs", type=Path)
     worker.add_argument("match")
     worker.add_argument("output", type=Path)
+    worker.add_argument("--scope", choices=("full", "training-validation"), default="full")
     args = parser.parse_args()
     os.umask(0o077)
     if args.mode == "check-source":
-        result = check_source(args.source, args.inputs, args.normalization)
+        result = check_source(
+            args.source,
+            args.inputs,
+            args.normalization,
+            scope=args.scope,
+            match_ids=args.match_id,
+        )
         args.output.write_bytes(v.canonical_bytes(result))
     else:
-        result = derive(args.inputs, args.match, args.output)
+        result = derive(args.inputs, args.match, args.output, scope=args.scope)
         args.output.with_suffix(".summary.json").write_bytes(v.canonical_bytes(result))
 
 

@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import cast
 
 SCHEMA = "fpdbench.public-skillcorner-research-admission"
 VERSION = "1.0.0"
@@ -91,6 +92,35 @@ def resource_estimate(census: dict, free: int) -> dict:
         "row_allowance_bytes": 128 * 1024,
         "memory_limit_per_worker_bytes": 2 * 1024**3,
         "basis": "census rows + scenes, fixture max diagnostic 12571 / truth 6213 bytes",
+    }
+
+
+def training_validation_resource_estimate(reference: dict, free: int) -> dict:
+    source_files = cast(list[dict[str, object]], reference["source_manifest"])
+    inputs = sum(
+        int(row.get("lfs_payload_size", row["byte_size"]))
+        for row in source_files
+        if str(row["repository_path"]).endswith(
+            ("_tracking_extrapolated.jsonl", "_match.json", "_phases_of_play.csv")
+        )
+    )
+    population = 2 * sum(
+        int(item["bytes"])
+        for item in cast(dict[str, dict[str, object]], reference["artifacts"]).values()
+    )
+    reserve = 8 * 1024**3
+    estimated = inputs + population
+    if free < estimated + reserve:
+        raise ValueError(f"insufficient Colab disk: need {estimated + reserve}, available {free}")
+    return {
+        "estimated_peak_bytes": estimated,
+        "reserve_bytes": reserve,
+        "available_bytes": free,
+        "source_input_bytes": inputs,
+        "independent_population_outputs_bytes": population,
+        "basis": (
+            "pinned training/validation source sizes and both frozen reconciliation output sizes"
+        ),
     }
 
 
@@ -275,13 +305,90 @@ def reconcile(producer: Path, verifier: Path, matches: list[str], expected_hashe
     }
 
 
-def run(source: Path, output: Path, census: Path) -> None:
+def run(
+    source: Path,
+    output: Path,
+    census: Path | None,
+    *,
+    scope: str = "full",
+    reference_path: Path | None = None,
+    reference_sha256: str | None = None,
+) -> None:
     from fpdbench.data_sources import protected_skillcorner as p
     from fpdbench.data_sources.phase_normalization_c import normalize_phases_c
 
+    if scope not in {"full", "training-validation"}:
+        raise ValueError("unknown research population scope")
+    reference = json.loads(reference_path.read_bytes()) if reference_path else None
+    if scope == "training-validation" and not isinstance(reference, dict):
+        raise ValueError("training-validation execution requires its frozen reference manifest")
+    if scope == "full" and reference_path is not None:
+        raise ValueError("a scoped reference manifest is only valid for training-validation")
+    if scope == "training-validation" and (
+        reference_sha256 is None
+        or hashlib.sha256(reference_path.read_bytes()).hexdigest() != reference_sha256
+    ):
+        raise ValueError("training-validation reference SHA-256 differs")
     with p.private_directory(output.parent):
         output.mkdir(mode=0o700)
-    estimate = resource_estimate(json.loads(census.read_bytes()), shutil.disk_usage(output).free)
+    if scope == "full":
+        if census is None:
+            raise ValueError("full-population reconciliation requires its census")
+        resource_census = json.loads(census.read_bytes())
+        authority = p._authority()
+        matches = [str(match) for match in authority["selected_source_matches"]]
+        role_counts_expected = {"training": 12, "validation": 4, "evaluation": 4}
+        records = p._records(authority)
+    else:
+        assert isinstance(reference, dict)
+        if (
+            reference.get("schema_id") != "fpdbench.res338.training-validation-reference"
+            or reference.get("parent_research_manifest_sha256")
+            != "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
+        ):
+            raise ValueError(
+                "training-validation reference is not bound to the ratified population"
+            )
+        authority = p._authority()
+        if reference.get("source_commit") != authority["upstream"]["pinned_commit"]:
+            raise ValueError("training-validation source commit differs from the pinned release")
+        roles_in_source = {str(match): role for role, match in p._roles()}
+        reference_roles = cast(dict[str, list[str]], reference["roles"])
+        role_counts_expected = {"training": 12, "validation": 4}
+        if reference_roles != {
+            role: sorted(mid for mid, actual in roles_in_source.items() if actual == role)
+            for role in role_counts_expected
+        }:
+            raise ValueError("training-validation roles differ from the frozen v2 split")
+        matches = cast(list[str], reference["source_match_order"])
+        expected_matches = {
+            match for role in role_counts_expected for match in reference_roles[role]
+        }
+        if len(matches) != 16 or set(matches) != expected_matches:
+            raise ValueError("training-validation source scope contains missing or extra matches")
+        records = [
+            record
+            for record in p._records(authority)
+            if any(
+                str(record["repository_path"]).startswith(f"data/matches/{mid}/") for mid in matches
+            )
+        ]
+        if len(records) != 64 or any(
+            str(record["repository_path"]) == "data/matches.json" for record in records
+        ):
+            raise ValueError("training-validation source scope must contain exactly 64 match files")
+        if {
+            str(row["repository_path"])
+            for row in cast(list[dict[str, object]], reference["source_manifest"])
+        } != {str(record["repository_path"]) for record in records}:
+            raise ValueError("projected source manifest differs from the pinned authority")
+    if scope == "full":
+        estimate = resource_estimate(
+            cast(dict[str, object], resource_census), shutil.disk_usage(output).free
+        )
+    else:
+        assert isinstance(reference, dict)
+        estimate = training_validation_resource_estimate(reference, shutil.disk_usage(output).free)
     write(output / "resource-estimate.json", estimate)
     inventory = code_inventory()
     environment = {
@@ -298,14 +405,12 @@ def run(source: Path, output: Path, census: Path) -> None:
         "code_inventory": inventory,
     }
     write(output / "environment.json", environment)
-    authority = p._authority()
-    records = p._records(authority)
     inputs, normalization = output / "inputs", output / "normalization"
     inputs.mkdir(mode=0o700)
     normalization.mkdir(mode=0o700)
     with p.private_directory(source) as fd:
         before = p._verify_sources(fd, records)
-        for match in authority["selected_source_matches"]:
+        for match in matches:
             directory = inputs / str(match)
             directory.mkdir(mode=0o700)
             prefix = f"data/matches/{match}/{match}"
@@ -320,7 +425,8 @@ def run(source: Path, output: Path, census: Path) -> None:
                 with (directory / "tracking.jsonl").open("xb") as dst:
                     shutil.copyfileobj(src, dst, length=1024 * 1024)
     write(output / "source-inventory.json", before)
-    matches = [str(i) for i in authority["selected_source_matches"]]
+    if scope == "training-validation" and before != reference["source_files"]:
+        raise ValueError("downloaded sources differ from the frozen training-validation identity")
     logs = output / "logs"
     logs.mkdir(mode=0o700)
     verifier_tool = REPO / "tools/research_population_verifier_v1.py"
@@ -328,16 +434,19 @@ def run(source: Path, output: Path, census: Path) -> None:
         destination = output / phase
         destination.mkdir(mode=0o700)
         if phase == "verifier":
+            check_command = [
+                sys.executable,
+                str(verifier_tool),
+                "check-source",
+                str(source),
+                str(inputs),
+                str(normalization),
+                str(output / "independent-source.json"),
+            ]
+            if scope != "full":
+                check_command.extend(["--scope", scope])
             launch(
-                [
-                    sys.executable,
-                    str(verifier_tool),
-                    "check-source",
-                    str(source),
-                    str(inputs),
-                    str(normalization),
-                    str(output / "independent-source.json"),
-                ],
+                check_command,
                 logs / "independent-source.log",
                 output,
             )
@@ -350,6 +459,8 @@ def run(source: Path, output: Path, census: Path) -> None:
                 else [sys.executable, str(verifier_tool), "derive"]
             )
             command += [str(inputs), mid, str(destination / f"{mid}.jsonl")]
+            if scope != "full" and phase == "verifier":
+                command += ["--scope", scope]
             try:
                 launch(command, logs / f"{phase}-{mid}.log", output, abort)
             except Exception:
@@ -361,14 +472,33 @@ def run(source: Path, output: Path, census: Path) -> None:
             list(pool.map(worker, matches))
         if code_inventory() != inventory:
             raise ValueError("research code changed during execution")
+    selected_matches = set(matches)
     expected = {
         str(m["match_id"]): next(r["lfs_oid_sha256"] for r in m["files"] if "lfs_oid_sha256" in r)
         for m in authority["available_matches"]
+        if str(m["match_id"]) in selected_matches
     }
     result = reconcile(output / "producer", output / "verifier", matches, expected)
     role_counts = collections.Counter(v["role"] for v in result["per_match"].values())
-    if role_counts != {"training": 12, "validation": 4, "evaluation": 4}:
+    if role_counts != role_counts_expected:
         raise ValueError("frozen role coverage differs")
+    if scope == "training-validation":
+        if (
+            result["per_match"] != reference["per_match"]
+            or result["artifacts"] != reference["artifacts"]
+        ):
+            raise ValueError("Colab research outputs differ from the ratified 16-match projection")
+        independent = json.loads((output / "independent-source.json").read_bytes())
+        expected_independent = cast(dict[str, object], reference["independent_source"])
+        if independent.get("source_files") != expected_independent.get("source_files") or sorted(
+            independent.get("normalization_receipts", []), key=lambda item: item["match_id"]
+        ) != sorted(
+            expected_independent.get("normalization_receipts", []),
+            key=lambda item: item["match_id"],
+        ):
+            raise ValueError(
+                "independent source and phase normalization differ from the projection"
+            )
     with p.private_directory(source) as fd:
         if p._verify_sources(fd, records) != before:
             raise ValueError("source changed during research reconciliation")
@@ -387,6 +517,10 @@ def run(source: Path, output: Path, census: Path) -> None:
         independent_source_sha256=digest(output / "independent-source.json"),
         empirical_execution="BLOCKED_PENDING_OWNER_RATIFICATION",
     )
+    if scope == "training-validation":
+        result["execution_scope"] = scope
+        result["parent_research_manifest_sha256"] = reference["parent_research_manifest_sha256"]
+        result["source_match_order"] = matches
     write(output / "research-admission.json", result)
     print("RESEARCH_RECONCILED", canonical(result["total"]).decode(), flush=True)
 
@@ -397,7 +531,10 @@ def main() -> None:
     whole = modes.add_parser("run")
     whole.add_argument("source", type=Path)
     whole.add_argument("output", type=Path)
-    whole.add_argument("census", type=Path)
+    whole.add_argument("census", type=Path, nargs="?")
+    whole.add_argument("--scope", choices=("full", "training-validation"), default="full")
+    whole.add_argument("--reference", type=Path)
+    whole.add_argument("--reference-sha256")
     worker = modes.add_parser("produce")
     worker.add_argument("inputs", type=Path)
     worker.add_argument("match")
@@ -410,7 +547,14 @@ def main() -> None:
         write(args.output.with_suffix(".summary.json"), result)
     else:
         try:
-            run(args.source, args.output, args.census)
+            run(
+                args.source,
+                args.output,
+                args.census,
+                scope=args.scope,
+                reference_path=args.reference,
+                reference_sha256=args.reference_sha256,
+            )
         except Exception as error:
             if args.output.is_dir() and not (args.output / "research-admission.json").exists():
                 write(

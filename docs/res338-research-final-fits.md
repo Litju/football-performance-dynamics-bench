@@ -32,16 +32,19 @@ worker environment is created with `uv sync --group research-training`.
 
 ## Results
 
-Campaign status as of 2026-11-03: `RES338_COLAB_EXECUTION_BLOCKED` before the first
-fit. Verified GPU fits: 0/18. Selected checkpoints and validation results: 0.
+Campaign status as of 2026-11-04: Colab execution setup is in progress before the
+first fit. Verified GPU fits: 0/18. Selected checkpoints and validation results: 0.
 
-Execution did not start because the current project data-rights policy does not
-allow cloud hosting of the row-level source-derived feature caches before written
-SkillCorner clarification, and no Colab runtime/browser control is available in
-the connected execution environment. The original v2 CPU plan remains unchanged;
-no CPU/GPU equivalence or GPU result is claimed. The source, existing feature
-caches, and partial preparation remain in private local storage. Only non-row-level
-identity and recovery metadata was placed in the owner-only Drive folder.
+The owner approved a scoped private Colab/Drive handling amendment, recorded in
+the companion policy and execution amendments. The official Colab CLI is installed
+and authenticated; no GPU session has been allocated yet. The original v2 CPU
+plan and public data-release policy remain unchanged. No CPU/GPU equivalence or
+GPU result is claimed. The pinned source and partial local preparation are
+preserved. Six completed training caches were uploaded as content-addressed
+64 MiB chunks to the owner-only Drive folder; all 41 chunk readbacks and the six
+reconstructed archive hashes verify. No validation caches have been generated.
+The next Colab staging step downloads the pinned 16 training/validation matches
+directly from SkillCorner and excludes evaluation-role files and labels.
 
 No evaluation-role scoring, learned LOMO, or held-out evaluation was run. The
 protected population gate remains `NOT_QUALIFIED`. The previously supplied

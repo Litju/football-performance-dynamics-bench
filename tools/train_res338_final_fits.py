@@ -18,10 +18,12 @@ import sys
 import time
 import uuid
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
+
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import numpy as np
 import research_baseline_v1 as research_run
@@ -101,12 +103,22 @@ CAMPAIGN_PREPARATION_CPU_BUDGET_SECONDS = 19.5 * 3600
 CAMPAIGN_CPU_BUDGET_SECONDS = 292.5 * 3600
 CAMPAIGN_WALL_BUDGET_SECONDS = 336 * 3600
 MAX_WORKER_RSS_BYTES = 16 * 1024**3
+GPU_FIT_WALL_BUDGET_SECONDS = 3600.0
+GPU_RETRY_WALL_BUDGET_SECONDS = 0.25 * 3600
+GPU_CAMPAIGN_BUDGET_SECONDS = 22.5 * 3600
+MAX_GPU_ALLOCATED_BYTES = 8 * 1024**3
+DEFAULT_PRIVATE_DISK_RESERVE_BYTES = 1024**3
+GPU_PRIVATE_DISK_RESERVE_BYTES = 8 * 1024**3
+GPU_TORCH_VERSION = "2.6.0+cu124"
+GPU_CUDA_VERSION = "12.4"
 REPO = Path(__file__).resolve().parents[1]
 SOURCE_ROOT_DEFAULT = Path("/srv/fpdbench-private/source/skillcorner-v1")
 RESEARCH_ROOT_DEFAULT = Path("/srv/fpdbench-private/evidence/research-population-v1-e9850a7")
 TOY_PREFLIGHT_PATH = Path(
     "/srv/fpdbench-private/evidence/res338-toy-preflight-v2/toy-preflight.json"
 )
+GPU_EXECUTION_AMENDMENT = REPO / "docs/res338-colab-gpu-execution-amendment.md"
+PRIVATE_CLOUD_AMENDMENT = REPO / "docs/res338-private-cloud-research-amendment.md"
 
 _FEATURE_ARRAYS = (
     "target_history",
@@ -125,6 +137,17 @@ def _canonical(value: object) -> bytes:
     return json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
     ).encode("utf-8")
+
+
+def _training_environment_sha256(runtime: Mapping[str, object]) -> str:
+    stable = dict(runtime)
+    stable["cpu_affinity"] = len(cast(list[int], runtime["cpu_affinity"]))
+    accelerator = runtime.get("accelerator")
+    if isinstance(accelerator, Mapping):
+        stable_accelerator = dict(accelerator)
+        stable_accelerator.pop("available_memory_bytes_at_start", None)
+        stable["accelerator"] = stable_accelerator
+    return hashlib.sha256(_canonical(stable)).hexdigest()
 
 
 def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -348,27 +371,222 @@ def verify_research_population(
     }
 
 
-def _validate_training_runtime() -> dict[str, object]:
+def verify_training_validation_population(
+    research_root: Path,
+    source_root: Path,
+    reference_path: Path,
+    reference_sha256: str,
+    plan: Mapping[str, object],
+    roles: Mapping[str, Sequence[str]],
+) -> tuple[dict[str, object], dict[str, object]]:
+    reference_bytes = read_private_file(reference_path, reference_sha256)
+    reference = cast(
+        dict[str, object],
+        json.loads(reference_bytes, object_pairs_hook=_unique_json_object),
+    )
+    expected_roles = {role: sorted(roles[role]) for role in ("training", "validation")}
+    matches = cast(list[str], reference["source_match_order"])
+    selected = set(expected_roles["training"]) | set(expected_roles["validation"])
+    preloaded_cache_identities = cast(
+        dict[str, dict[str, object]], reference.get("preloaded_cache_identities", {})
+    )
+    if (
+        reference.get("schema_id") != "fpdbench.res338.training-validation-reference"
+        or reference.get("parent_research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+        or reference.get("source_release_hash")
+        != plan["population_authority"]["source_release_hash"]
+        or reference.get("source_population_hash")
+        != plan["population_authority"]["source_population_hash"]
+        or reference.get("roles") != expected_roles
+        or set(matches) != selected
+        or len(matches) != 16
+        or len(preloaded_cache_identities) != 6
+        or not set(preloaded_cache_identities).issubset(set(expected_roles["training"]))
+        or set(reference) & {"evaluation", "evaluation_matches", "evaluation_labels"}
+    ):
+        raise ValueError("training-validation reference differs from the ratified 12/4 scope")
+    reference_sha = hashlib.sha256(reference_bytes).hexdigest()
+
+    source_authority = source._authority()
+    if (
+        reference.get("source_commit")
+        != cast(dict[str, object], source_authority["upstream"])["pinned_commit"]
+    ):
+        raise ValueError("training-validation source commit differs from the pinned release")
+    source_paths = {
+        str(record["repository_path"])
+        for record in cast(list[dict[str, object]], reference["source_manifest"])
+    }
+    if (
+        len(source_paths) != 64
+        or source_paths
+        != {str(item["path"]) for item in cast(list[dict[str, object]], reference["source_files"])}
+        or any(
+            len(Path(path).parts) != 4 or Path(path).parts[2] not in selected
+            for path in source_paths
+        )
+        or reference.get("source_commit")
+        != cast(dict[str, object], source_authority["upstream"])["pinned_commit"]
+    ):
+        raise ValueError("training-validation source projection includes an unexpected source")
+    records = [
+        record
+        for record in source._records(source_authority)
+        if any(
+            str(record["repository_path"]).startswith(f"data/matches/{match}/")
+            for match in selected
+        )
+    ]
+    if len(records) != 64:
+        raise ValueError("Colab source authority must contain only 64 training/validation files")
+    with source.private_directory(source_root) as root_fd:
+        source_inventory = source._verify_sources(root_fd, records)
+    if source_inventory != reference["source_files"]:
+        raise ValueError("Colab-pinned source bytes differ from the projected source identity")
+
+    admission_bytes = _read_private_bytes(research_root / "research-admission.json")
+    admission_sha = hashlib.sha256(admission_bytes).hexdigest()
+    admission = cast(
+        dict[str, object],
+        json.loads(admission_bytes, object_pairs_hook=_unique_json_object),
+    )
+    if (
+        admission.get("schema_id") != RESEARCH_SCHEMA
+        or admission.get("schema_version") != RESEARCH_VERSION
+        or admission.get("status") != "RESEARCH_RECONCILED"
+        or admission.get("protected_status") != "NOT_QUALIFIED"
+        or admission.get("execution_scope") != "training-validation"
+        or admission.get("parent_research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+        or admission.get("source_release_hash") != reference["source_release_hash"]
+        or admission.get("source_population_hash") != reference["source_population_hash"]
+        or set(cast(dict[str, object], admission["per_match"])) != selected
+        or set(cast(dict[str, object], admission["artifacts"])) != selected
+        or admission.get("source_match_order") != matches
+        or "evaluation" in cast(dict[str, object], admission["roles"])
+    ):
+        raise ValueError("Colab research admission is outside the training/validation scope")
+    expected_role_names = {f"{match}.jsonl" for match in selected} | {
+        f"{match}.summary.json" for match in selected
+    }
+    for directory_name in ("producer", "verifier"):
+        directory = research_root / directory_name
+        if {item.name for item in directory.iterdir()} != expected_role_names:
+            raise ValueError("Colab population outputs contain missing or out-of-scope matches")
+    if {item.name for item in (research_root / "inputs").iterdir()} != selected:
+        raise ValueError("Colab canonical inputs contain missing or out-of-scope matches")
+    if {
+        item.name.removesuffix("-lineage.json")
+        for item in (research_root / "normalization").iterdir()
+    } != selected:
+        raise ValueError("Colab normalization inputs contain missing or out-of-scope matches")
+
+    inventory_bytes = read_private_file(
+        research_root / "source-inventory.json", str(admission["source_inventory_sha256"])
+    )
+    if (
+        json.loads(inventory_bytes, object_pairs_hook=_unique_json_object)
+        != reference["source_files"]
+    ):
+        raise ValueError("Colab research source inventory differs from its reference")
+    independent_bytes = read_private_file(
+        research_root / "independent-source.json", str(admission["independent_source_sha256"])
+    )
+    independent = cast(
+        dict[str, object],
+        json.loads(independent_bytes, object_pairs_hook=_unique_json_object),
+    )
+    reference_independent = cast(dict[str, object], reference["independent_source"])
+    if (
+        independent.get("scope") != "training-validation"
+        or set(cast(list[str], independent["match_ids"])) != selected
+        or independent.get("source_files") != reference_independent["source_files"]
+        or sorted(
+            cast(list[dict[str, object]], independent["normalization_receipts"]),
+            key=lambda item: str(item["match_id"]),
+        )
+        != sorted(
+            cast(list[dict[str, object]], reference_independent["normalization_receipts"]),
+            key=lambda item: str(item["match_id"]),
+        )
+    ):
+        raise ValueError("Colab source or phase normalization differs from the private reference")
+
+    source_matches = cast(list[dict[str, object]], source_authority["available_matches"])
+    tracking_hashes = {
+        str(item["match_id"]): str(
+            next(file["lfs_oid_sha256"] for file in item["files"] if "lfs_oid_sha256" in file)
+        )
+        for item in source_matches
+        if str(item["match_id"]) in selected
+    }
+    if set(tracking_hashes) != selected:
+        raise ValueError("pinned tracking identities do not cover the training/validation scope")
+    reconciled = research.reconcile(
+        research_root / "producer", research_root / "verifier", matches, tracking_hashes
+    )
+    if (
+        reconciled["per_match"] != reference["per_match"]
+        or reconciled["artifacts"] != reference["artifacts"]
+        or admission["per_match"] != reconciled["per_match"]
+        or admission["artifacts"] != reconciled["artifacts"]
+    ):
+        raise ValueError(
+            "Colab producer/verifier outputs differ from the frozen 16-match projection"
+        )
+    admission["preloaded_cache_identities"] = reference.get("preloaded_cache_identities", {})
+
+    return admission, {
+        "source_files_rehashed": len(source_inventory),
+        "independent_source_files_rehashed": len(source_inventory),
+        "producer_outputs_rehashed": len(matches),
+        "verifier_outputs_rehashed": len(matches),
+        "producer_verifier_mismatches": 0,
+        "exact_role_assignment_match": True,
+        "scope": "training-validation",
+        "role_counts": {role: len(values) for role, values in expected_roles.items()},
+        "reference_manifest_sha256": reference_sha,
+        "projected_research_admission_sha256": admission_sha,
+    }
+
+
+def _colab_session_identity() -> dict[str, str | None]:
+    return {
+        "session_name": os.environ.get("RES338_COLAB_SESSION_NAME"),
+        "session_id": os.environ.get("RES338_COLAB_SESSION_ID"),
+        "colab_release_tag": os.environ.get("COLAB_RELEASE_TAG"),
+    }
+
+
+def _validate_training_runtime(device: str = "cpu") -> dict[str, object]:
     if sys.version_info[:3] != (3, 12, 8):
         raise RuntimeError(f"required Python 3.12.8, found {sys.version.split()[0]}")
-    if torch.__version__ != "2.6.0+cpu" or torch.version.cuda is not None:
-        raise RuntimeError(f"required PyTorch 2.6.0+cpu, found {torch.__version__}")
     if np.__version__ != "2.2.4":
         raise RuntimeError(f"required NumPy 2.2.4, found {np.__version__}")
     if platform.machine().lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("the frozen worker requires x86_64")
     if len(os.sched_getaffinity(0)) != 1:
         raise RuntimeError("launch the frozen worker on exactly one CPU core")
+    if device == "cuda" and os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
+        raise RuntimeError("CUBLAS_WORKSPACE_CONFIG must be set before importing PyTorch")
     configure_deterministic_cpu()
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    torch.set_float32_matmul_precision("highest")
     if (
         torch.get_num_threads() != 1
         or torch.get_num_interop_threads() != 1
         or not torch.are_deterministic_algorithms_enabled()
+        or torch.backends.cudnn.benchmark
+        or not torch.backends.cudnn.deterministic
+        or torch.backends.cuda.matmul.allow_tf32
+        or torch.backends.cudnn.allow_tf32
+        or torch.get_float32_matmul_precision() != "highest"
+        or torch.get_default_dtype() is not torch.float32
     ):
-        raise RuntimeError("the pinned deterministic CPU runtime could not be established")
-    if torch.cuda.is_available():
-        raise RuntimeError("learned fits are CPU-only")
-    return {
+        raise RuntimeError("the frozen deterministic numerical settings could not be established")
+    runtime: dict[str, object] = {
         "python": sys.version,
         "python_executable_sha256": _sha256_file(Path(sys.executable).resolve()),
         "numpy": np.__version__,
@@ -381,11 +599,71 @@ def _validate_training_runtime() -> dict[str, object]:
         "machine": platform.machine(),
         "platform": platform.platform(),
         "torch_build": torch.__config__.show(),
+        "cublas_workspace_config": os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
+        "cudnn_deterministic": torch.backends.cudnn.deterministic,
+        "cudnn_benchmark": torch.backends.cudnn.benchmark,
+        "matmul_tf32": torch.backends.cuda.matmul.allow_tf32,
+        "cudnn_tf32": torch.backends.cudnn.allow_tf32,
+        "float32_matmul_precision": torch.get_float32_matmul_precision(),
+        "default_dtype": str(torch.get_default_dtype()),
+        "device": device,
         "packages": sorted(
             (distribution.metadata["Name"], distribution.version)
             for distribution in importlib.metadata.distributions()
         ),
     }
+    if device == "cpu":
+        if torch.__version__ != "2.6.0+cpu" or torch.version.cuda is not None:
+            raise RuntimeError(f"required PyTorch 2.6.0+cpu, found {torch.__version__}")
+        if torch.cuda.is_available():
+            raise RuntimeError("CPU execution refuses an available CUDA device")
+        runtime["accelerator"] = None
+    elif device == "cuda":
+        session_identity = _colab_session_identity()
+        if not session_identity["session_name"] or not session_identity["session_id"]:
+            raise RuntimeError("Colab session name and assigned session ID must be recorded")
+        if torch.__version__ != GPU_TORCH_VERSION or torch.version.cuda != GPU_CUDA_VERSION:
+            raise RuntimeError(
+                f"required PyTorch {GPU_TORCH_VERSION} with CUDA {GPU_CUDA_VERSION}, "
+                f"found {torch.__version__} with CUDA {torch.version.cuda}"
+            )
+        if not torch.cuda.is_available() or torch.cuda.device_count() != 1:
+            raise RuntimeError("CUDA execution requires exactly one visible NVIDIA GPU")
+        if shutil.which("nvidia-smi") is None:
+            raise RuntimeError("nvidia-smi is required to record the NVIDIA driver")
+        torch.cuda.init()
+        gpu_name = torch.cuda.get_device_name(0)
+        properties = torch.cuda.get_device_properties(0)
+        free_bytes, total_bytes = torch.cuda.mem_get_info(0)
+        rows = (
+            subprocess.check_output(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=name,memory.total,driver_version",
+                    "--format=csv,noheader,nounits",
+                ],
+                text=True,
+                timeout=10,
+            )
+            .strip()
+            .splitlines()
+        )
+        if len(rows) != 1:
+            raise RuntimeError("the Colab worker must see exactly one NVIDIA GPU")
+        reported_name, memory_mib, driver_version = (item.strip() for item in rows[0].split(","))
+        if reported_name != gpu_name or int(memory_mib) * 1024**2 != int(properties.total_memory):
+            raise RuntimeError("nvidia-smi and PyTorch disagree on the assigned GPU")
+        runtime["accelerator"] = {
+            "name": gpu_name,
+            "capability": list(torch.cuda.get_device_capability(0)),
+            "total_memory_bytes": int(total_bytes),
+            "available_memory_bytes_at_start": int(free_bytes),
+            "driver_version": driver_version,
+            "peak_allocated_budget_bytes": MAX_GPU_ALLOCATED_BYTES,
+        }
+    else:
+        raise ValueError("device must be cpu or cuda")
+    return runtime
 
 
 def _available_memory() -> tuple[int, int]:
@@ -459,6 +737,8 @@ def _refresh_resource_totals(
         ledger.get("resume_preparation_cpu_seconds", 0.0)
     )
     fit_cpu = math.fsum(float(item["fit_cpu_seconds"]) for item in runs)
+    fit_gpu_wall = math.fsum(float(item.get("gpu_wall_seconds") or 0.0) for item in runs)
+    fit_gpu_wall = math.fsum(float(item.get("gpu_wall_seconds") or 0.0) for item in runs)
     unknown_attempts = sum(
         entry.get("cpu_seconds") == "not_observable_after_worker_interruption"
         for entries in attempts.values()
@@ -467,6 +747,26 @@ def _refresh_resource_totals(
     ledger["recorded_preparation_cpu_seconds"] = prep_cpu
     ledger["recorded_fit_cpu_seconds"] = fit_cpu
     ledger["recorded_total_cpu_seconds"] = prep_cpu + fit_cpu
+    ledger["recorded_gpu_wall_seconds"] = fit_gpu_wall
+    gpu_started_at = ledger.get("gpu_training_started_at_utc")
+    if gpu_started_at:
+        ledger["campaign_gpu_elapsed_wall_seconds"] = round(
+            max(
+                0.0,
+                (datetime.now(UTC) - datetime.fromisoformat(str(gpu_started_at))).total_seconds(),
+            ),
+            6,
+        )
+    ledger["recorded_gpu_wall_seconds"] = fit_gpu_wall
+    gpu_started_at = ledger.get("gpu_training_started_at_utc")
+    if gpu_started_at:
+        ledger["campaign_gpu_elapsed_wall_seconds"] = round(
+            max(
+                0.0,
+                (datetime.now(UTC) - datetime.fromisoformat(str(gpu_started_at))).total_seconds(),
+            ),
+            6,
+        )
     ledger["interrupted_attempt_cpu_unknown_count"] = unknown_attempts
     ledger["campaign_cpu_seconds_this_process"] = round(time.process_time() - campaign_cpu_start, 6)
     ledger["campaign_wall_seconds"] = round(time.monotonic() - campaign_wall_start, 6)
@@ -548,6 +848,7 @@ def _build_match_cache(
     match_id: str,
     role: str,
     research_manifest: Mapping[str, object],
+    disk_reserve_bytes: int = DEFAULT_PRIVATE_DISK_RESERVE_BYTES,
 ) -> dict[str, object]:
     match_counts = cast(dict[str, object], research_manifest["per_match"])[match_id]
     expected_windows = int(cast(dict[str, object], match_counts["counts"])["scoreable_windows"])
@@ -587,7 +888,7 @@ def _build_match_cache(
         + 4096
     )
     estimated_cache_bytes = expected_windows * estimated_bytes_per_window
-    if shutil.disk_usage(cache_root).free < estimated_cache_bytes + 1024**3:
+    if shutil.disk_usage(cache_root).free < estimated_cache_bytes + disk_reserve_bytes:
         raise OSError("insufficient private disk for the complete frozen feature cache")
 
     shapes: dict[str, tuple[int, ...]] = {
@@ -795,6 +1096,15 @@ def _open_match_cache(directory: Path, match_id: str, role: str) -> MatchCache:
     return MatchCache(match_id, role, directory, arrays)
 
 
+def _model_inputs_to_device(inputs: ModelInputs, device: torch.device) -> ModelInputs:
+    values = {
+        field.name: (value.to(device) if value is not None else None)
+        for field in fields(inputs)
+        if (value := getattr(inputs, field.name)) is not None
+    }
+    return ModelInputs(**values)
+
+
 def _scene_payload(
     cache: MatchCache, window_index: int, lane: int, regime: InformationRegime
 ) -> dict[str, NDArray[np.generic]]:
@@ -822,8 +1132,10 @@ def _fit_match_metrics(
     representation: TargetRepresentation,
     *,
     fit_cpu_deadline: float,
+    fit_gpu_wall_deadline: float | None,
     campaign_cpu_deadline: float,
     campaign_wall_deadline: float,
+    campaign_gpu_wall_deadline: float | None,
     worker_memory_limit_bytes: int,
 ) -> dict[str, float | int]:
     selected = np.argwhere(cast(NDArray[np.bool_], cache.arrays["scoreable"]))
@@ -837,13 +1149,22 @@ def _fit_match_metrics(
             raise TimeoutError("campaign_training_cpu_budget_exceeded")
         if time.monotonic() >= campaign_wall_deadline:
             raise TimeoutError("campaign_wall_budget_exceeded")
+        if fit_gpu_wall_deadline is not None and time.monotonic() >= fit_gpu_wall_deadline:
+            raise TimeoutError("per_fit_gpu_wall_budget_exceeded")
+        if (
+            campaign_gpu_wall_deadline is not None
+            and time.monotonic() >= campaign_gpu_wall_deadline
+        ):
+            raise TimeoutError("campaign_gpu_wall_budget_exceeded")
         if resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024 > worker_memory_limit_bytes:
             raise MemoryError("16GiB_worker_memory_budget_exceeded")
         batch_ids = selected[start : start + BATCH_SIZE]
         payloads = [
             _scene_payload(cache, int(window), int(lane), regime) for window, lane in batch_ids
         ]
-        inputs = collate_feature_payloads(payloads, regime)
+        inputs = _model_inputs_to_device(
+            collate_feature_payloads(payloads, regime), next(model.parameters()).device
+        )
         with torch.inference_mode():
             batch_prediction = model(inputs).cpu().numpy()
         if not np.isfinite(batch_prediction).all():
@@ -867,6 +1188,7 @@ def _per_fit_config(
     validation_matches: Sequence[str],
     plan_sha256: str,
     protocol_sha256: str,
+    device: str = "cpu",
 ) -> dict[str, object]:
     return {
         "model_id": MODEL_ID,
@@ -874,6 +1196,7 @@ def _per_fit_config(
         "information_regime": regime,
         "target_representation": representation,
         "seed": seed,
+        "training_device": device,
         "plan_sha256": plan_sha256,
         "protocol_sha256": protocol_sha256,
         "train_match_ids": list(train_matches),
@@ -913,8 +1236,12 @@ def _fit_one(
     environment_sha256: str,
     campaign_cpu_start: float,
     campaign_wall_start: float,
+    campaign_gpu_start: float | None = None,
+    device: str = "cpu",
+    accelerator: Mapping[str, object] | None = None,
     attempt_number: int = 1,
     fit_cpu_budget_seconds: float = FIT_CPU_BUDGET_SECONDS,
+    fit_gpu_wall_budget_seconds: float = GPU_FIT_WALL_BUDGET_SECONDS,
     worker_memory_limit_bytes: int = MAX_WORKER_RSS_BYTES,
 ) -> dict[str, object]:
     cell_id = f"{MODEL_ID}|{regime}|{representation}"
@@ -931,6 +1258,7 @@ def _fit_one(
         validation_matches,
         plan_sha256,
         protocol_sha256,
+        device,
     )
     config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
     rng = np.random.default_rng(seed)
@@ -943,20 +1271,28 @@ def _fit_one(
     checkpoint_sha256: str | None = None
     model: PerTargetContextDeepSetsMLP | None = None
     optimizer: torch.optim.AdamW | None = None
+    torch_device = torch.device(device)
     step = 0
     last_training_loss_m: float | None = None
     start_wall, start_cpu = time.monotonic(), time.process_time()
     fit_cpu_deadline = start_cpu + fit_cpu_budget_seconds
+    fit_gpu_wall_deadline = start_wall + fit_gpu_wall_budget_seconds
     campaign_cpu_deadline = campaign_cpu_start + CAMPAIGN_CPU_BUDGET_SECONDS
     campaign_wall_deadline = campaign_wall_start + CAMPAIGN_WALL_BUDGET_SECONDS
+    campaign_gpu_wall_deadline = (
+        campaign_gpu_start if campaign_gpu_start is not None else campaign_wall_start
+    ) + GPU_CAMPAIGN_BUDGET_SECONDS
     fit_peak_rss_bytes = _current_rss_bytes()
+    fit_peak_gpu_bytes = 0
     failure: str | None = None
     stopping_reason = "max_optimizer_steps"
     try:
         if (start_cpu - campaign_cpu_start) > CAMPAIGN_CPU_BUDGET_SECONDS:
             raise RuntimeError("campaign_training_cpu_budget_exceeded")
+        if device == "cuda":
+            torch.cuda.reset_peak_memory_stats(torch_device)
         seed_training(seed)
-        model = PerTargetContextDeepSetsMLP(regime)
+        model = PerTargetContextDeepSetsMLP(regime).to(torch_device)
         optimizer = make_optimizer(model)
         for step in range(1, MAX_STEPS + 1):
             elapsed_cpu = time.process_time() - start_cpu
@@ -966,6 +1302,10 @@ def _fit_one(
                 raise TimeoutError("campaign_training_cpu_budget_exceeded")
             if time.monotonic() >= campaign_wall_deadline:
                 raise TimeoutError("campaign_wall_budget_exceeded")
+            if device == "cuda" and time.monotonic() >= fit_gpu_wall_deadline:
+                raise TimeoutError("per_fit_gpu_wall_budget_exceeded")
+            if device == "cuda" and time.monotonic() >= campaign_gpu_wall_deadline:
+                raise TimeoutError("campaign_gpu_wall_budget_exceeded")
             if (
                 resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
                 > worker_memory_limit_bytes
@@ -978,7 +1318,9 @@ def _fit_one(
                 )
                 for match_index, window_index, lane in sampled
             ]
-            inputs: ModelInputs = collate_feature_payloads(payloads, regime)
+            inputs: ModelInputs = _model_inputs_to_device(
+                collate_feature_payloads(payloads, regime), torch_device
+            )
             panel_name = (
                 "target_absolute_xy" if representation == "absolute_xy" else "target_displacement"
             )
@@ -991,7 +1333,7 @@ def _fit_one(
                         for match_index, window_index, lane in sampled
                     ]
                 ).astype(np.float32)
-            )
+            ).to(torch_device)
             mask = torch.from_numpy(
                 np.stack(
                     [
@@ -1001,7 +1343,7 @@ def _fit_one(
                         for match_index, window_index, lane in sampled
                     ]
                 )
-            )
+            ).to(torch_device)
             model.train()
             optimizer.zero_grad(set_to_none=True)
             predictions = model(inputs)
@@ -1019,6 +1361,12 @@ def _fit_one(
             fit_peak_rss_bytes = max(fit_peak_rss_bytes, _current_rss_bytes())
             if fit_peak_rss_bytes > worker_memory_limit_bytes:
                 raise MemoryError("16GiB_worker_memory_budget_exceeded")
+            if device == "cuda":
+                fit_peak_gpu_bytes = max(
+                    fit_peak_gpu_bytes, int(torch.cuda.max_memory_allocated(torch_device))
+                )
+                if fit_peak_gpu_bytes > MAX_GPU_ALLOCATED_BYTES:
+                    raise MemoryError("8GiB_GPU_memory_budget_exceeded")
             if not validation_due(step):
                 continue
 
@@ -1031,13 +1379,23 @@ def _fit_one(
                     regime,
                     representation,
                     fit_cpu_deadline=fit_cpu_deadline,
+                    fit_gpu_wall_deadline=(fit_gpu_wall_deadline if device == "cuda" else None),
                     campaign_cpu_deadline=campaign_cpu_deadline,
                     campaign_wall_deadline=campaign_wall_deadline,
+                    campaign_gpu_wall_deadline=(
+                        campaign_gpu_wall_deadline if device == "cuda" else None
+                    ),
                     worker_memory_limit_bytes=worker_memory_limit_bytes,
                 )
                 fit_peak_rss_bytes = max(fit_peak_rss_bytes, _current_rss_bytes())
                 if fit_peak_rss_bytes > worker_memory_limit_bytes:
                     raise MemoryError("16GiB_worker_memory_budget_exceeded")
+                if device == "cuda":
+                    fit_peak_gpu_bytes = max(
+                        fit_peak_gpu_bytes, int(torch.cuda.max_memory_allocated(torch_device))
+                    )
+                    if fit_peak_gpu_bytes > MAX_GPU_ALLOCATED_BYTES:
+                        raise MemoryError("8GiB_GPU_memory_budget_exceeded")
             match_ade = {
                 match_id: float(metrics["ade_m"]) for match_id, metrics in match_metrics.items()
             }
@@ -1062,7 +1420,10 @@ def _fit_one(
                             "selected_step": step,
                             "attempt_number": attempt_number,
                         },
-                        "state_dict": model.state_dict(),
+                        "state_dict": {
+                            key: value.detach().cpu() if device == "cuda" else value
+                            for key, value in model.state_dict().items()
+                        },
                     },
                 )
             if selection.should_stop:
@@ -1081,6 +1442,11 @@ def _fit_one(
             != selection.best_step
         ):
             raise ValueError("selected checkpoint step differs from validation selection")
+        if device == "cuda":
+            torch.cuda.synchronize(torch_device)
+            fit_peak_gpu_bytes = max(
+                fit_peak_gpu_bytes, int(torch.cuda.max_memory_allocated(torch_device))
+            )
         selected_state = cast(dict[str, Tensor], selected["state_dict"])
         if any(not torch.isfinite(value).all() for value in selected_state.values()):
             raise FloatingPointError("selected checkpoint contains non-finite parameters")
@@ -1095,6 +1461,9 @@ def _fit_one(
             "target_representation": representation,
             "seed": seed,
             "attempt_number": attempt_number,
+            "execution_device": device,
+            "session_identity": _colab_session_identity(),
+            "accelerator": dict(accelerator) if accelerator is not None else None,
             "status": "completed",
             "fit_role": "final_train",
             "train_match_ids": list(train_matches),
@@ -1121,6 +1490,10 @@ def _fit_one(
             ),
             "fit_cpu_budget_seconds": fit_cpu_budget_seconds,
             "worker_memory_limit_bytes": worker_memory_limit_bytes,
+            "fit_gpu_wall_budget_seconds": fit_gpu_wall_budget_seconds
+            if device == "cuda"
+            else None,
+            "peak_gpu_memory_allocated_bytes": fit_peak_gpu_bytes if device == "cuda" else None,
         }
         _atomic_json(partial / "receipt.json", receipt)
         if final_dir.exists():
@@ -1146,6 +1519,9 @@ def _fit_one(
             "target_representation": representation,
             "seed": seed,
             "attempt_number": attempt_number,
+            "execution_device": device,
+            "session_identity": _colab_session_identity(),
+            "accelerator": dict(accelerator) if accelerator is not None else None,
             "status": "failed",
             "fit_role": "final_train",
             "train_match_ids": list(train_matches),
@@ -1170,6 +1546,10 @@ def _fit_one(
             ),
             "fit_cpu_budget_seconds": fit_cpu_budget_seconds,
             "worker_memory_limit_bytes": worker_memory_limit_bytes,
+            "fit_gpu_wall_budget_seconds": fit_gpu_wall_budget_seconds
+            if device == "cuda"
+            else None,
+            "peak_gpu_memory_allocated_bytes": fit_peak_gpu_bytes if device == "cuda" else None,
         }
         if not final_dir.exists():
             _atomic_json(partial / "receipt.json", failed)
@@ -1227,8 +1607,23 @@ def _implementation_fingerprint() -> dict[str, str]:
         / "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/learned_deepsets.py",
         Path(__file__).resolve(),
         REPO / "tools/res338_toy_preflight.py",
+        REPO / "tools/res338_cuda_qualification.py",
+        REPO / "tools/res338_build_reference_manifest.py",
+        REPO / "tools/res338_colab_prepare.py",
+        REPO / "tools/res338_colab_setup.py",
+        REPO / "tools/res338_colab_gpu_requirements.txt",
+        REPO / "tools/res338_colab_worker.py",
+        REPO / "tools/res338_colab_job.py",
+        REPO / "tools/res338_colab_gpu_probe.py",
+        REPO / "tools/res338_cache_archive.py",
+        REPO / "tools/res338_colab_progress.py",
+        REPO / "tools/res338_drive_readback.py",
+        REPO / "tools/research_population_v1.py",
+        REPO / "tools/research_population_verifier_v1.py",
         REPO / "pyproject.toml",
         REPO / "uv.lock",
+        GPU_EXECUTION_AMENDMENT,
+        PRIVATE_CLOUD_AMENDMENT,
     )
     return {path.relative_to(REPO).as_posix(): _sha256_file(path) for path in paths}
 
@@ -1259,6 +1654,28 @@ def _verify_cached_inputs(output_root: Path, cache_receipts: Mapping[str, object
                 raise ValueError("private feature-cache array identity mismatch")
 
 
+def _verified_preloaded_cache(
+    directory: Path, match_id: str, role: str, expected: Mapping[str, object]
+) -> dict[str, object]:
+    expected_metadata_sha = str(expected["cache_metadata_sha256"])
+    payload = read_private_file(directory / "cache.json", expected_metadata_sha)
+    cache = cast(dict[str, object], json.loads(payload, object_pairs_hook=_unique_json_object))
+    identity = {key: value for key, value in expected.items() if key != "cache_metadata_sha256"}
+    if cache != identity or cache.get("match_id") != match_id or cache.get("role") != role:
+        raise ValueError("preloaded cache identity differs from its frozen private reference")
+    arrays = cast(dict[str, str], cache["arrays"])
+    expected_arrays = {f"{name}.npy" for name in (*_FEATURE_ARRAYS, *_LABEL_ARRAYS)}
+    if set(arrays) != expected_arrays:
+        raise ValueError("preloaded cache has missing or unexpected arrays")
+    members = {item.name for item in directory.iterdir()}
+    if members != expected_arrays | {"cache.json"}:
+        raise ValueError("preloaded cache directory has missing or unexpected files")
+    for name, expected_sha in arrays.items():
+        if _sha256_file(directory / name) != expected_sha:
+            raise ValueError("preloaded cache array hash differs")
+    return {**cache, "cache_metadata_sha256": expected_metadata_sha}
+
+
 def _verify_toy_preflight(
     path: Path,
     *,
@@ -1266,10 +1683,55 @@ def _verify_toy_preflight(
     protocol_sha256: str,
     code_sha: str,
     runtime_sha256: str,
+    device: str = "cpu",
 ) -> tuple[bytes, dict[str, object], str]:
     payload = _read_private_bytes(path)
     report = cast(dict[str, object], json.loads(payload, object_pairs_hook=_unique_json_object))
     digest = hashlib.sha256(payload).hexdigest()
+    if device == "cuda":
+        qualification = cast(dict[str, object], report.get("cuda_qualification", {}))
+        tolerances = cast(dict[str, object], qualification.get("numerical_tolerances", {}))
+        if (
+            report.get("schema_id") != "fpdbench.res338-cuda-qualification"
+            or report.get("schema_version") != "1.0.0"
+            or report.get("status") != "PASSED"
+            or report.get("synthetic_only") is not True
+            or report.get("real_fit_count") != 0
+            or report.get("real_evaluation_metrics") != 0
+            or report.get("evaluation_match_features") != 0
+            or report.get("real_tracking_rows_read_for_features") != 0
+            or report.get("research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+            or report.get("plan_sha256") != plan_sha256
+            or report.get("protocol_sha256") != protocol_sha256
+            or report.get("code_sha") != code_sha
+            or report.get("runtime_sha256") != runtime_sha256
+            or report.get("device") != "cuda"
+            or qualification.get("numerical_agreement") != "PASSED"
+            or qualification.get("deterministic_replay") != "BITWISE_EQUAL"
+            or set(cast(dict[str, object], qualification.get("per_regime", {})))
+            != set(INFORMATION_REGIMES)
+            or tolerances
+            != {
+                "prediction_and_masked_ade": {"rtol": 1e-4, "atol": 1e-5},
+                "gradient_and_adamw_update": {"rtol": 1e-3, "atol": 1e-5},
+            }
+            or report.get("synthetic_optimization_steps") != MAX_STEPS
+            or report.get("synthetic_validation_checks") != MAX_STEPS // VALIDATION_CADENCE
+            or report.get("synthetic_full_cadence_forced") is not True
+            or float(report.get("synthetic_fit_cpu_seconds", math.inf)) > FIT_CPU_BUDGET_SECONDS
+            or float(report.get("synthetic_fit_gpu_wall_seconds", math.inf))
+            > GPU_FIT_WALL_BUDGET_SECONDS
+            or int(report.get("synthetic_peak_rss_bytes", MAX_WORKER_RSS_BYTES + 1))
+            > MAX_WORKER_RSS_BYTES
+            or int(report.get("synthetic_peak_cuda_memory_bytes", MAX_GPU_ALLOCATED_BYTES + 1))
+            > MAX_GPU_ALLOCATED_BYTES
+            or int(report.get("available_disk_bytes", 0))
+            < int(report.get("estimated_private_cache_bytes_with_32_tracks_per_team", 0))
+            + GPU_PRIVATE_DISK_RESERVE_BYTES
+        ):
+            raise ValueError("synthetic CUDA qualification did not pass the frozen limits")
+        return payload, report, digest
+
     rehash = cast(dict[str, object], report.get("population_rehash", {}))
     if (
         report.get("schema_id") != "fpdbench.res338-toy-preflight"
@@ -1297,7 +1759,8 @@ def _verify_toy_preflight(
         or float(report.get("synthetic_fit_cpu_seconds", math.inf)) > FIT_CPU_BUDGET_SECONDS
         or int(report.get("synthetic_peak_rss_bytes", MAX_WORKER_RSS_BYTES + 1))
         > int(report.get("effective_worker_memory_limit_bytes", MAX_WORKER_RSS_BYTES))
-        or int(report.get("estimated_private_cache_bytes_with_32_tracks_per_team", 0)) + 1024**3
+        or int(report.get("estimated_private_cache_bytes_with_32_tracks_per_team", 0))
+        + DEFAULT_PRIVATE_DISK_RESERVE_BYTES
         > int(report.get("available_disk_bytes", 0))
     ):
         raise ValueError("toy-only CPU and disk preflight did not pass the frozen limits")
@@ -1313,6 +1776,7 @@ def _verify_committed_run(
     validation_matches: Sequence[str],
     plan_sha256: str,
     protocol_sha256: str,
+    device: str = "cpu",
 ) -> None:
     run_id = _fit_run_id(fit)
     if ledger_item.get("run_id") != run_id or ledger_item.get("status") != "completed":
@@ -1330,6 +1794,7 @@ def _verify_committed_run(
         validation_matches,
         plan_sha256,
         protocol_sha256,
+        device,
     )
     expected_config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
     if (
@@ -1337,9 +1802,23 @@ def _verify_committed_run(
         or receipt.get("status") != "completed"
         or receipt.get("configuration_sha256") != expected_config_sha256
         or receipt.get("environment_sha256") != environment_sha256
+        or receipt.get("execution_device") != device
         or receipt.get("checkpoint_sha256") != ledger_item.get("checkpoint_sha256")
     ):
         raise ValueError("committed run receipt differs from the frozen configuration")
+    if device == "cuda":
+        accelerator = cast(dict[str, object] | None, receipt.get("accelerator"))
+        session = cast(dict[str, object], receipt.get("session_identity", {}))
+        if (
+            not accelerator
+            or not accelerator.get("name")
+            or not accelerator.get("driver_version")
+            or not session.get("session_name")
+            or not session.get("session_id")
+            or int(receipt.get("peak_gpu_memory_allocated_bytes", MAX_GPU_ALLOCATED_BYTES + 1))
+            > MAX_GPU_ALLOCATED_BYTES
+        ):
+            raise ValueError("GPU runtime identity or memory receipt is incomplete")
     checkpoint = run_dir / "checkpoint.pt"
     loaded = load_checkpoint_verified(checkpoint, str(receipt["checkpoint_sha256"]))
     metadata = cast(dict[str, object], loaded["metadata"])
@@ -1373,8 +1852,50 @@ def run_campaign(
     *,
     resume: bool = False,
     retry_interrupted_run: str | None = None,
+    device: str = "cpu",
+    research_scope: str = "full",
+    reference_manifest_path: Path | None = None,
+    reference_manifest_sha256: str | None = None,
+    preloaded_cache_root: Path | None = None,
+    toy_preflight_path: Path | None = None,
+    max_new_fits: int | None = None,
+    prepare_only: bool = False,
 ) -> dict[str, object]:
     os.umask(0o077)
+    if device not in {"cpu", "cuda"}:
+        raise ValueError("device must be cpu or cuda")
+    if research_scope not in {"full", "training-validation"}:
+        raise ValueError("unknown research scope")
+    if device == "cuda" and research_scope != "training-validation":
+        raise ValueError("GPU final fits must use the training/validation-only scope")
+    if research_scope == "training-validation" and reference_manifest_path is None:
+        raise ValueError("training-validation scope requires its projected reference manifest")
+    if preloaded_cache_root is not None and research_scope != "training-validation":
+        raise ValueError("preloaded research caches require the training-validation scope")
+    if max_new_fits is not None and max_new_fits <= 0:
+        raise ValueError("max_new_fits must be a positive integer")
+    if prepare_only and (resume or retry_interrupted_run is not None or max_new_fits is not None):
+        raise ValueError(
+            "prepare-only mode is fresh and cannot be combined with resume or fit limits"
+        )
+    if device == "cuda":
+        affinity = os.sched_getaffinity(0)
+        if not affinity:
+            raise RuntimeError("the GPU worker has no CPU affinity")
+        os.sched_setaffinity(0, {min(affinity)})
+        if not GPU_EXECUTION_AMENDMENT.is_file() or not PRIVATE_CLOUD_AMENDMENT.is_file():
+            raise FileNotFoundError("the frozen GPU and private-cloud amendments are required")
+    required_disk_reserve_bytes = (
+        GPU_PRIVATE_DISK_RESERVE_BYTES if device == "cuda" else DEFAULT_PRIVATE_DISK_RESERVE_BYTES
+    )
+    if reference_manifest_path is not None:
+        if reference_manifest_sha256 is None or _sha256_file(reference_manifest_path) != (
+            reference_manifest_sha256
+        ):
+            raise ValueError("training-validation reference hash differs")
+    toy_preflight_path = toy_preflight_path or TOY_PREFLIGHT_PATH
+    gpu_amendment_sha256 = _sha256_file(GPU_EXECUTION_AMENDMENT) if device == "cuda" else None
+    cloud_amendment_sha256 = _sha256_file(PRIVATE_CLOUD_AMENDMENT) if device == "cuda" else None
     if not output_root.is_absolute():
         raise ValueError("private evidence output must use an absolute path")
     fresh = not output_root.exists()
@@ -1427,11 +1948,23 @@ def run_campaign(
             campaign_started_at = str(freeze["campaign_started_at_utc"])
             preparation_cpu_start = time.process_time()
 
-        runtime = _validate_training_runtime()
+        runtime = _validate_training_runtime(device)
         plan, protocol, roles = _frozen_split_and_authorities()
-        research_manifest, population_rehash = verify_research_population(
-            research_root, source_root, plan, roles
-        )
+        if research_scope == "full":
+            research_manifest, population_rehash = verify_research_population(
+                research_root, source_root, plan, roles
+            )
+        else:
+            assert reference_manifest_path is not None and reference_manifest_sha256 is not None
+            research_manifest, population_rehash = verify_training_validation_population(
+                research_root,
+                source_root,
+                reference_manifest_path,
+                reference_manifest_sha256,
+                plan,
+                roles,
+            )
+            roles = {role: roles[role] for role in ("training", "validation")}
         train_matches, validation_matches = roles["training"], roles["validation"]
         if set(train_matches) & set(validation_matches):
             raise ValueError("training and validation match roles must be disjoint")
@@ -1439,17 +1972,18 @@ def run_campaign(
         plan_sha256 = str(plan["plan_sha256"])
         protocol_sha256 = str(protocol["protocol_sha256"])
         six_configs = _six_frozen_configurations(plan_sha256, protocol_sha256)
-        runtime_sha256 = hashlib.sha256(_canonical(runtime)).hexdigest()
+        runtime_sha256 = _training_environment_sha256(runtime)
         implementation = _implementation_fingerprint()
         code_sha = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=REPO, text=True
         ).strip()
         toy_payload, toy_report, toy_preflight_sha256 = _verify_toy_preflight(
-            TOY_PREFLIGHT_PATH,
+            toy_preflight_path,
             plan_sha256=plan_sha256,
             protocol_sha256=protocol_sha256,
             code_sha=code_sha,
             runtime_sha256=runtime_sha256,
+            device=device,
         )
         if time.monotonic() - campaign_wall_start >= CAMPAIGN_WALL_BUDGET_SECONDS:
             raise TimeoutError("campaign_wall_budget_exceeded")
@@ -1457,6 +1991,25 @@ def run_campaign(
         if fresh:
             resource_state = _resource_fingerprint(output_root)
             cache_receipts: dict[str, dict[str, object]] = {}
+            preloaded_identities = cast(
+                dict[str, dict[str, object]],
+                research_manifest.get("preloaded_cache_identities", {}),
+            )
+            preloaded_matches = set(preloaded_identities)
+            if device == "cuda" and len(preloaded_matches) != 6:
+                raise ValueError("the GPU preparation reference must bind all six completed caches")
+            if preloaded_matches:
+                if preloaded_cache_root is None:
+                    raise ValueError(
+                        "frozen preloaded caches must be staged before cache preparation"
+                    )
+                with source.private_directory(preloaded_cache_root):
+                    pass
+                if {item.name for item in preloaded_cache_root.iterdir()} != {"training"}:
+                    raise ValueError("staged cache root contains a nontraining cache role")
+                training_root = preloaded_cache_root / "training"
+                if {item.name for item in training_root.iterdir()} != preloaded_matches:
+                    raise ValueError("staged cache set differs from the six frozen training caches")
             for role, matches in (("training", train_matches), ("validation", validation_matches)):
                 for match_id in matches:
                     if time.process_time() - preparation_cpu_start >= (
@@ -1465,13 +2018,26 @@ def run_campaign(
                         raise TimeoutError("campaign_preparation_cpu_budget_exceeded")
                     if time.monotonic() - campaign_wall_start >= CAMPAIGN_WALL_BUDGET_SECONDS:
                         raise TimeoutError("campaign_wall_budget_exceeded")
-                    cache_receipts[match_id] = _build_match_cache(
-                        research_root,
-                        output_root / "feature-cache",
-                        match_id,
-                        role,
-                        research_manifest,
-                    )
+                    if match_id in preloaded_matches:
+                        identity = _verified_preloaded_cache(
+                            preloaded_cache_root / role / match_id,
+                            match_id,
+                            role,
+                            preloaded_identities[match_id],
+                        )
+                        target = output_root / "feature-cache" / role / match_id
+                        target.parent.mkdir(mode=0o700, exist_ok=True)
+                        shutil.copytree(preloaded_cache_root / role / match_id, target)
+                        cache_receipts[match_id] = identity
+                    else:
+                        cache_receipts[match_id] = _build_match_cache(
+                            research_root,
+                            output_root / "feature-cache",
+                            match_id,
+                            role,
+                            research_manifest,
+                            required_disk_reserve_bytes,
+                        )
             target_mask_identity = hashlib.sha256(
                 _canonical(
                     {
@@ -1482,6 +2048,13 @@ def run_campaign(
             ).hexdigest()
             fit_resource_state = _resource_fingerprint(output_root)
             worker_memory_limit = int(fit_resource_state["effective_worker_memory_limit_bytes"])
+            feature_cache_bytes = sum(
+                path.stat().st_size
+                for path in (output_root / "feature-cache").rglob("*")
+                if path.is_file()
+            )
+            if int(fit_resource_state["disk_available_bytes"]) < required_disk_reserve_bytes:
+                raise OSError("frozen private disk reserve is required before training")
             if _current_rss_bytes() > worker_memory_limit:
                 raise MemoryError("worker RSS exceeds available host memory before fitting")
             preparation_cpu_seconds = round(time.process_time() - preparation_cpu_start, 6)
@@ -1510,6 +2083,11 @@ def run_campaign(
                 },
                 "research_contract": f"{RESEARCH_SCHEMA}/{RESEARCH_VERSION}",
                 "research_manifest_sha256": RESEARCH_MANIFEST_SHA256,
+                "research_scope": research_scope,
+                "research_projection_sha256": population_rehash.get(
+                    "projected_research_admission_sha256"
+                ),
+                "reference_manifest_sha256": reference_manifest_sha256,
                 "source_release_hash": research_manifest["source_release_hash"],
                 "source_population_hash": research_manifest["source_population_hash"],
                 "source_inventory_sha256": research_manifest["source_inventory_sha256"],
@@ -1523,6 +2101,10 @@ def run_campaign(
                 "measurement_state_hash": population_authority["measurement_state_hash"],
                 "eligibility_policy_hash": population_authority["eligibility_policy_hash"],
                 "model_id": MODEL_ID,
+                "training_device": device,
+                "gpu_execution_amendment_sha256": gpu_amendment_sha256,
+                "private_cloud_amendment_sha256": cloud_amendment_sha256,
+                "session_identity_at_freeze": _colab_session_identity(),
                 "architecture": model_spec["architecture"],
                 "head_feature_layout": HEAD_FEATURE_LAYOUT,
                 "track_pooling": TRACK_POOLING,
@@ -1556,10 +2138,12 @@ def run_campaign(
                         "synthetic_fit_cpu_seconds",
                         "synthetic_fit_wall_seconds",
                         "synthetic_peak_rss_bytes",
+                        "synthetic_peak_cuda_memory_bytes",
                         "effective_worker_memory_limit_bytes",
                         "estimated_private_cache_bytes_with_32_tracks_per_team",
                         "available_disk_bytes",
                     )
+                    if key in toy_report
                 },
                 "seeds": list(SEEDS),
                 "fit_order": configs,
@@ -1587,6 +2171,18 @@ def run_campaign(
                     "maximum_steps": MAX_STEPS,
                     "per_fit_cpu_seconds": FIT_CPU_BUDGET_SECONDS,
                     "per_fit_retry_cpu_seconds": 0.25 * 3600,
+                    "per_fit_gpu_wall_seconds": (
+                        GPU_FIT_WALL_BUDGET_SECONDS if device == "cuda" else None
+                    ),
+                    "per_fit_gpu_retry_wall_seconds": (
+                        GPU_RETRY_WALL_BUDGET_SECONDS if device == "cuda" else None
+                    ),
+                    "campaign_gpu_wall_seconds": (
+                        GPU_CAMPAIGN_BUDGET_SECONDS if device == "cuda" else None
+                    ),
+                    "maximum_gpu_memory_allocated_bytes": (
+                        MAX_GPU_ALLOCATED_BYTES if device == "cuda" else None
+                    ),
                     "campaign_training_cpu_seconds": CAMPAIGN_CPU_BUDGET_SECONDS,
                     "campaign_preparation_cpu_seconds": CAMPAIGN_PREPARATION_CPU_BUDGET_SECONDS,
                     "campaign_wall_seconds": CAMPAIGN_WALL_BUDGET_SECONDS,
@@ -1595,6 +2191,8 @@ def run_campaign(
                 "preparation_wall_seconds": preparation_wall_seconds,
                 "target_mask_identity_sha256": target_mask_identity,
                 "feature_cache": cache_receipts,
+                "feature_cache_total_bytes": feature_cache_bytes,
+                "private_disk_reserve_before_fit_bytes": required_disk_reserve_bytes,
                 "runtime": runtime,
                 "runtime_sha256": runtime_sha256,
                 "host_resources_before_cache": resource_state,
@@ -1605,12 +2203,14 @@ def run_campaign(
                 "research_admission_amendment_sha256": _sha256_file(
                     REPO / "docs/research-population-admission-v1.md"
                 ),
+                "research_private_cloud_amendment_sha256": cloud_amendment_sha256,
+                "research_gpu_execution_amendment_sha256": gpu_amendment_sha256,
                 "data_rights_policy_sha256": _sha256_file(REPO / "docs/data-rights.md"),
                 "configuration_sha256": hashlib.sha256(_canonical(configs)).hexdigest(),
                 "environment_sha256": runtime_sha256,
                 "artifacts_policy": (
-                    "row-level cache, run receipts, and checkpoints remain private; no "
-                    "evaluation-role data is loaded for feature extraction"
+                    "training/validation row-level caches, receipts, and checkpoints remain "
+                    "owner-private; no evaluation-role files or labels are loaded"
                 ),
                 "evaluation_scoring": "not run",
                 "learned_lomo": "not run",
@@ -1627,6 +2227,9 @@ def run_campaign(
                 "completed_fit_count": 0,
                 "failed_fit_count": 0,
                 "reserved_training_cpu_seconds": 0.0,
+                "reserved_gpu_wall_seconds": 0.0,
+                "recorded_gpu_wall_seconds": 0.0,
+                "gpu_training_started_at_utc": None,
                 "current_run_id": None,
                 "current_attempt": None,
                 "current_configuration_sha256": None,
@@ -1639,6 +2242,10 @@ def run_campaign(
             if (
                 freeze.get("schema_id") != "fpdbench.res338-research-final-fit-campaign"
                 or freeze.get("research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+                or freeze.get("research_scope") != research_scope
+                or freeze.get("research_projection_sha256")
+                != population_rehash.get("projected_research_admission_sha256")
+                or freeze.get("reference_manifest_sha256") != reference_manifest_sha256
                 or freeze.get("source_release_hash") != research_manifest["source_release_hash"]
                 or freeze.get("source_population_hash")
                 != research_manifest["source_population_hash"]
@@ -1646,6 +2253,9 @@ def run_campaign(
                 or freeze.get("protocol_sha256") != protocol_sha256
                 or freeze.get("research_roles") != roles
                 or freeze.get("runtime_sha256") != runtime_sha256
+                or freeze.get("training_device") != device
+                or freeze.get("gpu_execution_amendment_sha256") != gpu_amendment_sha256
+                or freeze.get("private_cloud_amendment_sha256") != cloud_amendment_sha256
                 or freeze.get("code_sha") != code_sha
                 or freeze.get("implementation_files") != implementation
                 or freeze.get("toy_preflight_sha256") != toy_preflight_sha256
@@ -1660,6 +2270,13 @@ def run_campaign(
             worker_memory_limit = int(freeze["worker_memory_limit_bytes"])
             if int(fit_resource_state["memory_available_bytes"]) < worker_memory_limit:
                 raise RuntimeError("available host memory is below the frozen worker limit")
+            if int(fit_resource_state["disk_available_bytes"]) < int(
+                freeze.get(
+                    "private_disk_reserve_before_fit_bytes",
+                    DEFAULT_PRIVATE_DISK_RESERVE_BYTES,
+                )
+            ):
+                raise RuntimeError("available private disk is below the frozen reserve")
             if _current_rss_bytes() > worker_memory_limit:
                 raise MemoryError("worker RSS exceeds available host memory before fitting")
             ledger = prior_ledger
@@ -1722,12 +2339,21 @@ def run_campaign(
                 validation_matches,
                 plan_sha256,
                 protocol_sha256,
+                device,
             )
             completed_ids.add(run_id)
         if int(ledger["completed_fit_count"]) != len(completed_ids):
             raise ValueError("campaign coverage count differs from committed fit receipts")
         if int(ledger["failed_fit_count"]):
             raise RuntimeError("failed scientific fits are terminal and cannot be retried")
+        if prepare_only:
+            if not fresh or completed_ids:
+                raise RuntimeError(
+                    "prepare-only mode requires a fresh campaign with zero real fits"
+                )
+            ledger["status"] = "PREPARED"
+            _atomic_json(output_root / "campaign.json", ledger)
+            return ledger
 
         current_run_id = cast(str | None, ledger.get("current_run_id"))
         retry_id: str | None = None
@@ -1750,6 +2376,7 @@ def run_campaign(
                 validation_matches,
                 plan_sha256,
                 protocol_sha256,
+                device,
             )
             current_config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
             if current_config_sha256 != ledger.get("current_configuration_sha256"):
@@ -1771,6 +2398,7 @@ def run_campaign(
                     "optimizer_steps": receipt["optimizer_steps"],
                     "fit_cpu_seconds": receipt["fit_cpu_seconds"],
                     "fit_wall_seconds": receipt["fit_wall_seconds"],
+                    "gpu_wall_seconds": (receipt["fit_wall_seconds"] if device == "cuda" else 0.0),
                     "peak_rss_bytes": receipt["peak_rss_bytes"],
                     "stopping_reason": receipt["stopping_reason"],
                 }
@@ -1784,6 +2412,7 @@ def run_campaign(
                         validation_matches,
                         plan_sha256,
                         protocol_sha256,
+                        device,
                     )
                     completed_ids.add(current_run_id)
                     ledger["completed_fit_count"] = int(ledger["completed_fit_count"]) + 1
@@ -1854,12 +2483,39 @@ def run_campaign(
             raise RuntimeError("incomplete scientific campaign cannot be resumed")
 
         campaign_cpu_start = time.process_time()
+        campaign_gpu_start: float | None = None
+        if device == "cuda":
+            gpu_started_at = cast(str | None, ledger.get("gpu_training_started_at_utc"))
+            if gpu_started_at is None:
+                gpu_started_at = datetime.now(UTC).isoformat()
+                ledger["gpu_training_started_at_utc"] = gpu_started_at
+                _atomic_json(output_root / "campaign.json", ledger)
+            elapsed_gpu = max(
+                0.0,
+                (datetime.now(UTC) - datetime.fromisoformat(gpu_started_at)).total_seconds(),
+            )
+            campaign_gpu_start = time.monotonic() - elapsed_gpu
+        newly_completed = 0
         for fit in configs:
             run_id = _fit_run_id(fit)
             if run_id in completed_ids:
                 continue
+            _verify_cached_inputs(output_root, cast(dict[str, object], cache_receipts))
+            if hashlib.sha256(_canonical(configs)).hexdigest() != freeze.get(
+                "configuration_sha256"
+            ):
+                raise ValueError("fit schedule changed after the frozen campaign manifest")
             attempt_number = 2 if run_id == retry_id else 1
             fit_cpu_budget = 0.25 * 3600 if attempt_number == 2 else FIT_CPU_BUDGET_SECONDS
+            fit_gpu_wall_budget = (
+                (
+                    GPU_RETRY_WALL_BUDGET_SECONDS
+                    if attempt_number == 2
+                    else GPU_FIT_WALL_BUDGET_SECONDS
+                )
+                if device == "cuda"
+                else 0.0
+            )
             if time.monotonic() >= campaign_wall_start + CAMPAIGN_WALL_BUDGET_SECONDS:
                 ledger["status"] = "INCOMPLETE"
                 ledger["campaign_stop_reason"] = "campaign_wall_budget_exceeded"
@@ -1873,6 +2529,13 @@ def run_campaign(
                 _refresh_resource_totals(ledger, freeze, campaign_wall_start, campaign_cpu_start)
                 _atomic_json(output_root / "campaign.json", ledger)
                 return ledger
+            reserved_gpu = float(ledger.get("reserved_gpu_wall_seconds", 0.0)) + fit_gpu_wall_budget
+            if device == "cuda" and reserved_gpu > GPU_CAMPAIGN_BUDGET_SECONDS:
+                ledger["status"] = "INCOMPLETE"
+                ledger["campaign_stop_reason"] = "campaign_gpu_wall_budget_exceeded"
+                _refresh_resource_totals(ledger, freeze, campaign_wall_start, campaign_cpu_start)
+                _atomic_json(output_root / "campaign.json", ledger)
+                return ledger
             config = _per_fit_config(
                 cast(InformationRegime, fit["information_regime"]),
                 cast(TargetRepresentation, fit["target_representation"]),
@@ -1881,6 +2544,7 @@ def run_campaign(
                 validation_matches,
                 plan_sha256,
                 protocol_sha256,
+                device,
             )
             config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
             attempt_log = cast(dict[str, list[dict[str, object]]], ledger["attempt_history"])
@@ -1893,6 +2557,7 @@ def run_campaign(
                 "status": "running",
                 "started_at_utc": datetime.now(UTC).isoformat(),
                 "cpu_budget_seconds": fit_cpu_budget,
+                "gpu_wall_budget_seconds": fit_gpu_wall_budget if device == "cuda" else None,
                 "oom_kill_count_before": oom_count,
                 "configuration_sha256": config_sha256,
             }
@@ -1902,6 +2567,7 @@ def run_campaign(
             ledger["current_attempt"] = attempt_number
             ledger["current_configuration_sha256"] = config_sha256
             ledger["reserved_training_cpu_seconds"] = reserved
+            ledger["reserved_gpu_wall_seconds"] = reserved_gpu
             _atomic_json(output_root / "campaign.json", ledger)
 
             receipt = _fit_one(
@@ -1919,8 +2585,14 @@ def run_campaign(
                 environment_sha256=runtime_sha256,
                 campaign_cpu_start=campaign_cpu_start,
                 campaign_wall_start=campaign_wall_start,
+                campaign_gpu_start=campaign_gpu_start,
+                device=device,
+                accelerator=cast(dict[str, object] | None, runtime.get("accelerator")),
                 attempt_number=attempt_number,
                 fit_cpu_budget_seconds=fit_cpu_budget,
+                fit_gpu_wall_budget_seconds=(
+                    fit_gpu_wall_budget if device == "cuda" else GPU_FIT_WALL_BUDGET_SECONDS
+                ),
                 worker_memory_limit_bytes=worker_memory_limit,
             )
             run_receipt_path = output_root / "runs" / run_id.replace("|", "--") / "receipt.json"
@@ -1929,6 +2601,8 @@ def run_campaign(
                 fit_cpu_seconds=receipt["fit_cpu_seconds"],
                 fit_wall_seconds=receipt["fit_wall_seconds"],
                 peak_rss_bytes=receipt["peak_rss_bytes"],
+                peak_gpu_memory_allocated_bytes=receipt.get("peak_gpu_memory_allocated_bytes"),
+                gpu_wall_seconds=receipt.get("fit_wall_seconds") if device == "cuda" else None,
                 stopping_reason=receipt["stopping_reason"],
                 finished_at_utc=datetime.now(UTC).isoformat(),
             )
@@ -1943,6 +2617,10 @@ def run_campaign(
                     "fit_cpu_seconds": receipt["fit_cpu_seconds"],
                     "fit_wall_seconds": receipt["fit_wall_seconds"],
                     "peak_rss_bytes": receipt["peak_rss_bytes"],
+                    "execution_device": receipt.get("execution_device", device),
+                    "peak_gpu_memory_allocated_bytes": receipt.get(
+                        "peak_gpu_memory_allocated_bytes"
+                    ),
                     "stopping_reason": receipt["stopping_reason"],
                 }
             )
@@ -1953,12 +2631,22 @@ def run_campaign(
             if receipt["status"] == "completed":
                 ledger["completed_fit_count"] = int(ledger["completed_fit_count"]) + 1
                 completed_ids.add(run_id)
+                newly_completed += 1
             else:
                 ledger["failed_fit_count"] = int(ledger["failed_fit_count"]) + 1
                 ledger["status"] = "INCOMPLETE"
                 _atomic_json(output_root / "campaign.json", ledger)
                 return ledger
             _atomic_json(output_root / "campaign.json", ledger)
+            if max_new_fits is not None and newly_completed >= max_new_fits:
+                if len(completed_ids) == 18:
+                    ledger["status"] = "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+                    _refresh_resource_totals(
+                        ledger, freeze, campaign_wall_start, campaign_cpu_start
+                    )
+                    ledger["fit_coverage"] = [str(item["run_id"]) for item in ledger["runs"]]
+                    _atomic_json(output_root / "campaign.json", ledger)
+                return ledger
 
         if len(completed_ids) != 18:
             ledger["status"] = "INCOMPLETE"
@@ -2010,6 +2698,14 @@ def main() -> None:
     )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--retry-interrupted-run")
+    parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument("--research-scope", choices=("full", "training-validation"), default="full")
+    parser.add_argument("--reference-manifest", type=Path)
+    parser.add_argument("--reference-manifest-sha256")
+    parser.add_argument("--preloaded-cache-root", type=Path)
+    parser.add_argument("--toy-preflight", type=Path)
+    parser.add_argument("--max-new-fits", type=int)
+    parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     if args.retry_interrupted_run and not args.resume:
         parser.error("--retry-interrupted-run requires --resume")
@@ -2019,9 +2715,21 @@ def main() -> None:
         args.output_root,
         resume=args.resume,
         retry_interrupted_run=args.retry_interrupted_run,
+        device=args.device,
+        research_scope=args.research_scope,
+        reference_manifest_path=args.reference_manifest,
+        reference_manifest_sha256=args.reference_manifest_sha256,
+        preloaded_cache_root=args.preloaded_cache_root,
+        toy_preflight_path=args.toy_preflight,
+        max_new_fits=args.max_new_fits,
+        prepare_only=args.prepare_only,
     )
     print(json.dumps(result, sort_keys=True))
-    if result["status"] != "RES338_RESEARCH_FINAL_FITS_COMPLETE":
+    if (
+        result["status"] != "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+        and not (args.prepare_only and result["status"] == "PREPARED")
+        and not (args.max_new_fits is not None and result["status"] == "RUNNING")
+    ):
         raise SystemExit(2)
 
 
