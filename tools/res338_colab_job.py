@@ -224,7 +224,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "kind",
-        choices=("probe", "prepare", "qualify", "prepare-campaign", "fit-one", "pack-caches"),
+        choices=(
+            "probe",
+            "prepare",
+            "qualify",
+            "stage-preloaded",
+            "prepare-campaign",
+            "fit-one",
+            "pack-caches",
+        ),
     )
     args = parser.parse_args()
     try:

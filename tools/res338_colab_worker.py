@@ -115,14 +115,17 @@ def status() -> dict[str, object]:
         try:
             os.kill(int(current["pid"]), 0)
         except (KeyError, ProcessLookupError):
-            current.update(
-                status="INTERRUPTED",
-                interrupted_at_utc=datetime.now(UTC).isoformat(),
-                interruption_reason=(
-                    "supervised process disappeared before writing a terminal status"
-                ),
-            )
-            _write_json(JOBS / f"{current['job_id']}.json", current)
+            status_path = JOBS / f"{current['job_id']}.json"
+            current = _read_json(status_path)
+            if current.get("status") in {"STARTING", "RUNNING"}:
+                current.update(
+                    status="INTERRUPTED",
+                    interrupted_at_utc=datetime.now(UTC).isoformat(),
+                    interruption_reason=(
+                        "supervised process disappeared before writing a terminal status"
+                    ),
+                )
+                _write_json(status_path, current)
     summary = {
         key: current.get(key)
         for key in (
