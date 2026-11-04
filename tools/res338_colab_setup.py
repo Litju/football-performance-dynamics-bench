@@ -96,10 +96,11 @@ def setup() -> dict[str, object]:
         _run([uv, "venv", "--python", "3.12.8", str(ROOT / "venv")], env=env)
     _run(
         [
-            str(VENV_PYTHON),
-            "-m",
+            uv,
             "pip",
             "install",
+            "--python",
+            str(VENV_PYTHON),
             "--disable-pip-version-check",
             "--index-url",
             PYPI_INDEX,

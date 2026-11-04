@@ -73,6 +73,9 @@ def probe(output: Path = OUTPUT) -> dict[str, object]:
     nvidia_smi = shutil.which("nvidia-smi")
     if not nvidia_smi:
         raise RuntimeError("nvidia-smi is unavailable; refusing a CPU fallback")
+    torch.cuda.init()
+    properties = torch.cuda.get_device_properties(0)
+    free_bytes, total_bytes = torch.cuda.mem_get_info(0)
     rows = (
         subprocess.check_output(
             [
@@ -93,11 +96,10 @@ def probe(output: Path = OUTPUT) -> dict[str, object]:
     )
     if index != "0" or torch.cuda.get_device_name(0) != name:
         raise RuntimeError("nvidia-smi and PyTorch disagree on the assigned GPU")
-    free_bytes, total_bytes = torch.cuda.mem_get_info(0)
-    if total_bytes != int(torch.cuda.get_device_properties(0).total_memory):
+    if total_bytes != int(properties.total_memory):
         raise RuntimeError("PyTorch CUDA memory APIs disagree on visible GPU memory")
     memory = gpu_memory_fingerprint(
-        int(torch.cuda.get_device_properties(0).total_memory),
+        int(properties.total_memory),
         int(free_bytes),
         int(memory_total_mib),
         int(memory_free_mib),
