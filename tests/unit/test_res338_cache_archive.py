@@ -22,6 +22,7 @@ from res338_cache_archive import (  # noqa: E402
     restore_manifests,
     split_archive,
     stage_preloaded_chunks,
+    stage_training_validation_chunks,
 )
 from train_res338_final_fits import _FEATURE_ARRAYS, _LABEL_ARRAYS  # noqa: E402
 
@@ -188,15 +189,26 @@ def test_training_validation_cache_pack_creates_content_addressed_indexes(
     tmp_path: Path,
 ) -> None:
     cache_root = tmp_path / "feature-cache"
-    _cache(cache_root, "training", "train-1")
-    _cache(cache_root, "validation", "validation-1")
+    training_matches = [f"train-{index}" for index in range(12)]
+    validation_matches = [f"validation-{index}" for index in range(4)]
+    for match_id in training_matches:
+        _cache(cache_root, "training", match_id)
+    for match_id in validation_matches:
+        _cache(cache_root, "validation", match_id)
+    training_cache_root = cache_root / "training"
+    preloaded = {}
+    for match_id in training_matches[:6]:
+        cache_path = training_cache_root / match_id / "cache.json"
+        preloaded[match_id] = {
+            **json.loads(cache_path.read_text()),
+            "cache_metadata_sha256": hashlib.sha256(cache_path.read_bytes()).hexdigest(),
+        }
     reference = {
         "roles": {
-            "training": ["train-1"],
-            "validation": ["validation-1"],
-            "evaluation": ["eval-1"],
+            "training": training_matches,
+            "validation": validation_matches,
         },
-        "preloaded_cache_identities": {"train-1": {}},
+        "preloaded_cache_identities": preloaded,
     }
     reference_bytes = json.dumps(reference, sort_keys=True, separators=(",", ":")).encode()
     reference_path = tmp_path / "reference.json"
@@ -210,9 +222,9 @@ def test_training_validation_cache_pack_creates_content_addressed_indexes(
         hashlib.sha256(reference_bytes).hexdigest(),
     )
 
-    assert result["cache_archive_count"] == 2
-    assert result["chunk_archive_count"] == 2
-    assert result["chunk_count"] == 2
+    assert result["cache_archive_count"] == 16
+    assert result["chunk_archive_count"] == 16
+    assert result["chunk_count"] == 16
     archive_index = json.loads(Path(str(result["archive_index_path"])).read_bytes())
     chunk_index = json.loads(Path(str(result["chunk_index_path"])).read_bytes())
     assert {row["role"] for row in archive_index["archives"]} == {
@@ -223,7 +235,40 @@ def test_training_validation_cache_pack_creates_content_addressed_indexes(
         "training",
         "validation",
     }
-    assert {row["match_id"] for row in chunk_index["archives"]} == {
-        "train-1",
-        "validation-1",
-    }
+    assert {row["match_id"] for row in chunk_index["archives"]} == set(
+        training_matches + validation_matches
+    )
+
+    chunk_directory = Path(str(result["chunk_index_path"])).parent
+    archive_directory = tmp_path / "restored-archives"
+    restored_root = tmp_path / "restored-cache"
+    for _ in range(2):
+        staged = stage_training_validation_chunks(
+            Path(str(result["chunk_index_path"])),
+            str(result["chunk_index_sha256"]),
+            reference_path,
+            hashlib.sha256(reference_bytes).hexdigest(),
+            chunk_directory,
+            archive_directory,
+            restored_root,
+        )
+        assert staged["cache_count"] == 16
+        assert staged["recovered_partial_cache_count"] == 0
+
+    corrupt = restored_root / "training" / training_matches[0] / "cache.json"
+    corrupt.chmod(0o600)
+    corrupt.write_text("corrupt")
+    staged = stage_training_validation_chunks(
+        Path(str(result["chunk_index_path"])),
+        str(result["chunk_index_sha256"]),
+        reference_path,
+        hashlib.sha256(reference_bytes).hexdigest(),
+        chunk_directory,
+        archive_directory,
+        restored_root,
+    )
+    assert staged["recovered_partial_cache_count"] == 1
+    assert (restored_root / "training" / training_matches[0] / "cache.json").read_bytes() == (
+        cache_root / "training" / training_matches[0] / "cache.json"
+    ).read_bytes()
+    assert len(list((restored_root.parent / "interrupted-cache-staging").iterdir())) == 1

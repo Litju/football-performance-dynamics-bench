@@ -9,6 +9,7 @@ import os
 import re
 import stat
 import tarfile
+import uuid
 from pathlib import Path, PurePosixPath
 from typing import cast
 
@@ -636,6 +637,115 @@ def stage_preloaded_chunks(
     return {"status": "STAGED", "cache_count": len(descriptors), "role": "training"}
 
 
+def _verify_extracted_cache(directory: Path, manifest: dict[str, object]) -> None:
+    role, match_id = str(manifest["role"]), str(manifest["match_id"])
+    files = cast(list[dict[str, object]], manifest["files"])
+    expected = {str(row["name"]): row for row in files}
+    if (
+        role not in {"training", "validation"}
+        or len(expected) != len(files)
+        or set(expected) != {"cache.json", *(f"{name}.npy" for name in ARRAYS)}
+        or directory.is_symlink()
+        or not directory.is_dir()
+        or {item.name for item in directory.iterdir()} != set(expected)
+    ):
+        raise ValueError("restored cache directory differs from its archive manifest")
+    for name, row in expected.items():
+        if _hash(directory / name) != (str(row["sha256"]), int(row["size_bytes"])):
+            raise ValueError("restored cache file differs from its archive manifest")
+    cache = trainer._read_private_json(directory / "cache.json")
+    arrays = {name: str(row["sha256"]) for name, row in expected.items() if name.endswith(".npy")}
+    if (
+        hashlib.sha256((directory / "cache.json").read_bytes()).hexdigest()
+        != manifest["cache_metadata_sha256"]
+        or cache.get("match_id") != match_id
+        or cache.get("role") != role
+        or cache.get("arrays") != arrays
+    ):
+        raise ValueError("restored cache metadata differs from its archive manifest")
+
+
+def stage_training_validation_chunks(
+    index_path: Path,
+    expected_index_sha256: str,
+    reference_path: Path,
+    reference_sha256: str,
+    chunk_directory: Path,
+    archive_directory: Path,
+    cache_root: Path,
+) -> dict[str, object]:
+    index_bytes = index_path.read_bytes()
+    reference_bytes = reference_path.read_bytes()
+    if (
+        hashlib.sha256(index_bytes).hexdigest() != expected_index_sha256
+        or hashlib.sha256(reference_bytes).hexdigest() != reference_sha256
+    ):
+        raise ValueError("training-validation cache index or reference SHA-256 differs")
+    index = cast(
+        dict[str, object], json.loads(index_bytes, object_pairs_hook=trainer._unique_json_object)
+    )
+    reference = cast(
+        dict[str, object],
+        json.loads(reference_bytes, object_pairs_hook=trainer._unique_json_object),
+    )
+    roles = cast(dict[str, list[str]], reference["roles"])
+    preloaded = cast(dict[str, dict[str, object]], reference["preloaded_cache_identities"])
+    expected = {(role, match_id) for role in ("training", "validation") for match_id in roles[role]}
+    entries = cast(list[dict[str, object]], index["archives"])
+    if (
+        index.get("schema_id") != "fpdbench.res338.cache-chunk-index"
+        or index.get("scope") != "all"
+        or index.get("parent_reference_sha256") != reference_sha256
+        or int(index.get("archive_count", -1)) != 16
+        or len(roles.get("training", [])) != 12
+        or len(roles.get("validation", [])) != 4
+        or len(preloaded) != 6
+        or not set(preloaded).issubset(set(roles["training"]))
+        or {(str(row["role"]), str(row["match_id"])) for row in entries} != expected
+        or len(entries) != 16
+    ):
+        raise ValueError("cache chunk index differs from the frozen 12/4 scope")
+    descriptors = restore_chunk_descriptors(index_path, archive_directory / "descriptors")
+    recovered_partial: list[str] = []
+    for descriptor_path in descriptors:
+        descriptor = trainer._read_private_json(descriptor_path)
+        role, match_id = str(descriptor["role"]), str(descriptor["match_id"])
+        manifest = cast(dict[str, object], descriptor["cache_manifest"])
+        if (role, match_id) not in expected or manifest.get("role") != role:
+            raise ValueError("cache chunk descriptor contains an out-of-scope role")
+        target = cache_root / role / match_id
+        if target.exists() or target.is_symlink():
+            try:
+                _verify_extracted_cache(target, manifest)
+            except (OSError, ValueError):
+                quarantine = cache_root.parent / "interrupted-cache-staging"
+                quarantine.mkdir(mode=0o700, parents=True, exist_ok=True)
+                preserved = quarantine / f"{role}--{match_id}--{uuid.uuid4().hex}"
+                os.rename(target, preserved)
+                trainer._fsync_directory(quarantine)
+                recovered_partial.append(f"{role}/{match_id}")
+                assemble_chunks(descriptor_path, chunk_directory, archive_directory, cache_root)
+                _verify_extracted_cache(target, manifest)
+        else:
+            assemble_chunks(descriptor_path, chunk_directory, archive_directory, cache_root)
+            _verify_extracted_cache(target, manifest)
+        if match_id in preloaded:
+            trainer._verified_preloaded_cache(target, match_id, role, preloaded[match_id])
+    expected_directories = {role: set(roles[role]) for role in ("training", "validation")}
+    if any(
+        {item.name for item in (cache_root / role).iterdir()} != match_ids
+        for role, match_ids in expected_directories.items()
+    ):
+        raise ValueError("restored cache root has missing or out-of-scope matches")
+    return {
+        "status": "STAGED",
+        "cache_count": len(descriptors),
+        "role": "training-validation",
+        "recovered_partial_cache_count": len(recovered_partial),
+        "recovered_partial_caches": recovered_partial,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_subparsers(dest="mode", required=True)
@@ -667,6 +777,14 @@ def main() -> None:
     stage_parser.add_argument("chunk_directory", type=Path)
     stage_parser.add_argument("archive_directory", type=Path)
     stage_parser.add_argument("cache_root", type=Path)
+    stage_all_parser = modes.add_parser("stage-all")
+    stage_all_parser.add_argument("index", type=Path)
+    stage_all_parser.add_argument("index_sha256")
+    stage_all_parser.add_argument("reference", type=Path)
+    stage_all_parser.add_argument("reference_sha256")
+    stage_all_parser.add_argument("chunk_directory", type=Path)
+    stage_all_parser.add_argument("archive_directory", type=Path)
+    stage_all_parser.add_argument("cache_root", type=Path)
     args = parser.parse_args()
     if args.mode == "pack":
         result: object = pack(args.cache_directory, args.output_directory, args.role, args.match_id)
@@ -691,8 +809,18 @@ def main() -> None:
                 restore_chunk_descriptors(args.index, args.output_directory)
             )
         }
-    else:
+    elif args.mode == "stage-preloaded":
         result = stage_preloaded_chunks(
+            args.index,
+            args.index_sha256,
+            args.reference,
+            args.reference_sha256,
+            args.chunk_directory,
+            args.archive_directory,
+            args.cache_root,
+        )
+    else:
+        result = stage_training_validation_chunks(
             args.index,
             args.index_sha256,
             args.reference,

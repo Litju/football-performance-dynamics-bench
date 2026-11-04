@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -44,13 +45,14 @@ def _current_job() -> dict[str, object] | None:
     return _read_json(path)
 
 
-def start() -> dict[str, object]:
+def _launch_job(*, background: bool) -> dict[str, object]:
     os.umask(0o077)
     kind = os.environ.get("RES338_JOB_KIND")
     if kind not in {
         "prepare",
         "qualify",
         "stage-preloaded",
+        "restore-cache-archives",
         "prepare-campaign",
         "pack-caches",
         "fit-one",
@@ -98,11 +100,69 @@ def start() -> dict[str, object]:
             stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=subprocess.STDOUT,
-            start_new_session=True,
+            start_new_session=background,
         )
+    start_monotonic = time.monotonic()
+    job = _read_json(status_path)
+    job["pid"] = process.pid
+    _write_json(status_path, job)
     _write_json(JOBS / "current.json", {"job_id": job_id})
-    print(json.dumps({"status": "STARTED", "job_id": job_id, "kind": kind, "pid": process.pid}))
-    return {"job_id": job_id, "pid": process.pid}
+    if background:
+        started = {"status": "STARTED", "job_id": job_id, "kind": kind, "pid": process.pid}
+        print(json.dumps(started, sort_keys=True), flush=True)
+        return started
+
+    print(
+        json.dumps(
+            {"status": "RUNNING", "job_id": job_id, "kind": kind, "pid": process.pid},
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    last_reported = 0.0
+    while process.poll() is None:
+        elapsed = time.monotonic() - start_monotonic
+        if elapsed - last_reported >= 30:
+            current = _read_json(status_path)
+            print(
+                json.dumps(
+                    {
+                        key: current.get(key)
+                        for key in (
+                            "job_id",
+                            "kind",
+                            "status",
+                            "elapsed_seconds",
+                            "gpu",
+                            "campaign_status",
+                            "completed_fit_count",
+                            "failed_fit_count",
+                            "current_run_id",
+                            "error_message",
+                        )
+                        if key in current
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            last_reported = elapsed
+        time.sleep(5)
+    returncode = process.wait()
+    current = _read_json(status_path)
+    current["process_exit_code"] = returncode
+    print(json.dumps(current, sort_keys=True), flush=True)
+    if returncode:
+        raise subprocess.CalledProcessError(returncode, process.args)
+    return current
+
+
+def start() -> dict[str, object]:
+    return _launch_job(background=True)
+
+
+def execute() -> dict[str, object]:
+    return _launch_job(background=False)
 
 
 def status() -> dict[str, object]:
@@ -157,6 +217,8 @@ def main() -> None:
     operation = os.environ.get("RES338_OPERATION", "status")
     if operation == "start":
         start()
+    elif operation == "execute":
+        execute()
     elif operation == "status":
         status()
     else:

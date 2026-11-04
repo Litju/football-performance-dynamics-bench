@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -85,6 +86,22 @@ def _command(kind: str) -> list[str]:
             str(ROOT / "cache-archives"),
             str(PRELOADED),
         ]
+    if kind == "restore-cache-archives":
+        index_sha = os.environ.get("RES338_CACHE_CHUNK_INDEX_SHA256", "")
+        if len(index_sha) != 64 or any(char not in "0123456789abcdef" for char in index_sha):
+            raise ValueError("a content-addressed cache chunk index SHA-256 is required")
+        return [
+            str(PYTHON),
+            str(REPO / "tools/res338_cache_archive.py"),
+            "stage-all",
+            str(ROOT / "manifests" / f"cache-chunk-index-{index_sha}.json"),
+            index_sha,
+            str(REFERENCE),
+            REFERENCE_SHA,
+            str(TRANSFER_CHUNKS),
+            str(ROOT / "cache-archives" / "restored"),
+            str(CAMPAIGN / "feature-cache"),
+        ]
     trainer = str(REPO / "tools/train_res338_final_fits.py")
     common = [
         str(PYTHON),
@@ -130,6 +147,41 @@ def _campaign_summary() -> dict[str, object]:
         "reserved_gpu_wall_seconds": ledger.get("reserved_gpu_wall_seconds"),
         "recorded_gpu_wall_seconds": ledger.get("recorded_gpu_wall_seconds"),
     }
+
+
+def _remove_verified_preparation_inputs() -> list[str]:
+    ledger_path = CAMPAIGN / "campaign.json"
+    freeze_path = CAMPAIGN / "reproducibility-manifest.json"
+    ledger = cast(dict[str, object], json.loads(ledger_path.read_bytes()))
+    freeze_bytes = freeze_path.read_bytes()
+    freeze = cast(dict[str, object], json.loads(freeze_bytes))
+    roles = cast(dict[str, list[str]], freeze["research_roles"])
+    caches = cast(dict[str, object], freeze["feature_cache"])
+    selected = set(roles["training"]) | set(roles["validation"])
+    if (
+        ledger.get("status") != "PREPARED"
+        or ledger.get("completed_fit_count") != 0
+        or ledger.get("failed_fit_count") != 0
+        or ledger.get("required_fit_count") != 18
+        or hashlib.sha256(freeze_bytes).hexdigest() != ledger.get("frozen_manifest_sha256")
+        or freeze.get("schema_id") != "fpdbench.res338-research-final-fit-campaign"
+        or freeze.get("research_scope") != "training-validation"
+        or freeze.get("protected_status") != "NOT_QUALIFIED"
+        or len(roles.get("training", [])) != 12
+        or len(roles.get("validation", [])) != 4
+        or len(caches) != 16
+        or set(caches) != selected
+    ):
+        raise ValueError("cannot remove source inputs before the exact 16-cache campaign is frozen")
+    removed = []
+    for path in (SOURCE, RESEARCH, PRELOADED, TRANSFER_CHUNKS):
+        if path.is_symlink() or ROOT.resolve() not in path.resolve().parents:
+            raise ValueError("Colab preparation cleanup path escaped its private workspace")
+        if not path.exists():
+            continue
+        shutil.rmtree(path)
+        removed.append(path.relative_to(ROOT).as_posix())
+    return removed
 
 
 def run(kind: str) -> dict[str, object]:
@@ -206,9 +258,15 @@ def run(kind: str) -> dict[str, object]:
                 last_heartbeat = elapsed
             time.sleep(5)
         returncode = process.wait()
+    cleanup = (
+        {"temporary_inputs_removed": _remove_verified_preparation_inputs()}
+        if kind == "prepare-campaign" and returncode == 0
+        else {}
+    )
     campaign = _campaign_summary() if kind in {"prepare-campaign", "fit-one"} else {}
     updates = {
         **campaign,
+        **cleanup,
         "elapsed_seconds": round(time.monotonic() - start, 3),
         "finished_at_utc": datetime.now(UTC).isoformat(),
         "exit_code": returncode,
@@ -229,6 +287,7 @@ def main() -> None:
             "prepare",
             "qualify",
             "stage-preloaded",
+            "restore-cache-archives",
             "prepare-campaign",
             "fit-one",
             "pack-caches",

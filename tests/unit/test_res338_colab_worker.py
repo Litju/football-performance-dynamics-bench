@@ -41,3 +41,48 @@ def test_worker_status_preserves_a_written_terminal_state(
 
     assert result["status"] == expected_status
     assert json.loads((tmp_path / f"{job_id}.json").read_text())["status"] == expected_status
+
+
+def test_execute_keeps_the_colab_kernel_attached_until_job_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job = worker
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    python = tmp_path / "venv" / "python"
+    python.parent.mkdir()
+    python.touch()
+    monkeypatch.setattr(job, "ROOT", tmp_path)
+    monkeypatch.setattr(job, "REPO", repo)
+    monkeypatch.setattr(job, "PYTHON", python)
+    monkeypatch.setattr(job, "JOBS", tmp_path / "jobs")
+    monkeypatch.setenv("RES338_JOB_KIND", "qualify")
+    monkeypatch.setenv("RES338_CODE_SHA", "a" * 40)
+    monkeypatch.setenv("RES338_COLAB_SESSION_NAME", "test-session")
+    monkeypatch.setenv("RES338_COLAB_SESSION_ID", "test-session-id")
+    monkeypatch.setattr(job.subprocess, "check_output", lambda *_args, **_kwargs: "a" * 40)
+    monkeypatch.setattr(job.time, "sleep", lambda _seconds: None)
+
+    class FinishedProcess:
+        pid = 123
+        args = ["synthetic-qualification"]
+
+        def poll(self) -> int:
+            return 0
+
+        def wait(self) -> int:
+            return 0
+
+    def finished_child(_command: list[str], **kwargs: object) -> FinishedProcess:
+        assert kwargs["start_new_session"] is False
+        status_path = Path(str(kwargs["env"]["RES338_JOB_STATUS_PATH"]))
+        status = json.loads(status_path.read_bytes())
+        status["status"] = "COMPLETED"
+        status_path.write_text(json.dumps(status))
+        return FinishedProcess()
+
+    monkeypatch.setattr(job.subprocess, "Popen", finished_child)
+    result = job.execute()
+
+    assert result["status"] == "COMPLETED"
+    assert result["process_exit_code"] == 0

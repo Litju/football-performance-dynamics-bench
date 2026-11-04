@@ -28,6 +28,10 @@ claiming that upstream redistribution rights have been clarified.
 - Build and use the frozen feature caches and validation labels in the private
   Colab VM. Do not print rows, labels, predictions, or tensor values to notebook
   output or logs.
+- If the six completed cache archives cannot be staged after a runtime loss,
+  regenerate those six caches in Colab from the pinned training/validation
+  source. Require every regenerated cache identity to equal the frozen private
+  cache identity before use; stop if any identity differs.
 - Persist content-addressed training/validation feature caches, environment and
   configuration manifests, checkpoints, receipts, progress indexes, and aggregate
   results in the owner's private Drive folder. The folder and all descendants must

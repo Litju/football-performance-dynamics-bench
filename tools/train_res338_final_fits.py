@@ -552,6 +552,70 @@ def verify_training_validation_population(
     }
 
 
+def _frozen_training_validation_resume_authority(
+    freeze: Mapping[str, object],
+    reference_path: Path,
+    reference_sha256: str,
+    plan: Mapping[str, object],
+    plan_roles: Mapping[str, Sequence[str]],
+) -> tuple[dict[str, object], dict[str, object], dict[str, list[str]]]:
+    reference = cast(
+        dict[str, object],
+        json.loads(
+            read_private_file(reference_path, reference_sha256),
+            object_pairs_hook=_unique_json_object,
+        ),
+    )
+    roles = cast(dict[str, list[str]], freeze["research_roles"])
+    expected_roles = {
+        role: sorted(cast(Sequence[str], plan_roles[role])) for role in ("training", "validation")
+    }
+    preloaded = cast(dict[str, dict[str, object]], reference["preloaded_cache_identities"])
+    matches = cast(list[str], reference["source_match_order"])
+    population_rehash = cast(dict[str, object], freeze["population_rehash"])
+    expected_authority = cast(dict[str, object], plan["population_authority"])
+    if (
+        freeze.get("schema_id") != "fpdbench.res338-research-final-fit-campaign"
+        or freeze.get("research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+        or freeze.get("research_scope") != "training-validation"
+        or freeze.get("reference_manifest_sha256") != reference_sha256
+        or freeze.get("protected_status") != "NOT_QUALIFIED"
+        or roles != expected_roles
+        or reference.get("schema_id") != "fpdbench.res338.training-validation-reference"
+        or reference.get("parent_research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+        or reference.get("source_release_hash") != expected_authority["source_release_hash"]
+        or reference.get("source_population_hash") != expected_authority["source_population_hash"]
+        or reference.get("roles") != expected_roles
+        or len(matches) != 16
+        or set(matches) != set(expected_roles["training"]) | set(expected_roles["validation"])
+        or len(preloaded) != 6
+        or not set(preloaded).issubset(set(expected_roles["training"]))
+        or set(reference) & {"evaluation", "evaluation_matches", "evaluation_labels"}
+        or population_rehash.get("scope") != "training-validation"
+        or population_rehash.get("reference_manifest_sha256") != reference_sha256
+        or population_rehash.get("source_files_rehashed") != 64
+        or population_rehash.get("independent_source_files_rehashed") != 64
+        or population_rehash.get("producer_outputs_rehashed") != 16
+        or population_rehash.get("verifier_outputs_rehashed") != 16
+        or population_rehash.get("producer_verifier_mismatches") != 0
+        or population_rehash.get("exact_role_assignment_match") is not True
+    ):
+        raise ValueError("frozen training-validation population authority is incomplete")
+    return (
+        {
+            "source_release_hash": freeze["source_release_hash"],
+            "source_population_hash": freeze["source_population_hash"],
+            "source_inventory_sha256": freeze["source_inventory_sha256"],
+            "independent_source_sha256": freeze["independent_source_sha256"],
+            "status": freeze["source_reconciliation_status"],
+            "protected_status": freeze["protected_status"],
+            "preloaded_cache_identities": preloaded,
+        },
+        population_rehash,
+        roles,
+    )
+
+
 def _colab_session_identity() -> dict[str, str | None]:
     return {
         "session_name": os.environ.get("RES338_COLAB_SESSION_NAME"),
@@ -1683,6 +1747,29 @@ def _verified_preloaded_cache(
     return {**cache, "cache_metadata_sha256": expected_metadata_sha}
 
 
+def _has_staged_preloaded_caches(cache_root: Path | None, expected_matches: set[str]) -> bool:
+    if cache_root is None or (not cache_root.exists() and not cache_root.is_symlink()):
+        return False
+    with source.private_directory(cache_root):
+        pass
+    roles = {item.name for item in cache_root.iterdir()}
+    if not roles:
+        return False
+    if roles != {"training"}:
+        raise ValueError("staged cache root contains a nontraining cache role")
+    training_root = cache_root / "training"
+    if training_root.is_symlink() or not training_root.is_dir():
+        raise ValueError("staged training cache root is not a private directory")
+    matches = list(training_root.iterdir())
+    if not matches:
+        return False
+    if {item.name for item in matches} != expected_matches or any(
+        item.is_symlink() or not item.is_dir() for item in matches
+    ):
+        raise ValueError("staged cache set differs from the six frozen training caches")
+    return True
+
+
 def _verify_toy_preflight(
     path: Path,
     *,
@@ -1961,6 +2048,19 @@ def run_campaign(
             research_manifest, population_rehash = verify_research_population(
                 research_root, source_root, plan, roles
             )
+        elif not fresh and device == "cuda":
+            assert freeze is not None
+            assert reference_manifest_path is not None
+            assert reference_manifest_sha256 is not None
+            research_manifest, population_rehash, roles = (
+                _frozen_training_validation_resume_authority(
+                    freeze,
+                    reference_manifest_path,
+                    reference_manifest_sha256,
+                    plan,
+                    roles,
+                )
+            )
         else:
             assert reference_manifest_path is not None and reference_manifest_sha256 is not None
             research_manifest, population_rehash = verify_training_validation_population(
@@ -2005,18 +2105,9 @@ def run_campaign(
             preloaded_matches = set(preloaded_identities)
             if device == "cuda" and len(preloaded_matches) != 6:
                 raise ValueError("the GPU preparation reference must bind all six completed caches")
-            if preloaded_matches:
-                if preloaded_cache_root is None:
-                    raise ValueError(
-                        "frozen preloaded caches must be staged before cache preparation"
-                    )
-                with source.private_directory(preloaded_cache_root):
-                    pass
-                if {item.name for item in preloaded_cache_root.iterdir()} != {"training"}:
-                    raise ValueError("staged cache root contains a nontraining cache role")
-                training_root = preloaded_cache_root / "training"
-                if {item.name for item in training_root.iterdir()} != preloaded_matches:
-                    raise ValueError("staged cache set differs from the six frozen training caches")
+            staged_preloaded_caches = _has_staged_preloaded_caches(
+                preloaded_cache_root, preloaded_matches
+            )
             for role, matches in (("training", train_matches), ("validation", validation_matches)):
                 for match_id in matches:
                     if time.process_time() - preparation_cpu_start >= (
@@ -2026,15 +2117,29 @@ def run_campaign(
                     if time.monotonic() - campaign_wall_start >= CAMPAIGN_WALL_BUDGET_SECONDS:
                         raise TimeoutError("campaign_wall_budget_exceeded")
                     if match_id in preloaded_matches:
-                        identity = _verified_preloaded_cache(
-                            preloaded_cache_root / role / match_id,
-                            match_id,
-                            role,
-                            preloaded_identities[match_id],
-                        )
                         target = output_root / "feature-cache" / role / match_id
-                        target.parent.mkdir(mode=0o700, exist_ok=True)
-                        shutil.copytree(preloaded_cache_root / role / match_id, target)
+                        if staged_preloaded_caches:
+                            identity = _verified_preloaded_cache(
+                                preloaded_cache_root / role / match_id,
+                                match_id,
+                                role,
+                                preloaded_identities[match_id],
+                            )
+                            target.parent.mkdir(mode=0o700, exist_ok=True)
+                            shutil.copytree(preloaded_cache_root / role / match_id, target)
+                        else:
+                            identity = _build_match_cache(
+                                research_root,
+                                output_root / "feature-cache",
+                                match_id,
+                                role,
+                                research_manifest,
+                                required_disk_reserve_bytes,
+                            )
+                            if identity != preloaded_identities[match_id]:
+                                raise ValueError(
+                                    "regenerated preloaded cache differs from its frozen identity"
+                                )
                         cache_receipts[match_id] = identity
                     else:
                         cache_receipts[match_id] = _build_match_cache(
