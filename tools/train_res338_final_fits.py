@@ -30,6 +30,7 @@ import research_baseline_v1 as research_run
 import research_population_v1 as research
 import torch
 from numpy.typing import NDArray
+from res338_colab_gpu_probe import gpu_memory_fingerprint
 from torch import Tensor
 
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
@@ -146,6 +147,8 @@ def _training_environment_sha256(runtime: Mapping[str, object]) -> str:
     if isinstance(accelerator, Mapping):
         stable_accelerator = dict(accelerator)
         stable_accelerator.pop("available_memory_bytes_at_start", None)
+        stable_accelerator.pop("available_memory_bytes", None)
+        stable_accelerator.pop("torch_available_memory_bytes", None)
         stable["accelerator"] = stable_accelerator
     return hashlib.sha256(_canonical(stable)).hexdigest()
 
@@ -639,7 +642,7 @@ def _validate_training_runtime(device: str = "cpu") -> dict[str, object]:
             subprocess.check_output(
                 [
                     "nvidia-smi",
-                    "--query-gpu=name,memory.total,driver_version",
+                    "--query-gpu=name,memory.total,memory.free,driver_version",
                     "--format=csv,noheader,nounits",
                 ],
                 text=True,
@@ -650,13 +653,17 @@ def _validate_training_runtime(device: str = "cpu") -> dict[str, object]:
         )
         if len(rows) != 1:
             raise RuntimeError("the Colab worker must see exactly one NVIDIA GPU")
-        reported_name, memory_mib, driver_version = (item.strip() for item in rows[0].split(","))
-        if reported_name != gpu_name or int(memory_mib) * 1024**2 != int(properties.total_memory):
+        reported_name, memory_mib, free_mib, driver_version = (
+            item.strip() for item in rows[0].split(",")
+        )
+        if reported_name != gpu_name or total_bytes != int(properties.total_memory):
             raise RuntimeError("nvidia-smi and PyTorch disagree on the assigned GPU")
         runtime["accelerator"] = {
             "name": gpu_name,
             "capability": list(torch.cuda.get_device_capability(0)),
-            "total_memory_bytes": int(total_bytes),
+            **gpu_memory_fingerprint(
+                int(properties.total_memory), int(free_bytes), int(memory_mib), int(free_mib)
+            ),
             "available_memory_bytes_at_start": int(free_bytes),
             "driver_version": driver_version,
             "peak_allocated_budget_bytes": MAX_GPU_ALLOCATED_BYTES,

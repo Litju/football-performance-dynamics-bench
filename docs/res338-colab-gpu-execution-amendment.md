@@ -31,6 +31,9 @@ does not claim bitwise equivalence between CPU and GPU results.
 - Pin Python 3.12.8, NumPy 2.2.4, and PyTorch 2.6.0+cu124 with CUDA 12.4. Record
   the actual driver, runtime build, device model and memory, available system RAM,
   local disk, Colab session ID, and CLI version before a fit.
+- Record both `nvidia-smi` physical/free memory and PyTorch-visible total/free
+  memory. Allow the driver-reserved difference in reported totals; the free
+  readings must agree within one MiB.
 - Use FP32 only and set PyTorch float32 matmul precision to highest. Disable
   TF32 and mixed precision. Set
   `CUBLAS_WORKSPACE_CONFIG=:4096:8`, deterministic PyTorch algorithms, deterministic

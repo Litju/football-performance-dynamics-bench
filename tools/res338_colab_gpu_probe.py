@@ -15,6 +15,33 @@ import numpy as np
 import torch
 
 OUTPUT = Path("/content/res338/runtime/gpu-probe.json")
+MEMORY_TOLERANCE_BYTES = 1024**2
+
+
+def gpu_memory_fingerprint(
+    torch_visible_total_bytes: int,
+    torch_free_bytes: int,
+    nvidia_total_mib: int,
+    nvidia_free_mib: int,
+) -> dict[str, int]:
+    physical_total_bytes = nvidia_total_mib * 1024**2
+    nvidia_free_bytes = nvidia_free_mib * 1024**2
+    if (
+        min(torch_visible_total_bytes, torch_free_bytes, physical_total_bytes, nvidia_free_bytes)
+        <= 0
+        or torch_visible_total_bytes > physical_total_bytes
+        or torch_free_bytes > torch_visible_total_bytes
+        or nvidia_free_bytes > physical_total_bytes
+        or abs(torch_free_bytes - nvidia_free_bytes) > MEMORY_TOLERANCE_BYTES
+    ):
+        raise RuntimeError("PyTorch and nvidia-smi disagree on available GPU memory")
+    return {
+        "total_memory_bytes": physical_total_bytes,
+        "torch_visible_total_memory_bytes": torch_visible_total_bytes,
+        "driver_reserved_memory_bytes": physical_total_bytes - torch_visible_total_bytes,
+        "available_memory_bytes": nvidia_free_bytes,
+        "torch_available_memory_bytes": torch_free_bytes,
+    }
 
 
 def _memory_info() -> dict[str, int]:
@@ -67,8 +94,14 @@ def probe(output: Path = OUTPUT) -> dict[str, object]:
     if index != "0" or torch.cuda.get_device_name(0) != name:
         raise RuntimeError("nvidia-smi and PyTorch disagree on the assigned GPU")
     free_bytes, total_bytes = torch.cuda.mem_get_info(0)
-    if total_bytes != int(memory_total_mib) * 1024**2:
-        raise RuntimeError("PyTorch and nvidia-smi disagree on total GPU memory")
+    if total_bytes != int(torch.cuda.get_device_properties(0).total_memory):
+        raise RuntimeError("PyTorch CUDA memory APIs disagree on visible GPU memory")
+    memory = gpu_memory_fingerprint(
+        int(torch.cuda.get_device_properties(0).total_memory),
+        int(free_bytes),
+        int(memory_total_mib),
+        int(memory_free_mib),
+    )
     probe_result = {
         "schema_id": "fpdbench.res338.colab-gpu-probe",
         "schema_version": "1.0.0",
@@ -87,8 +120,7 @@ def probe(output: Path = OUTPUT) -> dict[str, object]:
             "index": int(index),
             "name": name,
             "driver_version": driver,
-            "total_memory_bytes": total_bytes,
-            "available_memory_bytes": free_bytes,
+            **memory,
             "capability": list(torch.cuda.get_device_capability(0)),
         },
         "system_memory": _memory_info(),
@@ -113,8 +145,22 @@ def probe(output: Path = OUTPUT) -> dict[str, object]:
     return probe_result
 
 
-if __name__ == "__main__":
+def parse_probe_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=OUTPUT)
-    args = parser.parse_args()
-    probe(args.output)
+    args, unknown = parser.parse_known_args(argv)
+    if unknown and not (
+        len(unknown) == 2
+        and unknown[0] == "-f"
+        and Path(unknown[1]).is_absolute()
+        and Path(unknown[1]).name.startswith("kernel-")
+        and Path(unknown[1]).suffix == ".json"
+        and Path(unknown[1]).is_file()
+    ):
+        parser.error(f"unrecognized arguments: {' '.join(unknown)}")
+    return args
+
+
+if __name__ == "__main__":
+    arguments = parse_probe_args()
+    probe(arguments.output)

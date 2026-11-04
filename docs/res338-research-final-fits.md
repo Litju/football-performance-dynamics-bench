@@ -37,9 +37,10 @@ first fit. Verified GPU fits: 0/18. Selected checkpoints and validation results:
 
 The owner approved a scoped private Colab/Drive handling amendment, recorded in
 the companion policy and execution amendments. The official Colab CLI is installed
-and authenticated; no GPU session has been allocated yet. The original v2 CPU
-plan and public data-release policy remain unchanged. No CPU/GPU equivalence or
-GPU result is claimed. The pinned source and partial local preparation are
+and authenticated; its live status reports an assigned A100, while the pinned
+CUDA/PyTorch probe is still being verified. The original v2 CPU plan and public
+data-release policy remain unchanged. No CPU/GPU equivalence or GPU result is
+claimed. The pinned source and partial local preparation are
 preserved. Six completed training caches were uploaded as content-addressed
 64 MiB chunks to the owner-only Drive folder; all 41 chunk readbacks and the six
 reconstructed archive hashes verify. No validation caches have been generated.
