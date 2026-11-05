@@ -1,0 +1,2201 @@
+{
+  "factorization": {
+    "fit_count": 216,
+    "fold_count": 12,
+    "information_regimes": [
+      "history_only",
+      "future_ball",
+      "future_opponent_plus_ball"
+    ],
+    "order": "protocol fold, target representation, information regime, seed",
+    "seeds": [
+      1729,
+      2718,
+      31415
+    ],
+    "target_representations": [
+      "absolute_xy",
+      "origin_relative_displacement"
+    ]
+  },
+  "fit_count": 216,
+  "fits": [
+    {
+      "configuration_sha256": "edbf0a507b8bbd009a6a8bb4ebd6fe1f33938d39647dc2a84ed24386671de118",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "dccc470552a1fe7e6f413646a9ab3615dc03b3e65b887cdc3ac1277da58a6654",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "c312821e2b9e618240e31d507334751981fbaff84295558909c5a593f11aa25f",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "09b9c83be018fc6be3b8ee7fe8a77abd308cbf45c6722e1776143a6cd4d09294",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e8e1bf803068c2069a1a6dc9a653b2fb2e538bd9c73fa005e269108be51235c4",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "b45cd8cdead232f75332386e4bc8d55e6c94ca2a74c1e57c4437f9408c9ce5fa",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "50b212b9875522255b4b5cd317ca3585a4b34e864e20c90212f3b9b830359357",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3d34edb70cd32160ddb97c31470f16e976718a4c57cbee39169c03e281805e9a",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "23fc90243f92b8d1f8d1abfdada4b9a9fd15e7e1eb833811544d02b237b01088",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "4b21096854f0b58632b8b9b646e1090ce0d864b4521229261300b6243af9ec34",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "7b6220824dfe390b58d2c6ae77de738cd228b5f04c9d128dbd0593c41294ab98",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "0a304142be88bf9f38d199cf5d37e33e6da8924c50df039e6ea3080dc643471b",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e77ce30e6e4692abd6e6fbc3cf61868e1c89389b139cea6dd6eab44756dfd7d4",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "a5e1d76435955a9e51cf8c9e472f578c55fa23b6d1d010192da9b87996a71862",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "84202264958b7549ea5aadfbfd4a956431edd29451b725bb75522d3e85761752",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "ab327563fdd2655753f9e8a6a598a5746cf0ecd4c970916f4e17185eee4dc4cf",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-01|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "be89b1ac84016c4dc7086c7f229c6f7883c7c308fde24ea6ee563ca4f6fb07c5",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-01|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "77a3b31d1101afd5975449328c2dab1ef9c04fc75c39f99c85a037709ec548d1",
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-01|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e78af761b60526a253d4b512fb96387051fef4e3dacc419b8298c72c196b351a",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "674e61579b1c6429cdc5fa2f70128cce873348b267d8ac33d0549a37ba82337f",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "72a175a3b76dca582237bad48a9835e3b284acae25df70dea9f379316ff688f6",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f5ca7b7bd121964a1f4b11228f9c26876f78885b3ec7475fefdf71ac1603bcb3",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "72ee73312a0b240dfab4f690e13e73f1162a07d25905f11c2232a4c9bbf45aef",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "7517ab5b08f2a260060dcebf0c7b3aca32fc5f70ecf81f5891f9223d4d98c94d",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f4e222133d18204b2bf704eb5b5d6fe1d466d8ad59d06dbbc7ae58d931ce0c12",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "832de13620818d8c2acc923f0eabfc461457f591ab5597de38c22f40fcb56c6b",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "17d39f753d0a1b25b29bd6c4248a006af119dc5cc539fadf532538a6354b0c71",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "ea6066653b6aebf96fa155df0f5c30d79fadc15d414463deebd932d6088d587c",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "6d6934ec7f5639ec63f6a362b5a31a9b758110a4f65b34ba95e1f8a97ba826ee",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "978b2cd6c0e1ef40e551a453902c1128c6fab34914efcdc16c19dbc8156142cd",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "ec451687243ea51cea09b09e9164f218d65acabab449e955475de718a2a80b04",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "916ea963f417c7a51993e563f4ad9b54e7460ce7d26643bc3a4ac8af78044eed",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "0ec4581d2adc9f556f26527df0e07c513604fbecb723f7a3c75baf9e8c776a9e",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "78d2cadf681460de7ec43fbb45ea0a72a371caaab315a0b33e973e6dc288ec5a",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-02|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "56ee0c285b5b37bc299adb4761b7fcb104ef43bbc206bcd8c2d93d6cfa706634",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-02|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "05c20197fc78c7ffd021c23fa0eeaa66436c3c68ba237dfca61c1b99d5f6035b",
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-02|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b64cbd6736c932cdb34e1aa7d1653c631ce9d47032528e2d7a3cabbc36603aae",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3771511c2d0bcfa33dab9044c3fcad6704f84d871e9b73750434f823adb34e9d",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d7b7c87f18da2d21b21a8cdc534f6c53628b86f9a5ebcf006d6d5931f28caee4",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "a88e2e99e2cfcfd76670f016304a3288d6b3c8eb2020969431c215449f6e0b5a",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "12924c0f9fa89fd4e01552deb4a3dbadb9a97eb3c882d3e4e3f7bce9eb7556a8",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f4d38fc4a8f5c6007c18a99b1cbb386389a2e9dae66b38591888bfd87b4a592a",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3cd8b3c841f7536a2fc594e23ab8bded2f2e541d69da7e53ed9af652d8f24b06",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "286652dd30f90bab6200b83e68ac9c0246b674d7e587beba2d6ec5abc817bf1f",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "050a7f4f575f604e5533e05f71fd652bcacbc6d516ae53e0c14377eb15e215e7",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "596aedbbf9e037dac9ffca8ed57a7e762e276fc186d67134c86fed3aface66eb",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "c31d7518c0e7fece81b41cdd7be8700570baf0ba2115b6b6944c43a3d0841b22",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "955f18d0962fb1b7ab77087322157672281ad2a7af631b6162ed19d6638a3e3a",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "380bc5e6e744c5731b7c61d65abc6efd6ee3066c760e3a4bf51425735ec99549",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "84d84f989fb2ad2d3aeede867caf1f8cb335be563de0dc24a0da96cccb20d560",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "8cd7b41266c44b9748b8ffe7e9f248c2a2114b20b688d22b35fbe362771a6eb9",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "50f56a30461b37a6f951ed9c11e4a6be8a8faf3d7259b0e802f545f182351ac5",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-03|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "cb5e99034fbfd7d9bb477bb12b6597e44ab747432795bdef8b0a4deebe7b3de9",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-03|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "d0548bbe0a9a488766e80e8fb56204814d0ed2874661d2470cbccb4a9f7fc166",
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-03|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "75637af1d35e911b89e1f35f81b34e0640acc0eae345e4838201a0ec49329a52",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "014419d8d3b98e7984d162d4e15eec671be3eeb43da5f21deefe56ede4268e89",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "a4ad2822830d6709a9c4603caffba8ccaafde97e3dd468835d8ab9f1d72350aa",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "202d3631b34e12735b3f26a523fd9de93122ecc47bc8594ffbbeba493b5b5981",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "750e5b991b9e954cb7c6c7ae1f789470e2d1f1be6a5dc8685a7c8540226afcbc",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "c47a85e6c925756ea4aae73b76910cc457d07acfd83bda7b3b8bb88c7a8bb97f",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "360c41e4a6735c5ca09223baf5bcfe8161c2a782001b48cb72fb96ba94258288",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "51b432c47b020c2a701d76483bb31226af9aac89cff657004ecb466363649464",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d99099dc9f2e60ee0156500e7bd0db60dbc8025ebd20fb3f7b2af26c0051eec0",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f04e3fc1e7ba2ff1c48c3dd2aad873c03be8d37572280864a1e52f8403624bdc",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "fb4b3a156ee2049d8b93aec7b3b248f330b16fad549bbe55725a05cb4088bd31",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "2d86b07affcfe72142c4504e1575f13558ef5fa3f4820b9a925b35f7c0da2b3b",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "0d17989cfbe1ecb79e8f0027c3703bc30e703cf171ec4bd4b3ab8c33d5a13cac",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "4e3de48b1206d875639b56ec01861af479828f73e0a5623c60a40096a4596a71",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "30b4df87d6a00daf920184dcf8698b55f519964168ea16e232ec38f4927e3aee",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "96cff1d37be6122cdba8100df1fa7d9f6d56b4af31e6e43d3b605f94b55a965c",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-04|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "311a5bf25ad3d52e55def3af59ccc40fbf5a10d119aaad09b045d1c0d559b2ec",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-04|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "6c20987edf120a6df82101841da04c6bb4851f289d87176a50ecc348481e6a0e",
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-04|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "8295f789282cf4d1bc2eef2e477eafba5e9ef567c7e1066970709b125b37a50e",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "991c837a92df98d0fa3c3ad3d1ac130fa8ea838559ce560550221fa16ffc59e5",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "c0ff454ae6ce8536717ac545f549dc361907585a8b9f0cb703582fb0f15f363b",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f668c6f77f738593396a93413c5feb0b31e7275e786e98d4082b6fac542b8d40",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "b2ec38badb4772e760a559071ea6b9cfb48d0d5660db4e96d805cf2640b78018",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "4e092bd3ff1fb48f2755f93f35e2aa2aa63ed55ba30766584e8546438fee0794",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d39aacebe0c5e7deedc7f987b6f5fb9f937991d3c1db9e1bb10c51951b345d8e",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3c4e633ac4df41d543c0a552d2ca07d8c0196abf8e12a150fe4df0e0cbb2fc9a",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e25a9191637f26759ba6cc03ab854e7d535abdf9ffc7b70167f33494c1dc2a6f",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e3b207421bc308f083aeec48e0177016e09c57bd6d65b38b08d995128e7afac2",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "8fed1d89387168eb95ef0fd49df8a17e0fa586d3d55281898dfba4b1eeb4149f",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "2132afeac16a3ab5a92d2fc5988df2f9291f43f4dd30853698a69ad380a905b3",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "a6783dd20fe86994accbfa1b0add826f7fabde58654218db0188a8c18cc6c227",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "159cd03fa52515929cc47561465240c65ad180673b92dde81f34d7d23ff64a71",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "d7ac1254eed1a865e9624cf95a7233a4ac98550ad5c5c15bed3c93d4a4ee03d7",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "cb105f323fe7cda8ff4d0296e2def694739c718bd782129debad4a2cd990f179",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-05|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "49555906519ad454c3dff0979ee07202cf3c61571ae488a55749941fa296736b",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-05|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "9fc3d266ce097baf0984b6c49da5e24ccccdf425ef2ece898f2f36d159c42c79",
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-05|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "2b61c2b703fce8c6e4d1486aff568e73e3709770e5a51d4b0d1b38f7bb00b622",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "17bf08eec2908d6476d3869bc0c06d704e3cc2c02478b6bf079ce4dd7346793e",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "69e51e8431d44f32bf2096a0078989b9c57db9f32dc7e0314a9cecacff800bb1",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "68a1d4e57c2c8dbe151d5875178015de81920e2b50238d27849fb7f3542d6302",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "5998aa49666289aa3f081ac533ef6e88f70712866f1362406188794d1218d7f6",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "7905769cfb44e9097f8ee183b62c34bd4d2a14e20919ec65265149ee1649896d",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d3d0aebe19ac9b138128b5518cbbdaf7f43b842bf507b74c45526e7897d0fd3e",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e5a3595a08e3fc47bb714114570e5c991a2e8a1c28dbfadb518af6914ecac064",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "15af9fec16351bd2e4425639a1e9aebc5873b7ba7e8eb2111f185aca28b0cf0f",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3eaf1e963e73ab397bc0b9943947bc9ffe065ffee91f5ed4c56d876d05f09bdd",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "d8b17e2796a7669b2dca5cf3124f9b4f9a4ebea2d83e666ddc0e2b4d2c10d5db",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "faa70da1048da71f16b219415a781f3905fde9d6900b77ae122eef8b326685cf",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "3b8c31a108667410c3e91d95ec9ff8688c1558316ce1aa7257590f29a6734088",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e6f131f8739e38c2ac5da038b89b23afe3aba31ea56e267c37b9d31dc73d5a18",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "cae7d64345d173ce40606bb39c41948f7c298856a6ec367b21957656e04c07ac",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "3865aecca515c05aa0c73f59672d51828ffce98fdccc1f52f23b87af3235af0e",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-06|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "76b227cccee8bd9a2e4bfed468e26991eec64a584632fbba9d8b6cf1925c5b43",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-06|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b62e2b60ae453d401477ab74f8440106d92c6411a2f8695f2678390338b0f0b5",
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-06|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "baa28542b32a1159e1409c6a7ebce5886d0216d90ca1fbdae94af7da819814d7",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "8d01f1f0adbb704df3c981420e7531c8c3c9e126d41e4b4a4a1f885e88f7c1b0",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "54d7a008aafb7e787d2ad12d0f70745d9e4d413aaed54e8d14a17e5914d4376d",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d8f8eda304a5bece9c13ef74c499e226c3cb009e9ab441e25d3f1b34514830f1",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "59b93149b01db946e4cf2e2f835ab7c893c288e4d9fe4114f2d034bb85092968",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "683b8be09c57e1f74024ca5be97858bb37fb8a0fdbc92b81b9d256f79aedd176",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "01ac457ae223ba61edb84d1a357ebf7a4bd4dfce1b3eaedf823c8b4ae10eef5d",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "96f8f689e91903cf66121480cf5eb0ba397a9aec39a6b2d67e3d1ae73c78baf4",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "5dfbec7d7ff44860e6eaf11ef2be166b7981cdb3cfab5d840aa52f10cd56c84b",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "862122e12e06e6cab1461dcd87cfbef5a91bf1e208174100b73e7a7612641448",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "f7313ed1f4e1e16cce9eefe0df8809019199729bdf9f3dfab04157047d0b6e99",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b8e127e96c251e2c110b9d096f6dec763603300459f9c0bfe86a6b5bba594423",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e0acebbc1e24f628fccdc8b8894b4e56059ba166dc2f80aa7494b4b3612931a0",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "15b89461fcb90af044111d2db7f0d6ac0f38ddcb88b2f674bd9126239d935f98",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "4db21cfd8eb57a632efda81785df1a4a58c47c755be702c4d70f9cae571fc4f4",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "c4e28aff1b7b21203e130205656a5eaaa23bf60e531bc9b812e78abaad841407",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-07|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "2bc2214c7fe9acebb78486fab54f4ba6ae10aadbcfc23803bb203de0b62fb080",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-07|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "8bbb6fe504cb92a52f50a777623a6f19c89a8a00ab3a9a57472438f627f29960",
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-07|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "82e4d9cd9e5ea46a0303dcc2aa412941fe4f153ea64d97be47111f0283d0f48c",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "2803f393e075acc6447d0b3c9ff533d967a17a22ec9146df6b2dd6ab78461681",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3f20f61b7c74fe1e1f004c9732da83dc3ae6d6014957bc5417c49c6d09c92766",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "a51ba7ef43bc9dce5701daae171287bfb26fd5d387c94c5904b08a3d5d773635",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "67902d664535e20c312f1c968c5dda10e101984df096c3f66d191277c39fc264",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "03f2a55c219060eeceeb4240df19a6628ee5da25a07e91c90bde37f27ce64c8c",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "a1d6fe3b0631edfd2cda46a02051824910b491fb86d3e34c6c7754d7be3f4e5e",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "46c3fa0098cabd277939e74041e391c5c9a67df0ce19d0e5a8b9ef2bf6714512",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "3705fb63c719a418fbc0d422ca35cd675a56d163cae0da25d425b9e50cd53415",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "542776cedbf5ccfbfae17538ec158a227cdc62c28628899e7734300a8ac0e04d",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "06fcdef9c51cf4693bd1b345b2132d6feab8867ef895f2541d4c1f4a12c73df5",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "604d964ac23c4f23c80bf2ff67561ea78441f48a46ccc6e4fc897b889a2e21b4",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "a3c2d44cf1c827994f73cb6905554e2fbfbae1de6115ed019ab62e1d27cce6fb",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "9ba274e92441c5daacb921582c221409dc5175dd0a985610802107ad79738d41",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "4b69c4621866ee4fb1d2ad5d4ce6867242a5617e3ca5ddaa5d74697372e96dfe",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "3af3b6a61ab203be80aa726f1dacf764989866db48ca2d8971d36731f5add158",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-08|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e35e5544c3a1e3d59a3d7ab084c0013b5f4688433b50e1101a89f44c30b05184",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-08|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "d077d94f6152dedf4fd18dd6977949f8e67fb40467475a837abdf63b443bfe5e",
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-08|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "bf48affa5fb0741e49e8476fc022ca60ca2df6f78537386e9a1e397508aa198e",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "b579eea0fc6938644f0cf0b31c2b92cc7d90ac18e07bc7dfbd3971ab0f8b90e7",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "ced54320b87478fe6b85a79877898e9e19289538786e92bdc77d5bd6ad34ce18",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "7a65bcf9218825817f95a23db6b6f1e88f0c704c59de81d6a2d4cf53129d5f30",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "2f20e7b6ad32e7a3ab054ed0f40ef5df6ea891cbd13cbb281895362b9db57e91",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "669fc84bfa36872a4395ab9ae8e373d44646752ec426ab897397d818e9a42e95",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "981bba952c1ce0a586cd8d3e66a01dbe380f259ab5d0b71848214813b26cda4a",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "022e163f8b409d0d7ede1911e542b7e219481a99fd50a4189e15a9222cf8df65",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "8eb8b7d80a8301e01cb105815f121b623b51f2e76975785ab98b4a3fe62b053b",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "8d93cea8ee06b3414cbf986730c39a93b56d28c953e98977f319fed7a79db4a8",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "30007c5ece746b7b3df78d93da552072d7f58de68bf43ab5848e3014243c3444",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "edc3682a9aaefcfa97bc087971476faa4fb6f526ff1978d4c91f9956eb67cf00",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b458fa25af296fbb223c9195ad43a4e605cc37b05b3ed6dc5f84bf885bab0fe6",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "44b7c77a416c08e8d28f3f6caad050fc7ffb57432066ac16ac88eaf34c449ca3",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b7c57f45fc1615d2ec620aac003997d69b49eeb59094dc985c3cf660628c0af9",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "d19006d616a91cf7050f7ff8e64815d5581defbdb07961d239e58a2598991fc7",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-09|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "832d928e2318bb71b64e217e053cf82679d3ee73a24fc2fafa72c41530a2e6d2",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-09|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "6d338039e3d2d52515f8cd68e7c5ef20ff646948ddc8b22cb832642022cfb55e",
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-09|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "ae58af882ae8df06670fab72f23f7820317233d558906fbc40c5b46cc83d049c",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e3e973854b37500a65017a5bb2b1517127ec99fb7dc613419988dcf7503cbbe9",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "42c988b0aaf50dfd8d9359d6fdf90c48ebc6eeb9788ae13d98cbe2d0ed4e185b",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "1ae3065a198858077cad7439cabb5fe3d17f9df7cf0a5bc91c22566f43e5bf1d",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "cdcaa544eb718fd58bc3eb185364f1153729fd1661527ea84bb798899fd0bb6c",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "63e87e4ef6c9fffc2428d4640ffcb0f6e65a065c2b5b37679890c4bcb9a33113",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "ec347f1d31e67bcfa2500344f0bc5f8edce22209eb9bfd5a8142c03712c3598f",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "a40b44d6445919d988e5fc74197192518920b86d14e5f0fd3677ede6c9dd7704",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "e1d18ce8ca405f6ba98f07cabe2a7e821dac8698c0377800ed3ff718cf2d5459",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "7f663ab8e61524491144b50d225f5435e81bf8ea5bdaee7c2bdf8514003496df",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "faa12e283b501a8038bf48dfe0e45681f085894acba75a43a53f498170f6be76",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "5cb91d21901d51626b24b14b994f18650f8546bb8e954bbabd3ba09ef52a06f8",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "bfbabc604861a9572ab5f5bd8c1c1c13f2a46d0b0b6a1a2e1782a1281ba92d12",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "e0983fa70f7fd6f0e527bb1faf11af6fe9686b6614d34bcd10334ffa57a234ff",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "ab34600a916a358deb2465bf72b49c61004372d4acea7dba1a77f06b7e1d6fcb",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "014735d4f9ab0d7ce7ee5d0e1fd51ab5c411d4e66e1e066edc1523b53dd0db67",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-10|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "c577e682a37cfe9ec33fa9fbb2e93ea7e5155041a02194a1c3bc04f4b875105d",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-10|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "4163680e6d740f519e86d50b13a9039ac7cb59d65ed76f6900c83927ceb8c870",
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-10|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "6cc24ddb11aba24930987cb16d08693e6da50f25b510eb94844afdd1e1700637",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "7824fc96f9cc802746b48d573ccd4b00975af03d7e6f3010a08ad727ae20b695",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "dbe511e78a330cc7fd3a6b8b407e0abd8b704468b8c2cad2ffa89b31ce93527a",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "5065096f170c019b27958fecebd801a2ca5dc115bda4fa8f1da00b73eb14fcaa",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "230b788f62b5bbcbde049abad2ba62dd53feec5c1cd381792446f8b285ddc6bd",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "4383378fd778f77dd5e0871ae15fc5074c9a6f6c304ba3a30c691bd5ebd5667e",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f83632e5f3329dd9a574d24fcb85f7727abe606792d149ec5e05f6027096ae1a",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "0381b5b157bc1be503e91530ee4b60035ec80afe3a005371361a11737f759822",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "6cf9df827ef9aed68d811b03d91c8460454437099bcb7bc4809ea2133d2414b7",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "5f942db2dd48ae18967efe7963d8face355daac8b76e050818c385818d3a7530",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b1cbe90977ca17ee875d594ad05b0ee2dfa66ca81fc1a3bdc02be5022a06e6c9",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "7f57c79cb2de45d36ae48405dca0cd31f6552033d7dde66cec67309a7451d62b",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "65a524528ccd09e7b7c374f94e4d23210932ec1f75f9692b45be56fbaedbbb8c",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "7d690a6df9ee882e374183b47ef50904c0ea69135e1c9ae9e1e5d41a7c01fc65",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "af873c4b15283626627fef56444f0aa347c32ed11eb24132b7118e0a824d5127",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "1b855738972414881a21bfb4d9dc1e0fb2c07e518e75cf8d23da26f3219b82a2",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-11|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "9e76726f09d6bc70e239cab1d0b0354df4ff10157d146af5614a7963ed1c86d6",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-11|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "23bbbdb21b48daf0e770f3084c551b267522633ccf567685e9cfa7c7d18aef0a",
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-11|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "891600a0c56f7092dbd6eaa9548b36862d831fa8afe7c48cf6256c442b4bce1e",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "12ab5212493292abcd5e61b3f8680db96596b0487888bc38cb512cd17bfd046d",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "efc70c692ceb8cb4503cc218e363dfd9d125a686612b29522ed1ff7b4294508c",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|absolute_xy|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "cba8028c7dc14f0cd1be385c3e5c394b53cdec407debe52b9efd7a183857f4e6",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "0ce8c38fc3ebea741fad67c348de2a3dc6125344ef8e539904e6a6547914fc7c",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "2c37d13576f4b5f4c630c6b0676aaa14bf77789176dfd1521ace9b762a25ec5a",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|absolute_xy|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f352d1f6a92cac8ce135019f83203f36a6cbaecc4f3624913fc8bfb14cffb80d",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "80f656ad3028a89adbb4a7163f85155ba3f70f7ed0dd5ade4ebc79e3c202ac25",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "f129787dc7e1e4b51ebe1b1e35414b29465b54e32fbac2b4ee3a1e1516d175b9",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|absolute_xy|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "absolute_xy"
+    },
+    {
+      "configuration_sha256": "d9142574828d803eb70268d52e5b6d4a252e3a1159ece86717d426f0fde4ef1f",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "b93318816f35c3c60396c72fafbd2f9c0535eb2b4819460f1a99ff25725704fd",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "496547fd58aa34b0963deb3c68f7f81e7fb1b6b257c3bfce9a4f11109f67b65f",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "history_only",
+      "run_id": "per_target_context_deepsets_mlp_v1|history_only|origin_relative_displacement|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "787df967a7cf28e6ca049f90431a7e4c04ac22a73e1e3fe489e7005ac3239028",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "8286e193ebca8480cba2059659b09c396253acdc54ed544ca9e9b63e8e18f79b",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "c6cd477a977b6e4088dd2698b31f627577f7013292b7c03d0130aa1c9cf6f9f2",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_ball|origin_relative_displacement|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "3cbb94f514dab8085a87f2d845bea63ec5b7112d4fcde5418e883dd7adc07764",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-12|1729",
+      "seed": 1729,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "fda51f9b5efaa254d5d41ac4a1757690591ca0b2089d95949b21b490ec7d2ae4",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-12|2718",
+      "seed": 2718,
+      "target_representation": "origin_relative_displacement"
+    },
+    {
+      "configuration_sha256": "51bfee45a49abca20fe62db4efcda8ae57875c61a43c16f129fa17ce39e6f417",
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "information_regime": "future_opponent_plus_ball",
+      "run_id": "per_target_context_deepsets_mlp_v1|future_opponent_plus_ball|origin_relative_displacement|lomo|fold-12|31415",
+      "seed": 31415,
+      "target_representation": "origin_relative_displacement"
+    }
+  ],
+  "folds": [
+    {
+      "fold_id": "fold-01",
+      "held_out_match_id": "1886347",
+      "train_match_ids": [
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-02",
+      "held_out_match_id": "1899585",
+      "train_match_ids": [
+        "1886347",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-03",
+      "held_out_match_id": "1927964",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-04",
+      "held_out_match_id": "1959846",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-05",
+      "held_out_match_id": "1986691",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-06",
+      "held_out_match_id": "1996436",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-07",
+      "held_out_match_id": "2006363",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-08",
+      "held_out_match_id": "2007448",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007721",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-09",
+      "held_out_match_id": "2007721",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2011166",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-10",
+      "held_out_match_id": "2011166",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2013725",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-11",
+      "held_out_match_id": "2013725",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2016236"
+      ]
+    },
+    {
+      "fold_id": "fold-12",
+      "held_out_match_id": "2016236",
+      "train_match_ids": [
+        "1886347",
+        "1899585",
+        "1927964",
+        "1959846",
+        "1986691",
+        "1996436",
+        "2006363",
+        "2007448",
+        "2007721",
+        "2011166",
+        "2013725"
+      ]
+    }
+  ],
+  "model_id": "per_target_context_deepsets_mlp_v1",
+  "plan_sha256": "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62",
+  "protocol_sha256": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f",
+  "research_population_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",
+  "schema_id": "fpdbench.res340.lomo-fit-matrix",
+  "schema_version": "1.0.0",
+  "status": "FROZEN_PROSPECTIVE_PENDING_OWNER_APPROVAL",
+  "training_match_ids": [
+    "1886347",
+    "1899585",
+    "1927964",
+    "1959846",
+    "1986691",
+    "1996436",
+    "2006363",
+    "2007448",
+    "2007721",
+    "2011166",
+    "2013725",
+    "2016236"
+  ],
+  "validation_match_ids": [
+    "1953632",
+    "1996435",
+    "2015213",
+    "2017461"
+  ]
+}

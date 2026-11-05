@@ -47,7 +47,7 @@ def _current_job() -> dict[str, object] | None:
 
 def _launch_job(*, background: bool) -> dict[str, object]:
     os.umask(0o077)
-    kind = os.environ.get("RES338_JOB_KIND")
+    kind = os.environ.get("RES340_JOB_KIND") or os.environ.get("RES338_JOB_KIND")
     if kind not in {
         "prepare",
         "qualify",
@@ -56,6 +56,9 @@ def _launch_job(*, background: bool) -> dict[str, object]:
         "prepare-campaign",
         "pack-caches",
         "fit-one",
+        "restore-lomo-caches",
+        "prepare-lomo",
+        "fit-lomo-one",
     }:
         raise ValueError("unknown Colab job kind")
     if not PYTHON.is_file() or not REPO.is_dir():
@@ -90,6 +93,9 @@ def _launch_job(*, background: bool) -> dict[str, object]:
     )
     env = os.environ.copy()
     env["RES338_JOB_ID"] = job_id
+    env["RES338_JOB_KIND"] = kind
+    if kind in {"restore-lomo-caches", "prepare-lomo", "fit-lomo-one"}:
+        env["RES340_JOB_KIND"] = kind
     env["RES338_JOB_STATUS_PATH"] = str(status_path)
     command = [str(PYTHON), str(REPO / "tools/res338_colab_job.py"), kind]
     with log_path.open("ab", buffering=0) as log:
