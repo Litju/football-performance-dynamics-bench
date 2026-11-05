@@ -5,6 +5,7 @@ import importlib
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -95,3 +96,44 @@ def test_cleanup_preserves_inputs_when_campaign_is_not_prepared(
         job._remove_verified_preparation_inputs()
 
     assert (tmp_path / "source").is_dir()
+
+
+def test_pack_caches_records_a_completed_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job = _job_module(monkeypatch)
+    status_path = tmp_path / "job.json"
+    status_path.write_text(json.dumps({"job_id": "unit-test", "status": "STARTING"}))
+    reference = tmp_path / "reference.json"
+    reference.write_bytes(b"{}")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    python = tmp_path / "venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("pinned runtime")
+    monkeypatch.setattr(job, "STATUS_PATH", status_path)
+    monkeypatch.setattr(job, "ROOT", tmp_path)
+    monkeypatch.setattr(job, "REPO", repo)
+    monkeypatch.setattr(job, "PYTHON", python)
+    monkeypatch.setattr(job, "REFERENCE", reference)
+    monkeypatch.setattr(job, "REFERENCE_SHA", hashlib.sha256(b"{}").hexdigest())
+    monkeypatch.setenv("RES338_CODE_SHA", "frozen-code")
+    monkeypatch.setattr(job.subprocess, "check_output", lambda *args, **kwargs: "frozen-code")
+    calls: list[tuple[object, ...]] = []
+    monkeypatch.setitem(
+        sys.modules,
+        "res338_cache_archive",
+        SimpleNamespace(
+            pack_training_validation_caches=lambda *args: calls.append(args) or {"packed": True}
+        ),
+    )
+
+    result = job.run("pack-caches")
+    status = json.loads(status_path.read_bytes())
+
+    assert result == {"packed": True}
+    assert len(calls) == 1
+    assert status["status"] == "COMPLETED"
+    assert status["exit_code"] == 0
+    assert status["elapsed_seconds"] >= 0
+    assert status["finished_at_utc"]

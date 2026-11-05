@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,26 @@ def test_source_role_lookup_uses_the_frozen_training_validation_roles() -> None:
     assert len(roles) == 16
     assert list(roles.values()).count("training") == 12
     assert list(roles.values()).count("validation") == 4
+
+
+def test_resource_totals_sum_recorded_gpu_fit_wall_times() -> None:
+    ledger = {
+        "runs": [
+            {"fit_cpu_seconds": 5.0, "gpu_wall_seconds": 2.5},
+            {"fit_cpu_seconds": 7.0, "gpu_wall_seconds": 3.25},
+        ],
+        "attempt_history": {},
+    }
+
+    trainer._refresh_resource_totals(
+        ledger,
+        {"preparation_cpu_seconds": 3.0},
+        time.monotonic(),
+        time.process_time(),
+    )
+
+    assert ledger["recorded_fit_cpu_seconds"] == 12.0
+    assert ledger["recorded_gpu_wall_seconds"] == 5.75
 
 
 def test_empty_preloaded_cache_root_allows_colab_regeneration(tmp_path: Path) -> None:

@@ -207,9 +207,20 @@ def run(kind: str) -> dict[str, object]:
 
         archive_dir = ROOT / "cache-archives"
         archive_dir.mkdir(mode=0o700, exist_ok=True)
-        return cache_archive.pack_training_validation_caches(
+        _status({"status": "RUNNING", "started_at_utc": datetime.now(UTC).isoformat()})
+        start = time.monotonic()
+        result = cache_archive.pack_training_validation_caches(
             CAMPAIGN / "feature-cache", archive_dir, REFERENCE, REFERENCE_SHA
         )
+        _status(
+            {
+                "status": "COMPLETED",
+                "elapsed_seconds": round(time.monotonic() - start, 3),
+                "finished_at_utc": datetime.now(UTC).isoformat(),
+                "exit_code": 0,
+            }
+        )
+        return result
 
     command = _command(kind)
     env = os.environ.copy()

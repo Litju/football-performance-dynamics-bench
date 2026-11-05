@@ -809,7 +809,6 @@ def _refresh_resource_totals(
     )
     fit_cpu = math.fsum(float(item["fit_cpu_seconds"]) for item in runs)
     fit_gpu_wall = math.fsum(float(item.get("gpu_wall_seconds") or 0.0) for item in runs)
-    fit_gpu_wall = math.fsum(float(item.get("gpu_wall_seconds") or 0.0) for item in runs)
     unknown_attempts = sum(
         entry.get("cpu_seconds") == "not_observable_after_worker_interruption"
         for entries in attempts.values()
@@ -818,16 +817,6 @@ def _refresh_resource_totals(
     ledger["recorded_preparation_cpu_seconds"] = prep_cpu
     ledger["recorded_fit_cpu_seconds"] = fit_cpu
     ledger["recorded_total_cpu_seconds"] = prep_cpu + fit_cpu
-    ledger["recorded_gpu_wall_seconds"] = fit_gpu_wall
-    gpu_started_at = ledger.get("gpu_training_started_at_utc")
-    if gpu_started_at:
-        ledger["campaign_gpu_elapsed_wall_seconds"] = round(
-            max(
-                0.0,
-                (datetime.now(UTC) - datetime.fromisoformat(str(gpu_started_at))).total_seconds(),
-            ),
-            6,
-        )
     ledger["recorded_gpu_wall_seconds"] = fit_gpu_wall
     gpu_started_at = ledger.get("gpu_training_started_at_utc")
     if gpu_started_at:
@@ -2728,6 +2717,7 @@ def run_campaign(
                     "optimizer_steps": receipt["optimizer_steps"],
                     "fit_cpu_seconds": receipt["fit_cpu_seconds"],
                     "fit_wall_seconds": receipt["fit_wall_seconds"],
+                    "gpu_wall_seconds": (receipt["fit_wall_seconds"] if device == "cuda" else 0.0),
                     "peak_rss_bytes": receipt["peak_rss_bytes"],
                     "execution_device": receipt.get("execution_device", device),
                     "peak_gpu_memory_allocated_bytes": receipt.get(
