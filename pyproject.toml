@@ -17,6 +17,7 @@ fpdbench = "fpdbench.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.12", "pyright>=1.1"]
+research-training = ["numpy==2.2.4", "torch==2.6.0+cpu"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fpdbench"]
@@ -61,3 +62,11 @@ select = ["E", "F", "I", "UP", "B"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
