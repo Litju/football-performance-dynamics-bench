@@ -1013,3 +1013,111 @@ def test_missing_private_fit_preflight_cannot_reserve_irreversible_campaign(
             output_directory=output,
         )
     assert not output.exists()
+
+
+def test_owner_authorization_consumption_survives_output_changes_and_metadata_edits(
+    tmp_path: Path,
+) -> None:
+    private_root = tmp_path / "owner-private"
+    private_root.mkdir(mode=0o700)
+    document = _auth_document()
+    authorization_path = private_root / "owner.json"
+    go = _write_auth(authorization_path, document)
+    owner = amended.authorize_owner_execution(
+        authorization_path,
+        go,
+        amendment_sha256=str(document["amendment_sha256"]),
+        checkpoint_manifest_sha256=str(document["checkpoint_manifest_sha256"]),
+        scorer_code_sha256=str(document["scorer_code_sha256"]),
+    )
+    marker = amended._consume_owner_authorization(
+        authorization_path, owner, tmp_path / "output-one"
+    )
+    assert marker.is_file()
+    assert marker.stat().st_mode & 0o077 == 0
+    record = json.loads(marker.read_text(encoding="utf-8"))
+    assert record["status"] == "CONSUMED_IRREVERSIBLY"
+    assert record["authorization_scope_sha256"] == amended._authorization_scope_sha256(
+        owner
+    )
+    with pytest.raises(FileExistsError, match="already consumed"):
+        amended._consume_owner_authorization(
+            authorization_path, owner, tmp_path / "output-two"
+        )
+
+    edited = dict(document)
+    edited["authorized_at_utc"] = "2026-11-07T00:00:00Z"
+    alternate_authorization = private_root / "renamed.json"
+    alternate_go = _write_auth(alternate_authorization, edited)
+    alternate_owner = amended.authorize_owner_execution(
+        alternate_authorization,
+        alternate_go,
+        amendment_sha256=str(edited["amendment_sha256"]),
+        checkpoint_manifest_sha256=str(edited["checkpoint_manifest_sha256"]),
+        scorer_code_sha256=str(edited["scorer_code_sha256"]),
+    )
+    with pytest.raises(FileExistsError, match="already consumed"):
+        amended._consume_owner_authorization(
+            alternate_authorization, alternate_owner, tmp_path / "output-three"
+        )
+
+
+def test_owner_authorization_consumption_is_atomic_between_competing_paths(
+    tmp_path: Path,
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    document = _auth_document()
+    authorization = tmp_path / "owner.json"
+    go = _write_auth(authorization, document)
+    owner = amended.authorize_owner_execution(
+        authorization,
+        go,
+        amendment_sha256=str(document["amendment_sha256"]),
+        checkpoint_manifest_sha256=str(document["checkpoint_manifest_sha256"]),
+        scorer_code_sha256=str(document["scorer_code_sha256"]),
+    )
+
+    def attempt(index: int) -> bool:
+        try:
+            amended._consume_owner_authorization(
+                authorization, owner, tmp_path / f"output-{index}"
+            )
+        except FileExistsError:
+            return False
+        return True
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        outcomes = list(pool.map(attempt, range(8)))
+    assert outcomes.count(True) == 1
+    assert outcomes.count(False) == 7
+
+
+def test_failed_campaign_consumes_authorization_across_output_directories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    document = _auth_document()
+    authorization = tmp_path / "owner.json"
+    go = _write_auth(authorization, document)
+    first_output = tmp_path / "first"
+    second_output = tmp_path / "second"
+    monkeypatch.setattr(amended, "_preflight_authorized_campaign", lambda **_kw: None)
+
+    def stop_before_evaluation() -> None:
+        raise RuntimeError("synthetic deliberate post-consumption stop")
+
+    monkeypatch.setattr(amended, "_set_cpu_inference_runtime", stop_before_evaluation)
+    arguments = {
+        "owner_authorization_path": authorization,
+        "owner_go": go,
+        "checkpoint_directory": tmp_path / "not-opened-checkpoints",
+        "receipt_directory": tmp_path / "not-opened-receipts",
+        "research_root": tmp_path / "not-opened-evaluation",
+        "source_root": tmp_path / "not-opened-source",
+    }
+    with pytest.raises(RuntimeError, match="synthetic deliberate"):
+        amended.run_authorized_campaign(**arguments, output_directory=first_output)
+    assert (first_output / ".failed.json").is_file()
+    with pytest.raises(FileExistsError, match="already consumed"):
+        amended.run_authorized_campaign(**arguments, output_directory=second_output)
+    assert not second_output.exists()

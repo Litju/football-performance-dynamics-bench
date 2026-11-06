@@ -2259,6 +2259,63 @@ def _preflight_authorized_campaign(
         raise OSError("preflight free disk is below the private-input ceiling plus receipt reserve")
 
 
+
+def _authorization_scope_sha256(owner: OwnerAuthorization) -> str:
+    """A stable one-pass key, unaffected by output path or cosmetic auth edits."""
+    scope = {
+        "study_id": _STUDY_ID,
+        "amendment_sha256": owner.amendment_sha256,
+        "checkpoint_manifest_sha256": owner.checkpoint_manifest_sha256,
+        "scorer_code_sha256": owner.scorer_code_sha256,
+        "research_admission_sha256": owner.document["research_admission_sha256"],
+        "evaluation_match_ids": list(_MATCHES),
+        "runtime": owner.document["runtime"],
+        "resource_limits": owner.document["resource_limits"],
+    }
+    return hashlib.sha256(canonical_bytes(scope)).hexdigest()
+
+
+def _consume_owner_authorization(
+    owner_authorization_path: Path,
+    owner: OwnerAuthorization,
+    output_directory: Path,
+) -> Path:
+    """Atomically consume the scope once within the durable private authorization root."""
+    private_root = owner_authorization_path.parent
+    _preflight_directory(private_root, owner_private=True)
+    scope_sha = _authorization_scope_sha256(owner)
+    marker = private_root / f".res594-consumed-{scope_sha}.json"
+    body = {
+        "schema_id": "fpdbench.res594.owner-authorization-consumed",
+        "status": "CONSUMED_IRREVERSIBLY",
+        "study_id": _STUDY_ID,
+        "authorization_scope_sha256": scope_sha,
+        "owner_authorization_document_sha256": hashlib.sha256(
+            canonical_bytes(owner.document)
+        ).hexdigest(),
+        "amendment_sha256": owner.amendment_sha256,
+        "checkpoint_manifest_sha256": owner.checkpoint_manifest_sha256,
+        "scorer_code_sha256": owner.scorer_code_sha256,
+        "research_admission_sha256": owner.document["research_admission_sha256"],
+        "output_directory": str(output_directory.absolute()),
+        "retry_allowed": False,
+    }
+    try:
+        receipt_sha = _write_private_json(marker, body)
+    except FileExistsError as exc:
+        raise FileExistsError(
+            "owner authorization already consumed; output-directory changes cannot retry"
+        ) from exc
+    if _secure_sha256(marker) != receipt_sha:
+        raise OSError("owner authorization consumption record failed SHA-256 readback")
+    fd = os.open(private_root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return marker
+
+
 def _reserve_campaign(output_directory: Path, owner: OwnerAuthorization) -> Path:
     if output_directory.exists() or output_directory.is_symlink():
         raise FileExistsError(
@@ -2468,7 +2525,7 @@ def run_authorized_campaign(
     source_root: Path,
     output_directory: Path,
 ) -> dict[str, object]:
-    """Run one owner-authorized CPU campaign; all failures permanently consume the output path."""
+    """Run one CPU campaign; preflight precedes durable authorization consumption."""
     _amendment, amendment_sha, manifest, baseline = load_frozen_artifacts()
     manifest_sha = hashlib.sha256(_read_resource(_MANIFEST_FILE)).hexdigest()
     scorer_sha = _scorer_code_identity_sha256()
@@ -2487,6 +2544,7 @@ def run_authorized_campaign(
         output_directory=output_directory,
         manifest=manifest,
     )
+    _consume_owner_authorization(owner_authorization_path, owner, output_directory)
     output = _reserve_campaign(output_directory, owner)
     snapshot: Path | None = None
     campaign_start_cpu, campaign_start_wall = time.process_time(), time.monotonic()
