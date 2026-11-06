@@ -129,7 +129,9 @@ def _history_manifest() -> dict[str, object]:
     }
 
 
-def test_recovered_private_baseline_index_is_complete_hash_only_and_bound() -> None:
+def test_recovered_private_baseline_index_is_complete_hash_only_and_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _, _, _, baseline = amended.load_frozen_artifacts()
     index_bytes = amended._read_resource(amended._BASELINE_INDEX_FILE)
     index_sha256 = hashlib.sha256(index_bytes).hexdigest()
@@ -152,6 +154,16 @@ def test_recovered_private_baseline_index_is_complete_hash_only_and_bound() -> N
     private_row["private_result_rows"] = [{"prediction": "forbidden"}]
     with pytest.raises(ValueError, match="identity or privacy"):
         amended._validate_private_baseline_manifest_index(private_row, baseline)
+
+    original_read = amended._read_resource
+
+    def changed_index(name: str) -> bytes:
+        raw = original_read(name)
+        return raw + b" " if name == amended._BASELINE_INDEX_FILE else raw
+
+    monkeypatch.setattr(amended, "_read_resource", changed_index)
+    with pytest.raises(ValueError, match="baseline or authorization-schema identity"):
+        amended.load_frozen_artifacts()
 
 
 def _result_matrix() -> tuple[list[dict[str, object]], dict[str, object], dict[str, object]]:
@@ -797,12 +809,16 @@ def test_aggregates_match_seed_then_equal_matches_and_frozen_contrast_sign() -> 
         "research_admission_sha256": RESEARCH_SHA256,
         "runtime": {"pytorch": "2.6.0+cpu"},
         "baseline_comparability": amended._BASELINE_COMPARABILITY,
+        "private_baseline_manifest_index_sha256": baseline["private_manifest_index_sha256"],
+        "baseline_execution_identity_sha256": baseline["execution_identity_sha256"],
     }
     report = amended.render_scientific_report(campaign, records)
     assert "Six-cell comparison" in report
     assert "Four-match result summary" in report
     assert "Evaluation-match deletion sensitivity" in report
     assert "original owner-private cell manifests recovered" in report
+    assert "0.00005 m of baseline-rounding uncertainty" in report
+    assert "Private baseline manifest index SHA-256" in report
     assert "significance tests or confidence intervals" in report
     assert "future target positions" not in report
     assert "held-out ade by regime" in amended._svg_ade(campaign).lower()
@@ -822,4 +838,27 @@ def test_repeated_or_partial_campaigns_fail_closed(tmp_path: Path) -> None:
     (partial / ".started.json").write_text('{"started": true}', encoding="utf-8")
     (partial / ".started.json").chmod(0o600)
     with pytest.raises(FileNotFoundError):
+        amended.verify_committed_campaign(partial)
+
+    amendment_sha = hashlib.sha256(amended._read_resource(amended._AMENDMENT_FILE)).hexdigest()
+    manifest_sha = hashlib.sha256(amended._read_resource(amended._MANIFEST_FILE)).hexdigest()
+    _amendment, _sha256, _manifest, baseline = amended.load_frozen_artifacts()
+    provenance_mismatch = {
+        "status": "COMPLETED",
+        "study_id": amended._STUDY_ID,
+        "authority_scope": "research-only-amended-heldout",
+        "amendment_sha256": amendment_sha,
+        "checkpoint_manifest_sha256": manifest_sha,
+        "scorer_code_sha256": amended._scorer_code_identity_sha256(),
+        "role": "evaluation",
+        "protected_status": "NOT_QUALIFIED",
+        "expected_record_count": 72,
+        "optimizer_steps": 0,
+        "baseline_reference_status": baseline["status"],
+        "baseline_comparability": amended._BASELINE_COMPARABILITY,
+        "private_baseline_manifest_index_sha256": "0" * 64,
+        "baseline_execution_identity_sha256": baseline["execution_identity_sha256"],
+    }
+    (partial / "campaign-result.json").write_text(json.dumps(provenance_mismatch), encoding="utf-8")
+    with pytest.raises(ValueError, match="authority or completion state"):
         amended.verify_committed_campaign(partial)

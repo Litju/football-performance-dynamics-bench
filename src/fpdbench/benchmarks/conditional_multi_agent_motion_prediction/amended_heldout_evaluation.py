@@ -2341,6 +2341,8 @@ def _score_authorized_snapshot(
         "runtime": runtime,
         "baseline_reference_status": baseline.get("status"),
         "baseline_comparability": _BASELINE_COMPARABILITY,
+        "private_baseline_manifest_index_sha256": baseline.get("private_manifest_index_sha256"),
+        "baseline_execution_identity_sha256": baseline.get("execution_identity_sha256"),
     }
     receipts_directory = output_directory / "records"
     receipts_directory.mkdir(mode=0o700)
@@ -2461,6 +2463,12 @@ def verify_committed_campaign(
         or campaign.get("protected_status") != "NOT_QUALIFIED"
         or campaign.get("expected_record_count") != 72
         or campaign.get("optimizer_steps") != 0
+        or campaign.get("baseline_reference_status") != baseline.get("status")
+        or campaign.get("baseline_comparability") != _BASELINE_COMPARABILITY
+        or campaign.get("private_baseline_manifest_index_sha256")
+        != baseline.get("private_manifest_index_sha256")
+        or campaign.get("baseline_execution_identity_sha256")
+        != baseline.get("execution_identity_sha256")
     ):
         raise ValueError("campaign result authority or completion state differs")
     entries = _list(campaign.get("result_receipts"), "campaign result receipts")
@@ -2875,7 +2883,7 @@ def render_scientific_report(
             "",
             "## Paired deterministic baseline comparisons",
             "",
-            "Values are learned minus baseline in metres; positive values mean the learned cell has higher error. Baseline inputs are the previously published published deterministic-baseline aggregate reference.",
+            "Values are learned minus baseline in metres; positive values mean the learned cell has higher error. The recovered owner-private baseline manifests agree with the previously published four-decimal match values.",
             "",
             _format_table(
                 [
@@ -2934,6 +2942,8 @@ def render_scientific_report(
             "## Reproducibility and rights boundary",
             "",
             f"- Checkpoint manifest SHA-256: {campaign['checkpoint_manifest_sha256']}",
+            f"- Private baseline manifest index SHA-256: {campaign['private_baseline_manifest_index_sha256']}",
+            f"- Baseline execution identity SHA-256: {campaign['baseline_execution_identity_sha256']}",
             f"- Evaluation input SHA-256: {campaign['evaluation_input_sha256']}",
             f"- Research admission SHA-256: {campaign['research_admission_sha256']}",
             f"- Match-scoped learned receipts: {len(records)}",
@@ -2948,6 +2958,8 @@ def render_scientific_report(
             "- Four evaluation matches limit the independent match count to four. Repeated overlapping origins are not treated as independent observations.",
             "- No significance tests or confidence intervals are reported.",
             f"- Baseline provenance status: {campaign['baseline_comparability']}.",
+            "- Baseline metrics are published to four decimal places; each learned-minus-baseline comparison has at most 0.00005 m of baseline-rounding uncertainty. The largest original-to-published discrepancy was 0.000048435 m.",
+            "- The primary C1/C2 contrasts use learned-model results only and do not depend on deterministic-baseline rounding.",
             "- Any negative or null context effect is reported as observed, without post-hoc contrast changes.",
             "",
             "## Planned figures",

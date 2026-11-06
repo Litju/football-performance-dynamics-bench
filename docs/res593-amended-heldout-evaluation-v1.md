@@ -2,7 +2,7 @@
 
 **Status: PROPOSED / UNRATIFIED.** This is a versioned, post-validation and pre-learned-evaluation amendment. It is not an original preregistration. It may proceed only after a separate owner scientific ratification and a separate exact-input execution GO.
 
-Machine-readable amendment identity SHA-256: 577731350e77d8d57d3651d31c0c5a4b8e07e12f2bf79487e33fba4d80f33a31. The exact 18-checkpoint manifest SHA-256 is 770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0.
+Machine-readable amendment identity SHA-256: fbbfb6a13ba22812adc94a6d79181b7ca675bc1491137859b1a9cf4fa648e9af. The exact 18-checkpoint manifest SHA-256 is 770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0.
 
 ## Historical authorities and disclosure
 
@@ -22,7 +22,7 @@ The measured 18-fit final campaign used 55.34 Colab compute units and 11,304.44 
 | 216 training-match LOMO fits | Required as 12 folds × 6 configurations × 3 seeds | Deferred, not completed or deleted; original LOMO matrix and implementation remain preserved. |
 | 234 checkpoint manifests before scoring | Required before the prescribed scoring stage | Replaced for this amended study with exactly the 18 verified final-fit checkpoints. |
 | Four validation matches | Select final checkpoints by equal-match ADE | Retained; the results and selected checkpoints predate this amendment. |
-| Four evaluation-role matches | Learned evaluation was downstream of all 234 original manifests | Retained as the learned held-out evaluation set. Deterministic deterministic baselines had already scored these matches. |
+| Four evaluation-role matches | Learned evaluation was downstream of all 234 original manifests | Retained as the learned held-out evaluation set. Deterministic baselines had already scored these matches. |
 | Model, seeds, targets, information regimes | Frozen v2 definitions | Retained without architecture, weight, seed, or training changes. |
 | Primary and secondary endpoints | Physical trajectory metrics | Retained as physical XY ADE, FDE, and XY RMSE in metres under the same truth masks. |
 | C1 and C2 contrasts | Frozen four contrasts | Retained exactly; no post-hoc contrast changes. |
@@ -57,9 +57,11 @@ Planned descriptive strata are early (0.2–1.0 s), middle (1.2–2.0 s), and la
 
 ## Deterministic baseline evidence
 
-The published deterministic report records match-scoped persistence and constant-velocity ADE/FDE/XY-RMSE values for the same four evaluation matches, with the same 15-step physical truth, scoreable-window population, equal scene-within-window and equal window-within-match weighting. Its public report records 51,713 windows and 103,426 directed scenes. The aggregate-safe values are mirrored in the versioned baseline reference file and are bound to the published report SHA-256.
+The twelve original RES-337 cell manifests and their evaluation/completion records were recovered in the owner-private baseline output area. Their original bytes remain there unchanged and are not copied into this repository. The committed hash-only index binds each of the twelve cell manifests, four match-level evaluation files, completion records, execution identity, source identities, research admission, population artifact map, and original training/validation/evaluation role membership. Its SHA-256 is `19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27`. The execution identity SHA-256 is `05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e`, and all six source-file identities match the recorded RES-337 source commit.
 
-The exact original private deterministic-baseline per-cell result manifest bytes were not found in the connected owner-only Drive or Linear evidence during this preparation. The published match summary is enough to prepare paired descriptive comparisons under the documented metric contract, but it is not a substitute for the immutable private cell manifests. Final scientific ratification requires the owner to accept this bounded baseline evidence or supply those manifests; the evaluator never reruns or silently recomputes the historical baselines.
+Verification found the exact 12-cell model × regime × representation coverage, 12 training / four validation / four evaluation match roles, all four evaluation match files, 288 match-level metric values, and 24 completion aggregates. The original match metrics agree with the published RES-337 report to its documented four decimal places. Published deterministic metrics therefore have at most 0.00005 m rounding error; the maximum observed pre-rounding difference was 0.000048434791 m. The immutable report hash is `c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68`.
+
+The baseline contract matches the amended physical XY scorer at the published precision: 15 future steps, the same eligible-window population and physical truth mask, equal scene weighting within windows, and equal window weighting within matches. Paired baseline comparisons remain secondary descriptive results. The primary C1/C2 contrasts use only learned-model ADE and are independent of baseline metric rounding. The evaluator reads the pinned aggregate reference and never reruns or silently recomputes the historical baselines.
 
 ## Inference plan and hard authorization gate
 
