@@ -2259,7 +2259,6 @@ def _preflight_authorized_campaign(
         raise OSError("preflight free disk is below the private-input ceiling plus receipt reserve")
 
 
-
 def _authorization_scope_sha256(owner: OwnerAuthorization) -> str:
     """A stable one-pass key, unaffected by output path or cosmetic auth edits."""
     scope = {

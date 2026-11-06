@@ -988,6 +988,7 @@ def test_preflight_cpu_identity_is_checked_without_inference(
     with pytest.raises(RuntimeError, match="held-out inference requires"):
         amended._verify_cpu_environment()
 
+
 def test_missing_private_fit_preflight_cannot_reserve_irreversible_campaign(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1037,13 +1038,9 @@ def test_owner_authorization_consumption_survives_output_changes_and_metadata_ed
     assert marker.stat().st_mode & 0o077 == 0
     record = json.loads(marker.read_text(encoding="utf-8"))
     assert record["status"] == "CONSUMED_IRREVERSIBLY"
-    assert record["authorization_scope_sha256"] == amended._authorization_scope_sha256(
-        owner
-    )
+    assert record["authorization_scope_sha256"] == amended._authorization_scope_sha256(owner)
     with pytest.raises(FileExistsError, match="already consumed"):
-        amended._consume_owner_authorization(
-            authorization_path, owner, tmp_path / "output-two"
-        )
+        amended._consume_owner_authorization(authorization_path, owner, tmp_path / "output-two")
 
     edited = dict(document)
     edited["authorized_at_utc"] = "2026-11-07T00:00:00Z"
@@ -1080,9 +1077,7 @@ def test_owner_authorization_consumption_is_atomic_between_competing_paths(
 
     def attempt(index: int) -> bool:
         try:
-            amended._consume_owner_authorization(
-                authorization, owner, tmp_path / f"output-{index}"
-            )
+            amended._consume_owner_authorization(authorization, owner, tmp_path / f"output-{index}")
         except FileExistsError:
             return False
         return True
