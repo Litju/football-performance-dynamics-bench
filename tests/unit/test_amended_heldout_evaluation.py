@@ -973,7 +973,7 @@ def test_preflight_rejects_corrupt_checkpoint_missing_input_and_insufficient_dis
         stream.write(b"tampered")
     with pytest.raises(ValueError, match="checkpoint SHA-256 mismatch"):
         amended._preflight_authorized_campaign(**arguments)
-    checkpoint.write_bytes(checkpoint.read_bytes()[:-len(b"tampered")])
+    checkpoint.write_bytes(checkpoint.read_bytes()[: -len(b"tampered")])
     missing_truth_path = research_root / "inputs" / amended._MATCHES[0] / "tracking.jsonl"
     missing_truth_path.unlink()
     with pytest.raises(FileNotFoundError):
@@ -987,3 +987,29 @@ def test_preflight_cpu_identity_is_checked_without_inference(
     monkeypatch.setattr(amended.platform, "python_version", lambda: "0.0.0")
     with pytest.raises(RuntimeError, match="held-out inference requires"):
         amended._verify_cpu_environment()
+
+def test_missing_private_fit_preflight_cannot_reserve_irreversible_campaign(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    document = _auth_document()
+    authorization = tmp_path / "owner.json"
+    go = _write_auth(authorization, document)
+    checkpoints, receipts = tmp_path / "checkpoints", tmp_path / "receipts"
+    checkpoints.mkdir(mode=0o700)
+    receipts.mkdir(mode=0o700)
+    research, source = tmp_path / "research", tmp_path / "source"
+    research.mkdir(mode=0o700)
+    source.mkdir(mode=0o700)
+    output = tmp_path / "unconsumed"
+    monkeypatch.setattr(amended, "_verify_cpu_environment", lambda: None)
+    with pytest.raises(FileNotFoundError):
+        amended.run_authorized_campaign(
+            owner_authorization_path=authorization,
+            owner_go=go,
+            checkpoint_directory=checkpoints,
+            receipt_directory=receipts,
+            research_root=research,
+            source_root=source,
+            output_directory=output,
+        )
+    assert not output.exists()
