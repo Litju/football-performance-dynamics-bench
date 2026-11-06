@@ -1,0 +1,119 @@
+{
+  "schema_id": "fpdbench.res593.amended-heldout-study",
+  "schema_version": "1.0.0",
+  "study_id": "fpdbench.public-skillcorner-amended-heldout-evaluation/1.0.0",
+  "status": "PROPOSED_UNRATIFIED",
+  "timing": {
+    "classification": "post-validation-pre-learned-evaluation amendment",
+    "original_preregistration": false,
+    "prospective_registration_date": null,
+    "learned_evaluation_results_observed": false,
+    "validation_results_observed_before_amendment": true,
+    "deterministic_evaluation_results_observed_before_amendment": true,
+    "selection_outcome_blind_claimed": false
+  },
+  "authorities": {
+    "original_plan_sha256": "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62",
+    "original_protocol_sha256": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f",
+    "research_admission_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",
+    "checkpoint_manifest_sha256": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
+    "checkpoint_evidence_index_sha256": "4dbfd5e430ad90e7fcfa49876f44b110bd96aa2d121c515ab382aef461a1ab63",
+    "checkpoint_progress_index_sha256": "073a474769f1d22d3bdadeef2353eed30760ad2e5e792083a8384ea94cc7d721",
+    "checkpoint_campaign_manifest_sha256": "4ddb1209eeb367e40e21cb0439c47c64d237dbe99369184c6e1ce6a8cfece0dd",
+    "checkpoint_final_report_sha256": "ba43e6befd6b08efac6803d13aa9a17de3f7c451a05b4c5ce6154377bb0661ac",
+    "baseline_reference_sha256": "7dcbdff07ad4e6fa53180ef610db78d2933ef4e3877ef59602cce6bc9c198508",
+    "owner_authorization_schema_sha256": "bdee7886ef69190cf27fa4e6b13680d86dae774de12f8df54de5dbf2e8aa34e9",
+    "deterministic_results_document_sha256": "c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68",
+    "deterministic_implementation_commit": "f14537acc17f4381d0c95907f1f1a1654152410a",
+    "deterministic_execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e"
+  },
+  "deviation": {
+    "original_plan_protocol_unchanged": true,
+    "original_required_final_fits": 18,
+    "original_required_training_lomo_fits": 216,
+    "original_required_total_learned_fits": 234,
+    "original_checkpoint_manifests_required_before_scoring": 234,
+    "original_234_checkpoint_prerequisite_fulfilled": false,
+    "lomo_216_fit_matrix": "preserved and deferred under the original LOMO authority",
+    "amended_checkpoint_prerequisite": "the exact 18 verified final-fit checkpoints only",
+    "amended_results_complete_original_v2_study": false
+  },
+  "population": {
+    "role": "evaluation",
+    "match_ids": ["1874553", "1925299", "2006229", "2010085"],
+    "history_intervals": 25,
+    "history_origin_included": true,
+    "future_steps": 15,
+    "step_seconds": 0.2,
+    "horizon_seconds": 3.0,
+    "coordinate_frame": "source pitch XY in metres, without scene reflection",
+    "target_mask": "the original v2 per-player, per-step physical truth mask",
+    "eligibility_and_window_identity": "the original frozen research-only admission and v2 window identity"
+  },
+  "model_matrix": {
+    "model_id": "per_target_context_deepsets_mlp_v1",
+    "regimes": ["history_only", "future_ball", "future_opponent_plus_ball"],
+    "representations": ["absolute_xy", "origin_relative_displacement"],
+    "seeds": [1729, 2718, 31415],
+    "checkpoint_count": 18,
+    "match_scoped_result_count": 72,
+    "new_fits": 0,
+    "checkpoint_reselection": false,
+    "warm_start": false
+  },
+  "endpoints": {
+    "primary": "physical XY ADE in metres",
+    "secondary": ["physical XY FDE in metres", "physical XY RMSE in metres"],
+    "truth_frame": "absolute source XY in metres",
+    "displacement_prediction_reconstruction": "add each player's frozen origin XY before scoring"
+  },
+  "aggregation": {
+    "scene_to_window": "equal mean over scoreable directed scenes",
+    "window_to_match": "equal mean over scoreable eligible windows",
+    "seed_to_match": "arithmetic mean of three frozen seed values within each match",
+    "match_to_configuration": "equal arithmetic mean of the four match-level seed means",
+    "overlapping_windows_independent": false,
+    "inferential_tests_or_confidence_intervals": false
+  },
+  "contrasts": [
+    {"id": "C1", "representation": "absolute_xy", "formula": "history_only ADE - future_ball ADE"},
+    {"id": "C1", "representation": "origin_relative_displacement", "formula": "history_only ADE - future_ball ADE"},
+    {"id": "C2", "representation": "absolute_xy", "formula": "future_ball ADE - future_opponent_plus_ball ADE"},
+    {"id": "C2", "representation": "origin_relative_displacement", "formula": "future_ball ADE - future_opponent_plus_ball ADE"}
+  ],
+  "planned_descriptive_strata": {
+    "horizon_seconds": {"early": [0.2, 1.0], "middle": [1.2, 2.0], "late": [2.2, 3.0]},
+    "target_quality": ["detected_only", "with_provider_extrapolation"],
+    "missing_quality_flag_accounting": "unclassified scenes are reported separately and are not included in either planned quality stratum",
+    "post_result_strata_label": "exploratory"
+  },
+  "inference": {
+    "substrate": "CPU only",
+    "precision": "FP32",
+    "python": "3.12.8",
+    "numpy": "2.2.4",
+    "pytorch": "2.6.0+cpu",
+    "same_runtime_replay": "bitwise equal on synthetic fixtures",
+    "cpu_gpu_bitwise_equivalence_claimed": false,
+    "cpu_gpu_tolerance_claimed": false,
+    "numerical_tolerances": {
+      "same_runtime_cpu_prediction_replay": {"rtol": 0.0, "atol": 0.0},
+      "absolute_displacement_truth_transform_abs": 1e-12,
+      "cpu_gpu_cross_device": null
+    },
+    "cpu_seconds_ceiling": 14400,
+    "wall_seconds_ceiling": 21600,
+    "rss_bytes_ceiling": 8589934592,
+    "input_bytes_ceiling": 8589934592,
+    "paid_cloud_or_compute_units": 0,
+    "paid_cost_ceiling_usd": 0
+  },
+  "authorization": {
+    "separate_owner_go_required": true,
+    "research_only_scope": true,
+    "protected_status_required": "NOT_QUALIFIED",
+    "go_phrase": "RES594-OWNER-GO:<amendment-sha256>:<checkpoint-manifest-sha256>:a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1:<scorer-code-sha256>",
+    "one_campaign_only": true,
+    "failed_or_partial_campaign_retry": false
+  }
+}

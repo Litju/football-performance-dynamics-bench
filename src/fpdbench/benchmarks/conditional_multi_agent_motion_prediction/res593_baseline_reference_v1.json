@@ -1,0 +1,51 @@
+{
+  "schema_id": "fpdbench.res593.deterministic-baseline-reference",
+  "schema_version": "1.0.0",
+  "status": "PUBLISHED_AGGREGATE_REFERENCE_PRIVATE_CELL_MANIFESTS_NOT_RECOVERED",
+  "implementation_commit": "f14537acc17f4381d0c95907f1f1a1654152410a",
+  "scorer_source_sha256": "bcdfb439fa0dc2e1cbc5840f64a223d5d0f00db7f667aa68e84b0bb79f7c4063",
+  "execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",
+  "results_document_sha256": "c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68",
+  "research_admission_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",
+  "original_protocol_sha256": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f",
+  "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+  "source_population_hash": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4",
+  "measurement_state_hash": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671",
+  "eligibility_policy_hash": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11",
+  "evaluation_match_ids": ["1874553", "1925299", "2006229", "2010085"],
+  "total_evaluation_windows": 51713,
+  "total_evaluation_scenes": 103426,
+  "eligibility": "original v2 candidate rules and the same ratified research-only admission",
+  "metric_contract": {
+    "units": "metres",
+    "metrics": ["ADE", "FDE", "XY RMSE"],
+    "horizon_steps": 15,
+    "step_seconds": 0.2,
+    "mask": "per-player, per-step finite XY truth",
+    "scene_aggregation": "equal scene metrics within each window",
+    "match_aggregation": "equal window metrics within match",
+    "role_aggregation": "equal match means",
+    "target_representation": "physical absolute XY; displacement parity checked",
+    "overlapping_windows_independent": false
+  },
+  "scored_denominators": {
+    "1874553": {"windows": 12363, "scenes": 24726, "scored_points": 4079790, "final_targets": 271986},
+    "1925299": {"windows": 14018, "scenes": 28036, "scored_points": 4625940, "final_targets": 308396},
+    "2006229": {"windows": 12501, "scenes": 25002, "scored_points": 4125330, "final_targets": 275022},
+    "2010085": {"windows": 12831, "scenes": 25662, "scored_points": 4234230, "final_targets": 282282}
+  },
+  "models": {
+    "origin_persistence_v1": {
+      "1874553": {"ade_m": 3.6619, "fde_m": 6.6389, "xy_rmse_m": 3.2044},
+      "1925299": {"ade_m": 3.4419, "fde_m": 6.2250, "xy_rmse_m": 3.0213},
+      "2006229": {"ade_m": 3.4937, "fde_m": 6.3159, "xy_rmse_m": 3.0860},
+      "2010085": {"ade_m": 3.4899, "fde_m": 6.3160, "xy_rmse_m": 3.0691}
+    },
+    "constant_velocity_1s_v1": {
+      "1874553": {"ade_m": 2.2771, "fde_m": 4.9935, "xy_rmse_m": 2.2673},
+      "1925299": {"ade_m": 2.1703, "fde_m": 4.7783, "xy_rmse_m": 2.1647},
+      "2006229": {"ade_m": 2.2816, "fde_m": 5.0098, "xy_rmse_m": 2.2820},
+      "2010085": {"ade_m": 2.2442, "fde_m": 4.9212, "xy_rmse_m": 2.2394}
+    }
+  }
+}
