@@ -2249,7 +2249,9 @@ def _preflight_authorized_campaign(
             _preflight_file(source_match / f"{match_id}{suffix}")
 
     if output_directory.exists() or output_directory.is_symlink():
-        raise FileExistsError("held-out campaign output already exists; repeated execution is locked")
+        raise FileExistsError(
+            "held-out campaign output already exists; repeated execution is locked"
+        )
     _preflight_directory(output_directory.parent, owner_private=True)
     free_bytes = shutil.disk_usage(output_directory.parent).free
     needed_bytes = _RESOURCE_LIMITS["input_bytes"] + 64 * 1024**2

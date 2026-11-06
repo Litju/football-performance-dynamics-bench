@@ -973,6 +973,11 @@ def test_preflight_rejects_corrupt_checkpoint_missing_input_and_insufficient_dis
         stream.write(b"tampered")
     with pytest.raises(ValueError, match="checkpoint SHA-256 mismatch"):
         amended._preflight_authorized_campaign(**arguments)
+    checkpoint.write_bytes(checkpoint.read_bytes()[:-len(b"tampered")])
+    missing_truth_path = research_root / "inputs" / amended._MATCHES[0] / "tracking.jsonl"
+    missing_truth_path.unlink()
+    with pytest.raises(FileNotFoundError):
+        amended._preflight_authorized_campaign(**arguments)
     assert not output.exists()
 
 
@@ -982,4 +987,3 @@ def test_preflight_cpu_identity_is_checked_without_inference(
     monkeypatch.setattr(amended.platform, "python_version", lambda: "0.0.0")
     with pytest.raises(RuntimeError, match="held-out inference requires"):
         amended._verify_cpu_environment()
-
