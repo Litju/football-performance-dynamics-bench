@@ -43,6 +43,7 @@ packages = ["src/fpdbench"]
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md"
 
@@ -56,6 +57,7 @@ packages = ["src/fpdbench"]
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md"
 

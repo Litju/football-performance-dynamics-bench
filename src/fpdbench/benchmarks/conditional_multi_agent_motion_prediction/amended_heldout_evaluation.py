@@ -71,6 +71,7 @@ from fpdbench.evaluation.metrics.trajectory import (
 _MANIFEST_FILE = "res593_checkpoint_manifest_v1.json"
 _AMENDMENT_FILE = "res593_amendment_v1.json"
 _BASELINE_FILE = "res593_baseline_reference_v1.json"
+_BASELINE_INDEX_FILE = "res593_private_baseline_manifest_index_v1.json"
 _STUDY_ID = "fpdbench.public-skillcorner-amended-heldout-evaluation/1.0.0"
 _INPUT_SCHEMA = "fpdbench.res594.private-evaluation-input"
 _AUTH_SCHEMA = "fpdbench.res594.owner-execution-authorization"
@@ -85,7 +86,10 @@ _RESOURCE_LIMITS = {
     "paid_cost_usd": 0,
 }
 _HEX64 = frozenset("0123456789abcdef")
-_BASELINE_COMPARABILITY = "published aggregate reference; exact immutable private deterministic-baseline cell manifests not recovered"
+_BASELINE_COMPARABILITY = (
+    "original owner-private cell manifests recovered and verified against the published report "
+    "to four decimal places; each published metric has at most 0.00005 m rounding error"
+)
 
 
 class DigestWriter(Protocol):
@@ -168,10 +172,12 @@ def load_frozen_artifacts() -> tuple[dict[str, object], str, dict[str, object], 
     amendment, amendment_bytes = _load_resource_json(_AMENDMENT_FILE)
     manifest, manifest_bytes = _load_resource_json(_MANIFEST_FILE)
     baseline, baseline_bytes = _load_resource_json(_BASELINE_FILE)
+    baseline_index, baseline_index_bytes = _load_resource_json(_BASELINE_INDEX_FILE)
     authorization_schema_bytes = _read_resource("res594_owner_authorization_v1.schema.json")
     amendment_sha256 = hashlib.sha256(amendment_bytes).hexdigest()
     manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
     baseline_report_sha256 = hashlib.sha256(_read_baseline_report()).hexdigest()
+    baseline_index_sha256 = hashlib.sha256(baseline_index_bytes).hexdigest()
     if amendment.get("study_id") != _STUDY_ID or amendment.get("status") != "PROPOSED_UNRATIFIED":
         raise ValueError("amended-study identity or ratification state differs")
     authorities = _mapping(amendment.get("authorities"), "amendment authorities")
@@ -179,6 +185,7 @@ def load_frozen_artifacts() -> tuple[dict[str, object], str, dict[str, object], 
         raise ValueError("amendment is not bound to the exact 18-checkpoint manifest")
     if (
         authorities.get("baseline_reference_sha256") != hashlib.sha256(baseline_bytes).hexdigest()
+        or authorities.get("private_baseline_manifest_index_sha256") != baseline_index_sha256
         or authorities.get("owner_authorization_schema_sha256")
         != hashlib.sha256(authorization_schema_bytes).hexdigest()
     ):
@@ -189,12 +196,14 @@ def load_frozen_artifacts() -> tuple[dict[str, object], str, dict[str, object], 
     if (
         baseline_sha != authorities.get("deterministic_results_document_sha256")
         or baseline_sha != baseline_report_sha256
+        or baseline.get("private_manifest_index_sha256") != baseline_index_sha256
     ):
         raise ValueError(
             "baseline reference differs from the disclosed deterministic-baseline report"
         )
     _validate_checkpoint_manifest(manifest)
     _validate_baseline_reference(baseline)
+    _validate_private_baseline_manifest_index(baseline_index, baseline)
     return amendment, amendment_sha256, manifest, baseline
 
 
@@ -342,6 +351,8 @@ def _validate_checkpoint_manifest(manifest: Mapping[str, object]) -> None:
 def _validate_baseline_reference(baseline: Mapping[str, object]) -> None:
     if baseline.get("schema_id") != "fpdbench.res593.deterministic-baseline-reference":
         raise ValueError("unexpected deterministic baseline reference")
+    if baseline.get("status") != "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED":
+        raise ValueError("original deterministic baseline manifest status differs")
     if (
         baseline.get("research_admission_sha256")
         != "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
@@ -366,6 +377,12 @@ def _validate_baseline_reference(baseline: Mapping[str, object]) -> None:
     models = _mapping(baseline.get("models"), "baseline models")
     if set(models) != {"origin_persistence_v1", "constant_velocity_1s_v1"}:
         raise ValueError("deterministic baseline model identities differ")
+    if (
+        baseline.get("published_metric_precision_decimal_places") != 4
+        or baseline.get("published_metric_rounding_bound_m") != 0.00005
+        or baseline.get("original_private_manifest_bytes_committed") is not False
+    ):
+        raise ValueError("deterministic baseline precision or privacy disclosure differs")
     expected_counts = {
         "1874553": (12363, 24726, 4079790, 271986),
         "1925299": (14018, 28036, 4625940, 308396),
@@ -386,9 +403,185 @@ def _validate_baseline_reference(baseline: Mapping[str, object]) -> None:
             if any(
                 type(metrics.get(name)) not in (float, int)
                 or not math.isfinite(cast(float, metrics[name]))
+                or round(cast(float, metrics[name]), 4) != cast(float, metrics[name])
                 for name in ("ade_m", "fde_m", "xy_rmse_m")
             ):
-                raise ValueError("baseline aggregate contains invalid metrics")
+                raise ValueError("baseline aggregate contains invalid or unrounded metrics")
+
+
+def _validate_private_baseline_manifest_index(
+    index: Mapping[str, object], baseline: Mapping[str, object]
+) -> None:
+    expected_index_keys = {
+        "cell_coverage",
+        "cell_manifests",
+        "evidence_store",
+        "execution_identity_sha256",
+        "population_artifact_map_sha256",
+        "research_admission_sha256",
+        "role_coverage",
+        "schema_id",
+        "schema_version",
+        "source_code_identity_files",
+        "source_commit",
+        "status",
+        "supporting_aggregate_files",
+        "verification",
+    }
+    if (
+        set(index) != expected_index_keys
+        or index.get("schema_id")
+        != "fpdbench.res593.original-deterministic-baseline-manifest-index"
+        or index.get("schema_version") != "1.0.0"
+        or index.get("status") != "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED"
+        or index.get("evidence_store")
+        != "owner-private RES-337 baseline run; original bytes retained in place and not copied to the repository"
+    ):
+        raise ValueError("original private baseline manifest index identity or privacy differs")
+    models = ("origin_persistence_v1", "constant_velocity_1s_v1")
+    regimes = ("history_only", "future_ball", "future_opponent_plus_ball")
+    representations = ("absolute_xy", "origin_relative_displacement")
+    coverage = _mapping(index.get("cell_coverage"), "private baseline cell coverage")
+    cells = _list(index.get("cell_manifests"), "private baseline cell manifests")
+    expected_cells = {
+        f"{model}|{regime}|{representation}"
+        for model in models
+        for regime in regimes
+        for representation in representations
+    }
+    if set(coverage) != {
+        "expected_cells",
+        "models",
+        "regimes",
+        "target_representations",
+        "verified_cells",
+    }:
+        raise ValueError("private baseline cell coverage fields differ")
+    observed_cells: set[str] = set()
+    for raw_cell in cells:
+        cell = _mapping(raw_cell, "private baseline cell")
+        if set(cell) != {"cell_id", "file", "sha256"}:
+            raise ValueError("private baseline index must contain hash-only cell identities")
+        cell_id = cast(str, cell.get("cell_id"))
+        parts = cell_id.split("|")
+        if (
+            cell_id not in expected_cells
+            or cell_id in observed_cells
+            or len(parts) != 3
+            or cell.get("file") != f"cell-{parts[0]}-{parts[1]}-{parts[2]}.json"
+        ):
+            raise ValueError("private baseline cell coverage or filename differs")
+        _sha(cell.get("sha256"), "private baseline cell manifest")
+        observed_cells.add(cell_id)
+    if (
+        observed_cells != expected_cells
+        or coverage.get("expected_cells") != 12
+        or coverage.get("verified_cells") != 12
+        or coverage.get("models") != list(models)
+        or coverage.get("regimes") != list(regimes)
+        or coverage.get("target_representations") != list(representations)
+    ):
+        raise ValueError("private baseline index does not cover the exact 12 cells")
+
+    execution_sha = cast(str, baseline.get("execution_identity_sha256"))
+    admission_sha = cast(str, baseline.get("research_admission_sha256"))
+    population_map_sha = "a0479807d81917ab821abd986ccd3fc721bc104d5396ae4c7cca2ebd7409642a"
+    source_commit = cast(str, baseline.get("implementation_commit"))
+    if (
+        index.get("execution_identity_sha256") != execution_sha
+        or execution_sha != "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e"
+        or index.get("research_admission_sha256") != admission_sha
+        or index.get("population_artifact_map_sha256") != population_map_sha
+        or index.get("source_commit") != source_commit
+    ):
+        raise ValueError("private baseline source, execution, or population identity differs")
+
+    expected_roles = {
+        "training": [
+            "1886347",
+            "1899585",
+            "1927964",
+            "1959846",
+            "1986691",
+            "1996436",
+            "2006363",
+            "2007448",
+            "2007721",
+            "2011166",
+            "2013725",
+            "2016236",
+        ],
+        "validation": ["1953632", "1996435", "2015213", "2017461"],
+        "evaluation": list(_MATCHES),
+    }
+    if index.get("role_coverage") != expected_roles:
+        raise ValueError("private baseline match roles differ from the frozen population")
+
+    expected_support = {
+        *(f"evaluation-{match}.json" for match in _MATCHES),
+        "evaluation-complete.json",
+        "evaluation-started.json",
+        "execution-identity.json",
+        "training-complete.json",
+    }
+    supporting = _mapping(index.get("supporting_aggregate_files"), "private baseline support files")
+    if set(supporting) != expected_support:
+        raise ValueError("private baseline aggregate evidence coverage differs")
+    for name, digest in supporting.items():
+        _sha(digest, f"private baseline {name}")
+    if supporting.get("execution-identity.json") != execution_sha:
+        raise ValueError("private baseline execution identity file hash differs")
+
+    source_files = _mapping(index.get("source_code_identity_files"), "baseline source identities")
+    expected_source_files = {
+        "tools/research_baseline_v1.py",
+        "tools/research_population_v1.py",
+        "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/deterministic_baselines.py",
+        "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/streaming_population_producer_v1.py",
+        "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/streaming_population_verifier_v1.py",
+        "src/fpdbench/evaluation/metrics/trajectory.py",
+    }
+    if set(source_files) != expected_source_files:
+        raise ValueError("private baseline source file identity coverage differs")
+    for name, digest in source_files.items():
+        _sha(digest, f"private baseline source {name}")
+    if source_files.get("tools/research_baseline_v1.py") != baseline.get("scorer_source_sha256"):
+        raise ValueError("private baseline scorer source hash differs")
+
+    verification = _mapping(index.get("verification"), "private baseline verification")
+    expected_verification_fields = {
+        "all_cells_share_source_population_identity",
+        "all_core_source_code_file_hashes_match_execution_identity",
+        "completion_summary_cell_aggregates_verified",
+        "evaluation_match_files_match_cell_manifests",
+        "maximum_absolute_difference_before_four_decimal_rounding_m",
+        "per_cell_match_roles_verified",
+        "per_match_metric_values_verified_to_four_decimal_precision",
+        "per_match_metrics_compared_to_published_report",
+        "published_report_sha256",
+        "published_rounding_bound_m",
+        "source_rows_or_predictions_copied",
+        "twelve_cell_ids_unique",
+    }
+    if set(verification) != expected_verification_fields or (
+        verification.get("all_cells_share_source_population_identity") is not True
+        or verification.get("all_core_source_code_file_hashes_match_execution_identity") is not True
+        or verification.get("completion_summary_cell_aggregates_verified") != 24
+        or verification.get("evaluation_match_files_match_cell_manifests") is not True
+        or verification.get("per_cell_match_roles_verified") is not True
+        or verification.get("per_match_metric_values_verified_to_four_decimal_precision") != 288
+        or verification.get("per_match_metrics_compared_to_published_report") is not True
+        or verification.get("published_report_sha256") != baseline.get("results_document_sha256")
+        or verification.get("published_rounding_bound_m") != 0.00005
+        or _strict_float(
+            verification.get("maximum_absolute_difference_before_four_decimal_rounding_m"),
+            "private baseline maximum rounding difference",
+        )
+        > 0.00005
+        or verification.get("source_rows_or_predictions_copied") is not False
+        or verification.get("twelve_cell_ids_unique") is not True
+    ):
+        raise ValueError("private baseline manifest verification claims differ")
 
 
 @dataclass(frozen=True, slots=True)

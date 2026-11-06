@@ -129,6 +129,31 @@ def _history_manifest() -> dict[str, object]:
     }
 
 
+def test_recovered_private_baseline_index_is_complete_hash_only_and_bound() -> None:
+    _, _, _, baseline = amended.load_frozen_artifacts()
+    index_bytes = amended._read_resource(amended._BASELINE_INDEX_FILE)
+    index_sha256 = hashlib.sha256(index_bytes).hexdigest()
+    index = json.loads(index_bytes)
+    assert index_sha256 == "19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27"
+    assert baseline["private_manifest_index_sha256"] == index_sha256
+    assert len(index["cell_manifests"]) == 12
+    assert (
+        index["verification"]["per_match_metric_values_verified_to_four_decimal_precision"] == 288
+    )
+    assert index["verification"]["completion_summary_cell_aggregates_verified"] == 24
+    assert "metrics" not in index
+    amended._validate_private_baseline_manifest_index(index, baseline)
+
+    missing_cell = json.loads(index_bytes)
+    missing_cell["cell_manifests"].pop()
+    with pytest.raises(ValueError, match="exact 12 cells"):
+        amended._validate_private_baseline_manifest_index(missing_cell, baseline)
+    private_row = json.loads(index_bytes)
+    private_row["private_result_rows"] = [{"prediction": "forbidden"}]
+    with pytest.raises(ValueError, match="identity or privacy"):
+        amended._validate_private_baseline_manifest_index(private_row, baseline)
+
+
 def _result_matrix() -> tuple[list[dict[str, object]], dict[str, object], dict[str, object]]:
     _, _, manifest, baseline = amended.load_frozen_artifacts()
     denominators = cast(dict[str, dict[str, int]], baseline["scored_denominators"])
@@ -733,9 +758,7 @@ def test_result_matrix_requires_all_cells_matches_hashes_and_common_denominators
     broken[0]["authority_scope"] = "protected"
     with pytest.raises(ValueError, match="authority"):
         amended.validate_result_matrix(broken, manifest)
-    assert (
-        baseline["status"] == "PUBLISHED_AGGREGATE_REFERENCE_PRIVATE_CELL_MANIFESTS_NOT_RECOVERED"
-    )
+    assert baseline["status"] == "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED"
 
 
 def test_aggregates_match_seed_then_equal_matches_and_frozen_contrast_sign() -> None:
@@ -779,7 +802,7 @@ def test_aggregates_match_seed_then_equal_matches_and_frozen_contrast_sign() -> 
     assert "Six-cell comparison" in report
     assert "Four-match result summary" in report
     assert "Evaluation-match deletion sensitivity" in report
-    assert "cell manifests not recovered" in report
+    assert "original owner-private cell manifests recovered" in report
     assert "significance tests or confidence intervals" in report
     assert "future target positions" not in report
     assert "held-out ade by regime" in amended._svg_ade(campaign).lower()

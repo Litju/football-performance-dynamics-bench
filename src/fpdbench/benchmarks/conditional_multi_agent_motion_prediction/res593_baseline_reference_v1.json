@@ -1,7 +1,11 @@
 {
   "schema_id": "fpdbench.res593.deterministic-baseline-reference",
   "schema_version": "1.0.0",
-  "status": "PUBLISHED_AGGREGATE_REFERENCE_PRIVATE_CELL_MANIFESTS_NOT_RECOVERED",
+  "status": "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED",
+  "private_manifest_index_sha256": "19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27",
+  "published_metric_precision_decimal_places": 4,
+  "published_metric_rounding_bound_m": 0.00005,
+  "original_private_manifest_bytes_committed": false,
   "implementation_commit": "f14537acc17f4381d0c95907f1f1a1654152410a",
   "scorer_source_sha256": "bcdfb439fa0dc2e1cbc5840f64a223d5d0f00db7f667aa68e84b0bb79f7c4063",
   "execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",

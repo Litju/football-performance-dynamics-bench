@@ -1,0 +1,149 @@
+{
+  "cell_coverage": {
+    "expected_cells": 12,
+    "models": [
+      "origin_persistence_v1",
+      "constant_velocity_1s_v1"
+    ],
+    "regimes": [
+      "history_only",
+      "future_ball",
+      "future_opponent_plus_ball"
+    ],
+    "target_representations": [
+      "absolute_xy",
+      "origin_relative_displacement"
+    ],
+    "verified_cells": 12
+  },
+  "cell_manifests": [
+    {
+      "cell_id": "constant_velocity_1s_v1|future_ball|absolute_xy",
+      "file": "cell-constant_velocity_1s_v1-future_ball-absolute_xy.json",
+      "sha256": "980da410f8c0455f20bfb0c19a1507dd87c35f714db7dfc1ec1405bcffc141e0"
+    },
+    {
+      "cell_id": "constant_velocity_1s_v1|future_ball|origin_relative_displacement",
+      "file": "cell-constant_velocity_1s_v1-future_ball-origin_relative_displacement.json",
+      "sha256": "e55e60a145a74fd606f8bc81e8ad484981e814beeb3b184f5fed4850eaa1a355"
+    },
+    {
+      "cell_id": "constant_velocity_1s_v1|future_opponent_plus_ball|absolute_xy",
+      "file": "cell-constant_velocity_1s_v1-future_opponent_plus_ball-absolute_xy.json",
+      "sha256": "f767ad13648867767399b23434bbdd7a777ba8f261692f73feb8e43c3fd1ffe9"
+    },
+    {
+      "cell_id": "constant_velocity_1s_v1|future_opponent_plus_ball|origin_relative_displacement",
+      "file": "cell-constant_velocity_1s_v1-future_opponent_plus_ball-origin_relative_displacement.json",
+      "sha256": "c50ae35e390b8a2d73c6da7c47290f4b5a969afc2f1d5583b1edcf9a38c1291d"
+    },
+    {
+      "cell_id": "constant_velocity_1s_v1|history_only|absolute_xy",
+      "file": "cell-constant_velocity_1s_v1-history_only-absolute_xy.json",
+      "sha256": "edcb62eb5bc6741783bba59265153c2a6601086d8be912c6773f4d4207ad4078"
+    },
+    {
+      "cell_id": "constant_velocity_1s_v1|history_only|origin_relative_displacement",
+      "file": "cell-constant_velocity_1s_v1-history_only-origin_relative_displacement.json",
+      "sha256": "9763f2f36739cb6d31b213fb09fb2bad3228858368b6b59a01408ad75a39951b"
+    },
+    {
+      "cell_id": "origin_persistence_v1|future_ball|absolute_xy",
+      "file": "cell-origin_persistence_v1-future_ball-absolute_xy.json",
+      "sha256": "cf9b5b633ccb40d3ffa3dae65cafc97d4c72b8799aa90261e207ee3638540d39"
+    },
+    {
+      "cell_id": "origin_persistence_v1|future_ball|origin_relative_displacement",
+      "file": "cell-origin_persistence_v1-future_ball-origin_relative_displacement.json",
+      "sha256": "904d6d1363c75e653fa3dbed777b9562137595b45e0a14396d1133f460550eab"
+    },
+    {
+      "cell_id": "origin_persistence_v1|future_opponent_plus_ball|absolute_xy",
+      "file": "cell-origin_persistence_v1-future_opponent_plus_ball-absolute_xy.json",
+      "sha256": "a86c11e30986b1fd2fd7ab69b0ddda23ca0a48fb9c2b72d91df169b1636b4166"
+    },
+    {
+      "cell_id": "origin_persistence_v1|future_opponent_plus_ball|origin_relative_displacement",
+      "file": "cell-origin_persistence_v1-future_opponent_plus_ball-origin_relative_displacement.json",
+      "sha256": "8b801fbebd8883eee652e303d16635b48f8a27b424e9cf631ff761f798f17510"
+    },
+    {
+      "cell_id": "origin_persistence_v1|history_only|absolute_xy",
+      "file": "cell-origin_persistence_v1-history_only-absolute_xy.json",
+      "sha256": "128368208d06b6024c7d47318e6b8da71dbb94921f5502330b2852b4dac0bf7b"
+    },
+    {
+      "cell_id": "origin_persistence_v1|history_only|origin_relative_displacement",
+      "file": "cell-origin_persistence_v1-history_only-origin_relative_displacement.json",
+      "sha256": "ea6d76482924baee3ac0756c2f8cccb1f546ded590b7850188145b078493583d"
+    }
+  ],
+  "evidence_store": "owner-private RES-337 baseline run; original bytes retained in place and not copied to the repository",
+  "execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",
+  "population_artifact_map_sha256": "a0479807d81917ab821abd986ccd3fc721bc104d5396ae4c7cca2ebd7409642a",
+  "research_admission_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",
+  "role_coverage": {
+    "evaluation": [
+      "1874553",
+      "1925299",
+      "2006229",
+      "2010085"
+    ],
+    "training": [
+      "1886347",
+      "1899585",
+      "1927964",
+      "1959846",
+      "1986691",
+      "1996436",
+      "2006363",
+      "2007448",
+      "2007721",
+      "2011166",
+      "2013725",
+      "2016236"
+    ],
+    "validation": [
+      "1953632",
+      "1996435",
+      "2015213",
+      "2017461"
+    ]
+  },
+  "schema_id": "fpdbench.res593.original-deterministic-baseline-manifest-index",
+  "schema_version": "1.0.0",
+  "source_code_identity_files": {
+    "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/deterministic_baselines.py": "366365120719b3d6aadd557acdf24da5fe477909945bc72d2c3f164a51da7746",
+    "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+    "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/streaming_population_verifier_v1.py": "49331a6537842f2a3dfe42f4594c4c09d891444c0193f511821315017f6c25ad",
+    "src/fpdbench/evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8",
+    "tools/research_baseline_v1.py": "bcdfb439fa0dc2e1cbc5840f64a223d5d0f00db7f667aa68e84b0bb79f7c4063",
+    "tools/research_population_v1.py": "12cdc6e45a338db3ea0f006d36a68e10af9e7d086ecb417268aea79bc5ab43a5"
+  },
+  "source_commit": "f14537acc17f4381d0c95907f1f1a1654152410a",
+  "status": "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED",
+  "supporting_aggregate_files": {
+    "evaluation-1874553.json": "c6f5a1c8d53030af0137024ddfc0713f2649b5f6a2e610eef7129d126876f9ad",
+    "evaluation-1925299.json": "0935a01253d41ec70c77a730e9bc33def9d49c0ecc96e4e66ddcaac1d5bf9da3",
+    "evaluation-2006229.json": "195a0aab4d71172436b944eaf07a73bd19bc731f85203f6083ec05ce68d39a15",
+    "evaluation-2010085.json": "a43ca534dcff910edd7e8c41cdcc0ace92f1abadb5e50c9da0fb6f09ac2a3c79",
+    "evaluation-complete.json": "b0e15bc752676c00f0bb2f588ddb0b341fceaecf2f15faacebe05fe4e56b9e5f",
+    "evaluation-started.json": "86efa2db7ba719e5096565d3a15b3088409d0df5026bb8fd209d65e39ce02d01",
+    "execution-identity.json": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",
+    "training-complete.json": "050ac2bc88a755d616ce874f558fad11b37e41d9df1f17d1e15e3d41f9d49ce9"
+  },
+  "verification": {
+    "all_cells_share_source_population_identity": true,
+    "all_core_source_code_file_hashes_match_execution_identity": true,
+    "completion_summary_cell_aggregates_verified": 24,
+    "evaluation_match_files_match_cell_manifests": true,
+    "maximum_absolute_difference_before_four_decimal_rounding_m": 4.843479098415315e-05,
+    "per_cell_match_roles_verified": true,
+    "per_match_metric_values_verified_to_four_decimal_precision": 288,
+    "per_match_metrics_compared_to_published_report": true,
+    "published_report_sha256": "c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68",
+    "published_rounding_bound_m": 5e-05,
+    "source_rows_or_predictions_copied": false,
+    "twelve_cell_ids_unique": true
+  }
+}
