@@ -78,7 +78,7 @@
       "sha256": "ea6d76482924baee3ac0756c2f8cccb1f546ded590b7850188145b078493583d"
     }
   ],
-  "evidence_store": "owner-private RES-337 baseline run; original bytes retained in place and not copied to the repository",
+  "evidence_store": "owner-private original baseline run; original bytes retained in place and not copied to the repository",
   "execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",
   "population_artifact_map_sha256": "a0479807d81917ab821abd986ccd3fc721bc104d5396ae4c7cca2ebd7409642a",
   "research_admission_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",

@@ -435,7 +435,7 @@ def _validate_private_baseline_manifest_index(
         or index.get("schema_version") != "1.0.0"
         or index.get("status") != "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED"
         or index.get("evidence_store")
-        != "owner-private RES-337 baseline run; original bytes retained in place and not copied to the repository"
+        != "owner-private original baseline run; original bytes retained in place and not copied to the repository"
     ):
         raise ValueError("original private baseline manifest index identity or privacy differs")
     models = ("origin_persistence_v1", "constant_velocity_1s_v1")

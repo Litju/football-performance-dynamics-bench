@@ -2,7 +2,7 @@
   "schema_id": "fpdbench.res593.deterministic-baseline-reference",
   "schema_version": "1.0.0",
   "status": "RECOVERED_OWNER_PRIVATE_ORIGINAL_CELL_MANIFESTS_VERIFIED",
-  "private_manifest_index_sha256": "19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27",
+  "private_manifest_index_sha256": "8962fd40437c4aca50b86c8f918b653c35e2aa4277010fe10cbd19ffe8d32d4e",
   "published_metric_precision_decimal_places": 4,
   "published_metric_rounding_bound_m": 0.00005,
   "original_private_manifest_bytes_committed": false,

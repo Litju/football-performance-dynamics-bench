@@ -2,7 +2,7 @@
 
 **Status: PROPOSED / UNRATIFIED.** This is a versioned, post-validation and pre-learned-evaluation amendment. It is not an original preregistration. It may proceed only after a separate owner scientific ratification and a separate exact-input execution GO.
 
-Machine-readable amendment identity SHA-256: fbbfb6a13ba22812adc94a6d79181b7ca675bc1491137859b1a9cf4fa648e9af. The exact 18-checkpoint manifest SHA-256 is 770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0.
+Machine-readable amendment identity SHA-256: e54f067a07479b81c4625428e49e5a5b907c49987d4c5bd7982138e270e66913. The exact 18-checkpoint manifest SHA-256 is 770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0.
 
 ## Historical authorities and disclosure
 
@@ -57,9 +57,9 @@ Planned descriptive strata are early (0.2–1.0 s), middle (1.2–2.0 s), and la
 
 ## Deterministic baseline evidence
 
-The twelve original RES-337 cell manifests and their evaluation/completion records were recovered in the owner-private baseline output area. Their original bytes remain there unchanged and are not copied into this repository. The committed hash-only index binds each of the twelve cell manifests, four match-level evaluation files, completion records, execution identity, source identities, research admission, population artifact map, and original training/validation/evaluation role membership. Its SHA-256 is `19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27`. The execution identity SHA-256 is `05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e`, and all six source-file identities match the recorded RES-337 source commit.
+The twelve original deterministic-baseline cell manifests and their evaluation/completion records were recovered in the owner-private baseline output area. Their original bytes remain there unchanged and are not copied into this repository. The committed hash-only index binds each of the twelve cell manifests, four match-level evaluation files, completion records, execution identity, source identities, research admission, population artifact map, and original training/validation/evaluation role membership. Its SHA-256 is `8962fd40437c4aca50b86c8f918b653c35e2aa4277010fe10cbd19ffe8d32d4e`. The execution identity SHA-256 is `05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e`, and all six source-file identities match the recorded original implementation commit.
 
-Verification found the exact 12-cell model × regime × representation coverage, 12 training / four validation / four evaluation match roles, all four evaluation match files, 288 match-level metric values, and 24 completion aggregates. The original match metrics agree with the published RES-337 report to its documented four decimal places. Published deterministic metrics therefore have at most 0.00005 m rounding error; the maximum observed pre-rounding difference was 0.000048434791 m. The immutable report hash is `c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68`.
+Verification found the exact 12-cell model × regime × representation coverage, 12 training / four validation / four evaluation match roles, all four evaluation match files, 288 match-level metric values, and 24 completion aggregates. The original match metrics agree with the published deterministic report to its documented four decimal places. Published deterministic metrics therefore have at most 0.00005 m rounding error; the maximum observed pre-rounding difference was 0.000048434791 m. The immutable report hash is `c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68`.
 
 The baseline contract matches the amended physical XY scorer at the published precision: 15 future steps, the same eligible-window population and physical truth mask, equal scene weighting within windows, and equal window weighting within matches. Paired baseline comparisons remain secondary descriptive results. The primary C1/C2 contrasts use only learned-model ADE and are independent of baseline metric rounding. The evaluator reads the pinned aggregate reference and never reruns or silently recomputes the historical baselines.
 

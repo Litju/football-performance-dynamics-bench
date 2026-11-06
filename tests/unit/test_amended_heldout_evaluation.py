@@ -136,7 +136,7 @@ def test_recovered_private_baseline_index_is_complete_hash_only_and_bound(
     index_bytes = amended._read_resource(amended._BASELINE_INDEX_FILE)
     index_sha256 = hashlib.sha256(index_bytes).hexdigest()
     index = json.loads(index_bytes)
-    assert index_sha256 == "19d1c2bf2008d21cf6dcac07d5e57d9a47afd5c2b80e16d2b8a90dd937638b27"
+    assert index_sha256 == "8962fd40437c4aca50b86c8f918b653c35e2aa4277010fe10cbd19ffe8d32d4e"
     assert baseline["private_manifest_index_sha256"] == index_sha256
     assert len(index["cell_manifests"]) == 12
     assert (
