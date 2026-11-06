@@ -14,6 +14,7 @@ import math
 import os
 import platform
 import resource
+import shutil
 import stat
 import sys
 import time
@@ -1994,7 +1995,8 @@ def _runtime_manifest(module_path: Path) -> dict[str, object]:
     }
 
 
-def _set_cpu_inference_runtime() -> None:
+def _verify_cpu_environment() -> None:
+    """Read-only check of the pinned CPU runtime; never initialize inference."""
     if (
         platform.python_version() != "3.12.8"
         or np.__version__ != "2.2.4"
@@ -2003,6 +2005,10 @@ def _set_cpu_inference_runtime() -> None:
         raise RuntimeError(
             "held-out inference requires Python 3.12.8, NumPy 2.2.4, and PyTorch 2.6.0+cpu"
         )
+
+
+def _set_cpu_inference_runtime() -> None:
+    _verify_cpu_environment()
     torch.set_num_threads(1)
     if torch.get_num_interop_threads() != 1:
         torch.set_num_interop_threads(1)
@@ -2172,6 +2178,83 @@ def _optional_window_metrics(accumulator: WindowMetricAccumulator) -> dict[str, 
         "final_targets": accumulator.final_targets,
         "metrics": accumulator.mean(),
     }
+
+
+def _preflight_directory(path: Path, *, owner_private: bool = False) -> None:
+    """Check directory metadata without opening protected source or truth."""
+    info = path.stat(follow_symlinks=False)
+    if not stat.S_ISDIR(info.st_mode) or (owner_private and info.st_mode & 0o077):
+        raise ValueError(f"preflight requires an owner-private directory: {path}")
+    if not os.access(path, os.R_OK | os.X_OK):
+        raise PermissionError(f"preflight directory cannot be traversed: {path}")
+
+
+def _preflight_file(path: Path) -> None:
+    """Stat the required source artifact without reading its contents."""
+    info = path.stat(follow_symlinks=False)
+    if not stat.S_ISREG(info.st_mode) or not os.access(path, os.R_OK):
+        raise ValueError(f"preflight requires a readable regular source artifact: {path}")
+
+
+def _preflight_authorized_campaign(
+    *,
+    checkpoint_directory: Path,
+    receipt_directory: Path,
+    research_root: Path,
+    source_root: Path,
+    output_directory: Path,
+    manifest: Mapping[str, object],
+) -> None:
+    """Validate readiness before irrevocable consumption; never open evaluation truth."""
+    _verify_cpu_environment()
+    for directory in (checkpoint_directory, receipt_directory, research_root, source_root):
+        _preflight_directory(directory, owner_private=True)
+    records = _list(manifest.get("checkpoints"), "frozen checkpoint records")
+    if len(records) != 18:
+        raise ValueError("preflight requires exactly the 18 frozen fit identities")
+    for raw_record in records:
+        record = _mapping(raw_record, "frozen fit")
+        _verify_fit_receipt(receipt_directory, record)
+        checkpoint_sha = _sha(record.get("checkpoint_sha256"), "frozen checkpoint identity")
+        if _secure_sha256(checkpoint_directory / f"{checkpoint_sha}.pt") != checkpoint_sha:
+            raise ValueError("checkpoint SHA-256 mismatch during preflight")
+
+    # The original 20-match admission is independently reverified only AFTER GO.
+    # These checks inspect paths and metadata, not contents or evaluation labels.
+    for name in ("inputs", "producer", "verifier", "normalization"):
+        _preflight_directory(research_root / name, owner_private=True)
+    for name in (
+        "research-admission.json",
+        "independent-source.json",
+        "source-inventory.json",
+        "environment.json",
+    ):
+        _preflight_file(research_root / name)
+    roles = _protocol_roles()
+    matches = {match for role_matches in roles.values() for match in role_matches}
+    if len(matches) != 20:
+        raise ValueError("preflight research input must cover all 20 frozen matches")
+    for match_id in sorted(matches):
+        inputs = research_root / "inputs" / match_id
+        _preflight_directory(inputs, owner_private=True)
+        for name in ("metadata.json", "tracking.jsonl", "phases.json"):
+            _preflight_file(inputs / name)
+        _preflight_file(research_root / "normalization" / f"{match_id}-lineage.json")
+        for phase in ("producer", "verifier"):
+            for suffix in (".jsonl", ".summary.json"):
+                _preflight_file(research_root / phase / f"{match_id}{suffix}")
+        source_match = source_root / "data" / "matches" / match_id
+        _preflight_directory(source_match)
+        for suffix in ("_match.json", "_phases_of_play.csv", "_tracking_extrapolated.jsonl"):
+            _preflight_file(source_match / f"{match_id}{suffix}")
+
+    if output_directory.exists() or output_directory.is_symlink():
+        raise FileExistsError("held-out campaign output already exists; repeated execution is locked")
+    _preflight_directory(output_directory.parent, owner_private=True)
+    free_bytes = shutil.disk_usage(output_directory.parent).free
+    needed_bytes = _RESOURCE_LIMITS["input_bytes"] + 64 * 1024**2
+    if free_bytes < needed_bytes:
+        raise OSError("preflight free disk is below the private-input ceiling plus receipt reserve")
 
 
 def _reserve_campaign(output_directory: Path, owner: OwnerAuthorization) -> Path:
@@ -2393,6 +2476,14 @@ def run_authorized_campaign(
         amendment_sha256=amendment_sha,
         checkpoint_manifest_sha256=manifest_sha,
         scorer_code_sha256=scorer_sha,
+    )
+    _preflight_authorized_campaign(
+        checkpoint_directory=checkpoint_directory,
+        receipt_directory=receipt_directory,
+        research_root=research_root,
+        source_root=source_root,
+        output_directory=output_directory,
+        manifest=manifest,
     )
     output = _reserve_campaign(output_directory, owner)
     snapshot: Path | None = None

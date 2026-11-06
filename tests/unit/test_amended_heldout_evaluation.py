@@ -862,3 +862,124 @@ def test_repeated_or_partial_campaigns_fail_closed(tmp_path: Path) -> None:
     (partial / "campaign-result.json").write_text(json.dumps(provenance_mismatch), encoding="utf-8")
     with pytest.raises(ValueError, match="authority or completion state"):
         amended.verify_committed_campaign(partial)
+
+
+def _synthetic_preflight_directories(root: Path) -> tuple[Path, Path]:
+    research_root = root / "research"
+    source_root = root / "source"
+    research_root.mkdir(mode=0o700)
+    source_root.mkdir(mode=0o700)
+    for name in ("inputs", "producer", "verifier", "normalization"):
+        (research_root / name).mkdir(mode=0o700)
+    for name in (
+        "research-admission.json",
+        "independent-source.json",
+        "source-inventory.json",
+        "environment.json",
+    ):
+        (research_root / name).write_bytes(b"metadata-only; must not read")
+    for group in amended._protocol_roles().values():
+        for match_id in group:
+            inputs = research_root / "inputs" / match_id
+            inputs.mkdir(mode=0o700)
+            for name in ("metadata.json", "tracking.jsonl", "phases.json"):
+                (inputs / name).write_bytes(b"evaluation truth must not be opened")
+            (research_root / "normalization" / f"{match_id}-lineage.json").write_bytes(
+                b"metadata only"
+            )
+            for phase in ("producer", "verifier"):
+                for suffix in (".jsonl", ".summary.json"):
+                    (research_root / phase / f"{match_id}{suffix}").write_bytes(b"private")
+            source_match = source_root / "data" / "matches" / match_id
+            source_match.mkdir(parents=True, mode=0o700)
+            for suffix in ("_match.json", "_phases_of_play.csv", "_tracking_extrapolated.jsonl"):
+                (source_match / f"{match_id}{suffix}").write_bytes(b"private")
+    return research_root, source_root
+
+
+def test_preflight_checks_all_18_hashes_without_opening_evaluation_truth(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    private_root = tmp_path / "fits"
+    private_root.mkdir(mode=0o700)
+    checkpoints, receipts, manifest = _write_synthetic_frozen_evidence(private_root)
+    research_root, source_root = _synthetic_preflight_directories(tmp_path)
+    output = tmp_path / "not-created"
+    monkeypatch.setattr(amended, "_verify_cpu_environment", lambda: None)
+    monkeypatch.setattr(
+        amended.shutil,
+        "disk_usage",
+        lambda _path: type("FreeDisk", (), {"free": 9 * 1024**3})(),
+    )
+    original_read_bytes = Path.read_bytes
+
+    def forbid_research_read(path: Path) -> bytes:
+        if research_root in path.parents or source_root in path.parents:
+            pytest.fail("preflight opened private research input or evaluation truth")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", forbid_research_read)
+    amended._preflight_authorized_campaign(
+        checkpoint_directory=checkpoints,
+        receipt_directory=receipts,
+        research_root=research_root,
+        source_root=source_root,
+        output_directory=output,
+        manifest=manifest,
+    )
+    assert not output.exists()
+    first = cast(dict[str, object], manifest["checkpoints"][0])
+    receipt = receipts / f"{first['receipt_sha256']}.json"
+    receipt.unlink()
+    with pytest.raises(FileNotFoundError):
+        amended._preflight_authorized_campaign(
+            checkpoint_directory=checkpoints,
+            receipt_directory=receipts,
+            research_root=research_root,
+            source_root=source_root,
+            output_directory=output,
+            manifest=manifest,
+        )
+    assert not output.exists()
+
+
+def test_preflight_rejects_corrupt_checkpoint_missing_input_and_insufficient_disk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    private_root = tmp_path / "fits"
+    private_root.mkdir(mode=0o700)
+    checkpoints, receipts, manifest = _write_synthetic_frozen_evidence(private_root)
+    research_root, source_root = _synthetic_preflight_directories(tmp_path)
+    output = tmp_path / "not-created"
+    monkeypatch.setattr(amended, "_verify_cpu_environment", lambda: None)
+    monkeypatch.setattr(
+        amended.shutil,
+        "disk_usage",
+        lambda _path: type("FreeDisk", (), {"free": 1})(),
+    )
+    arguments = dict(
+        checkpoint_directory=checkpoints,
+        receipt_directory=receipts,
+        research_root=research_root,
+        source_root=source_root,
+        output_directory=output,
+        manifest=manifest,
+    )
+    with pytest.raises(OSError, match="free disk"):
+        amended._preflight_authorized_campaign(**arguments)
+    first = cast(dict[str, object], manifest["checkpoints"][0])
+    checkpoint = checkpoints / f"{first['checkpoint_sha256']}.pt"
+    with checkpoint.open("ab") as stream:
+        stream.write(b"tampered")
+    with pytest.raises(ValueError, match="checkpoint SHA-256 mismatch"):
+        amended._preflight_authorized_campaign(**arguments)
+    assert not output.exists()
+
+
+def test_preflight_cpu_identity_is_checked_without_inference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(amended.platform, "python_version", lambda: "0.0.0")
+    with pytest.raises(RuntimeError, match="held-out inference requires"):
+        amended._verify_cpu_environment()
+
