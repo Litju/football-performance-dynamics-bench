@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.res594.owner-execution-authorization/1.0.0",
+  "title": "Separate owner execution authorization for the amended study",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "study_id",
+    "owner_approved",
+    "owner_name",
+    "authorized_at_utc",
+    "authorized_by_owner",
+    "research_only",
+    "protected_status",
+    "one_campaign_only",
+    "retry_after_failure",
+    "amendment_sha256",
+    "checkpoint_manifest_sha256",
+    "scorer_code_sha256",
+    "research_admission_sha256",
+    "evaluation_match_ids",
+    "resource_limits",
+    "runtime",
+    "evaluation_input_identity"
+  ],
+  "properties": {
+    "schema_id": {"const": "fpdbench.res594.owner-execution-authorization"},
+    "schema_version": {"const": "1.0.0"},
+    "study_id": {"const": "fpdbench.public-skillcorner-amended-heldout-evaluation/1.0.0"},
+    "owner_approved": {"const": true},
+    "owner_name": {"type": "string", "minLength": 1},
+    "authorized_at_utc": {"type": "string", "format": "date-time"},
+    "authorized_by_owner": {"const": true},
+    "research_only": {"const": true},
+    "protected_status": {"const": "NOT_QUALIFIED"},
+    "one_campaign_only": {"const": true},
+    "retry_after_failure": {"const": false},
+    "amendment_sha256": {"$ref": "#/$defs/sha256"},
+    "checkpoint_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "scorer_code_sha256": {"$ref": "#/$defs/sha256"},
+    "research_admission_sha256": {
+      "const": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
+    },
+    "evaluation_input_sha256": {"$ref": "#/$defs/sha256"},
+    "evaluation_match_ids": {
+      "const": ["1874553", "1925299", "2006229", "2010085"]
+    },
+    "resource_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_seconds",
+        "wall_seconds",
+        "rss_bytes",
+        "input_bytes",
+        "paid_compute_units",
+        "paid_cost_usd"
+      ],
+      "properties": {
+        "cpu_seconds": {"const": 14400},
+        "wall_seconds": {"const": 21600},
+        "rss_bytes": {"const": 8589934592},
+        "input_bytes": {"const": 8589934592},
+        "paid_compute_units": {"const": 0},
+        "paid_cost_usd": {"const": 0}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "numpy", "pytorch", "device", "precision", "threads"],
+      "properties": {
+        "python": {"const": "3.12.8"},
+        "numpy": {"const": "2.2.4"},
+        "pytorch": {"const": "2.6.0+cpu"},
+        "device": {"const": "cpu"},
+        "precision": {"const": "float32"},
+        "threads": {"const": 1}
+      }
+    },
+    "evaluation_input_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "research_admission_sha256",
+        "source_release_hash",
+        "source_population_hash",
+        "protocol_sha256"
+      ],
+      "properties": {
+        "research_admission_sha256": {
+          "const": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
+        },
+        "source_release_hash": {
+          "const": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+        },
+        "source_population_hash": {
+          "const": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
+        },
+        "protocol_sha256": {
+          "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -14,6 +14,7 @@ dependencies = []
 
 [project.scripts]
 fpdbench = "fpdbench.cli:main"
+fpdbench-res594 = "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.amended_heldout_evaluation:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.12", "pyright>=1.1"]
@@ -39,6 +40,12 @@ packages = ["src/fpdbench"]
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v1.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v1.schema.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md" = "fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md"
 
 [tool.hatch.build.targets.sdist.force-include]
 "src/fpdbench/data_states/skillcorner_5hz_v2.json" = "src/fpdbench/data_states/skillcorner_5hz_v2.json"
@@ -47,6 +54,12 @@ packages = ["src/fpdbench"]
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v2.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/empirical_experiment_plan_v2.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/evaluation_population_authority_v2.schema.json"
 "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/prospective_experiment_result_v2.schema.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_private_baseline_manifest_index_v1.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res594_owner_authorization_v1.schema.json"
+"src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md" = "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res337_deterministic_results_v1.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
