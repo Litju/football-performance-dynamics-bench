@@ -41,6 +41,7 @@ EXIT_BAD_INPUT = 4
 EXIT_INTERRUPTED = 143
 EXIT_CRASH_INJECTED = 86
 EXIT_WATCHDOG = 144
+EXIT_UNVERIFIED = 7
 
 
 class DuplicateExecutionRefused(RuntimeError):
@@ -69,6 +70,18 @@ class Config:
     ignore_sigterm: bool = False  # fault injection: hung worker
     crash_after_windows: int = -1  # fault injection: hard exit without cleanup
     torn_write_at_match: int = -1  # fault injection: leave a partial .tmp, then crash
+    forge_empty_result: bool = False  # fault injection: commit a self-consistent empty result
+
+    def __post_init__(self) -> None:
+        for name in ("matches", "windows_per_match", "telemetry_every"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if type(self.seed) is not int:
+            raise ValueError("seed must be an integer")
+        for name in ("wall_limit_s", "cpu_limit_s", "grace_s", "window_delay_s"):
+            if getattr(self, name) < 0:
+                raise ValueError(f"{name} must not be negative")
 
     def scope_sha256(self) -> str:
         body = {
@@ -149,6 +162,11 @@ def consume_scope(ledger_dir: Path, config: Config, campaign_dir: Path) -> Path:
         "retry_allowed": False,
         "synthetic_only": True,
         "scope_sha256": scope,
+        "config": {
+            "matches": config.matches,
+            "windows_per_match": config.windows_per_match,
+            "seed": config.seed,
+        },
         "campaign_directory": str(campaign_dir),
         "consumed_at_utc": utc_now(),
         "consumer_pid": os.getpid(),
@@ -245,6 +263,7 @@ def run_campaign(config: Config, campaign_dir: Path, ledger_dir: Path) -> int:
         "started_at_utc": utc_now(),
         "pid": os.getpid(),
     }
+    marker["metadata_sha256"] = hashlib.sha256(canonical(marker)).hexdigest()
     atomic_write(campaign_dir / MARKER, canonical(marker) + b"\n")
     sealed: list[dict[str, Any]] = []
     windows_done = 0
@@ -319,16 +338,20 @@ def run_campaign(config: Config, campaign_dir: Path, ledger_dir: Path) -> int:
             digest = hashlib.sha256(canonical(body)).hexdigest()
             atomic_write(receipts / f"match-{match}.json", canonical({**body, "sha256": digest}))
             chain = digest
-            sealed.append({"match": match, "sha256": digest})
+            sealed.append({"match": match, "windows": len(scores), "sha256": digest})
         result = {
             "schema_id": SCHEMA_ID + ".result",
             "status": "COMPLETED",
             "synthetic_only": True,
             "scope_sha256": config.scope_sha256(),
+            "matches": config.matches,
+            "windows_per_match": config.windows_per_match,
             "receipts": sealed,
             "final_chain_sha256": chain,
             "windows": windows_done,
         }
+        if config.forge_empty_result:
+            result.update(receipts=[], final_chain_sha256="0" * 64, matches=0, windows=0)
         result["result_sha256"] = hashlib.sha256(canonical(result)).hexdigest()
         atomic_write(campaign_dir / "campaign-result.json", canonical(result) + b"\n")
         return EXIT_OK
@@ -365,59 +388,203 @@ def _write_terminal(
     atomic_write(campaign_dir / name, canonical(record) + b"\n")
 
 
-def classify(campaign_dir: Path, expected_matches: int | None = None) -> dict[str, Any]:
-    """Read-only state classification used for partial-result identification."""
-    marker_path = campaign_dir / MARKER
-    if not marker_path.exists():
-        return {"state": "NOT_STARTED"}
-    marker = json.loads(marker_path.read_text())
-    matches = expected_matches if expected_matches is not None else marker["config"]["matches"]
+_RECEIPT_KEYS = {
+    "schema_id",
+    "match",
+    "windows",
+    "mean_score",
+    "previous_receipt_sha256",
+    "sha256",
+}
+_RESULT_KEYS = {
+    "schema_id",
+    "status",
+    "synthetic_only",
+    "scope_sha256",
+    "matches",
+    "windows_per_match",
+    "receipts",
+    "final_chain_sha256",
+    "windows",
+    "result_sha256",
+}
+
+
+def _load_json(path: Path) -> dict[str, Any] | None:
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
+def _is_sha(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and set(value) <= set("0123456789abcdef")
+
+
+def _frozen_campaign(
+    campaign_dir: Path, ledger_dir: Path | None, problems: list[str]
+) -> Config | None:
+    """Return the independently frozen configuration, or record why it cannot be trusted."""
+    marker = _load_json(campaign_dir / MARKER)
+    if marker is None:
+        problems.append("campaign metadata missing or unreadable")
+        return None
+    claimed = marker.pop("metadata_sha256", None)
+    if claimed != hashlib.sha256(canonical(marker)).hexdigest():
+        problems.append("campaign metadata hash mismatch")
+        return None
+    cfg = marker.get("config")
+    try:
+        assert isinstance(cfg, dict) and set(cfg) == {"matches", "windows_per_match", "seed"}
+        config = Config(**cfg)
+    except (AssertionError, TypeError, ValueError):
+        problems.append("campaign metadata configuration invalid")
+        return None
+    if marker.get("synthetic_only") is not True or marker.get("scope_sha256") != (
+        config.scope_sha256()
+    ):
+        problems.append("campaign metadata scope does not match its configuration")
+        return None
+    if ledger_dir is None:
+        problems.append("one-shot ledger location not supplied; frozen scope cannot be confirmed")
+        return None
+    ledger = _load_json(ledger_dir / f".consumed-{config.scope_sha256()}.json")
+    if (
+        ledger is None
+        or ledger.get("scope_sha256") != config.scope_sha256()
+        or ledger.get("config") != cfg
+        or ledger.get("status") != "CONSUMED_IRREVERSIBLY"
+    ):
+        problems.append("one-shot ledger missing or inconsistent with campaign metadata")
+        return None
+    return config
+
+
+def _check_receipts(
+    campaign_dir: Path, config: Config, problems: list[str]
+) -> list[dict[str, Any]]:
+    """Validate the on-disk receipt chain against the frozen match count; return sealed receipts."""
     receipts_dir = campaign_dir / "receipts"
-    sealed, problems = [], []
+    expected_names = {f"match-{m}.json" for m in range(config.matches)}
+    present = (
+        {p.name for p in receipts_dir.glob("match-*.json")} if receipts_dir.is_dir() else set()
+    )
+    for extra in sorted(present - expected_names):
+        problems.append(f"unexpected receipt file {extra}")
+    sealed: list[dict[str, Any]] = []
     chain = "0" * 64
-    for match in range(matches):
-        path = receipts_dir / f"match-{match}.json"
-        if not path.exists():
+    for match in range(config.matches):
+        doc = _load_json(receipts_dir / f"match-{match}.json")
+        if doc is None:
+            if f"match-{match}.json" in present:
+                problems.append(f"match-{match}: unreadable receipt")
+            break  # later receipts cannot be trusted without their predecessor
+        claimed = doc.get("sha256")
+        body = {k: v for k, v in doc.items() if k != "sha256"}
+        if set(doc) != _RECEIPT_KEYS or doc.get("schema_id") != SCHEMA_ID + ".match-receipt":
+            problems.append(f"match-{match}: receipt schema invalid")
+        elif hashlib.sha256(canonical(body)).hexdigest() != claimed:
+            problems.append(f"match-{match}: content hash mismatch")
+        elif doc["previous_receipt_sha256"] != chain:
+            problems.append(f"match-{match}: chain link mismatch")
+        elif doc["match"] != match or doc["windows"] != config.windows_per_match:
+            problems.append(f"match-{match}: receipt identity or window count mismatch")
+        else:
+            sealed.append({"match": match, "windows": doc["windows"], "sha256": claimed})
+            chain = claimed
             continue
-        try:
-            doc = json.loads(path.read_text())
-            claimed = doc.pop("sha256")
-            if hashlib.sha256(canonical(doc)).hexdigest() != claimed:
-                problems.append(f"match-{match}: content hash mismatch")
-            elif doc["previous_receipt_sha256"] != chain:
-                problems.append(f"match-{match}: chain link mismatch")
-            else:
-                sealed.append(match)
-                chain = claimed
-        except (ValueError, KeyError):
-            problems.append(f"match-{match}: unreadable receipt")
-    strays = sorted(p.name for p in campaign_dir.rglob(".*.tmp"))
-    state = "CRASHED_OR_KILLED"
-    if (campaign_dir / "campaign-result.json").exists():
-        state = "COMPLETED"
-    elif (campaign_dir / ".failed.json").exists():
-        state = "FAILED"
-    elif (campaign_dir / ".interrupted.json").exists():
-        state = "INTERRUPTED"
-    if problems:
-        state = "CORRUPT"
-    return {
-        "state": state,
+        break
+    return sealed
+
+
+def verify_campaign(campaign_dir: Path, ledger_dir: Path | None = None) -> list[str]:
+    """Fail-closed completion verification; an empty list means fully verified COMPLETED."""
+    problems: list[str] = []
+    if ledger_dir is None:
+        ledger_dir = campaign_dir.parent / f"{campaign_dir.name}.ledger"
+    config = _frozen_campaign(campaign_dir, ledger_dir, problems)
+    if config is None:
+        return problems
+    sealed = _check_receipts(campaign_dir, config, problems)
+    if len(sealed) != config.matches:
+        problems.append(f"only {len(sealed)} of {config.matches} frozen receipts are sealed")
+    for terminal in (".failed.json", ".interrupted.json"):
+        if (campaign_dir / terminal).exists():
+            problems.append(f"terminal marker {terminal} coexists with a completion claim")
+    if list(campaign_dir.rglob(".*.tmp")):
+        problems.append("stray temporary files present")
+    result = _load_json(campaign_dir / "campaign-result.json")
+    if result is None:
+        problems.append("final result missing, empty or malformed")
+        return problems
+    claimed = result.get("result_sha256")
+    body = {k: v for k, v in result.items() if k != "result_sha256"}
+    if set(result) != _RESULT_KEYS or hashlib.sha256(canonical(body)).hexdigest() != claimed:
+        problems.append("final result schema or hash invalid")
+        return problems
+    expected = {
+        "schema_id": SCHEMA_ID + ".result",
+        "status": "COMPLETED",
+        "synthetic_only": True,
+        "scope_sha256": config.scope_sha256(),
+        "matches": config.matches,
+        "windows_per_match": config.windows_per_match,
+        "windows": config.matches * config.windows_per_match,
+        "receipts": sealed,
+        "final_chain_sha256": sealed[-1]["sha256"] if sealed else None,
+    }
+    for key, value in expected.items():
+        if result.get(key) != value:
+            problems.append(f"final result field {key} differs from frozen campaign and receipts")
+    return problems
+
+
+def verify_completed(campaign_dir: Path, ledger_dir: Path | None = None) -> bool:
+    return not verify_campaign(campaign_dir, ledger_dir)
+
+
+def classify(campaign_dir: Path, ledger_dir: Path | None = None) -> dict[str, Any]:
+    """Read-only state classification. COMPLETED only if verify_campaign finds no problem."""
+    if not (campaign_dir / MARKER).exists():
+        if any(campaign_dir.glob("campaign-result.json")):
+            return {"state": "CORRUPT", "problems": ["result present without campaign metadata"]}
+        return {"state": "NOT_STARTED"}
+    if ledger_dir is None:
+        ledger_dir = campaign_dir.parent / f"{campaign_dir.name}.ledger"
+    framing: list[str] = []
+    config = _frozen_campaign(campaign_dir, ledger_dir, framing)
+    if config is None:
+        return {
+            "state": "CORRUPT",
+            "problems": framing,
+            "sealed_matches": [],
+            "missing_matches": [],
+            "stray_tmp_files": sorted(p.name for p in campaign_dir.rglob(".*.tmp")),
+            "partial_results_are_scientifically_usable": False,
+        }
+    receipt_problems: list[str] = []
+    sealed = [item["match"] for item in _check_receipts(campaign_dir, config, receipt_problems)]
+    info: dict[str, Any] = {
         "sealed_matches": sealed,
-        "missing_matches": [m for m in range(matches) if m not in sealed],
-        "stray_tmp_files": strays,
-        "problems": problems,
+        "missing_matches": [m for m in range(config.matches) if m not in sealed],
+        "stray_tmp_files": sorted(p.name for p in campaign_dir.rglob(".*.tmp")),
+        "problems": receipt_problems,
         "partial_results_are_scientifically_usable": False,
     }
-
-
-def verify_completed(campaign_dir: Path) -> bool:
-    result = json.loads((campaign_dir / "campaign-result.json").read_text())
-    claimed = result.pop("result_sha256")
-    if hashlib.sha256(canonical(result)).hexdigest() != claimed:
-        return False
-    info = classify(campaign_dir, len(result["receipts"]))
-    return info["state"] == "COMPLETED" and not info["missing_matches"]
+    if (campaign_dir / "campaign-result.json").exists():
+        full = verify_campaign(campaign_dir, ledger_dir)
+        info["state"] = "COMPLETED" if not full else "CORRUPT"
+        info["problems"] = full
+    elif receipt_problems:
+        info["state"] = "CORRUPT"
+    elif (campaign_dir / ".failed.json").exists():
+        info["state"] = "FAILED"
+    elif (campaign_dir / ".interrupted.json").exists():
+        info["state"] = "INTERRUPTED"
+    else:
+        info["state"] = "CRASHED_OR_KILLED"
+    return info
 
 
 def _worker_args(config: Config, campaign: Path, ledger: Path) -> list[str]:
@@ -451,6 +618,8 @@ def _worker_args(config: Config, campaign: Path, ledger: Path) -> list[str]:
     ]
     if config.ignore_sigterm:
         args.append("--ignore-sigterm")
+    if config.forge_empty_result:
+        args.append("--fault-forge-empty-result")
     return args
 
 
@@ -545,6 +714,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--ignore-sigterm", action="store_true")
     parser.add_argument("--crash-after-windows", type=int, default=-1)
     parser.add_argument("--torn-write-at-match", type=int, default=-1)
+    parser.add_argument("--fault-forge-empty-result", action="store_true")
     return parser
 
 
@@ -557,13 +727,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return EXIT_BAD_INPUT
     if args.command == "inspect":
-        print(json.dumps(classify(campaign), indent=2, sort_keys=True))
+        print(json.dumps(classify(campaign, args.ledger_dir), indent=2, sort_keys=True))
         return 0
     if args.command == "verify":
-        ok = verify_completed(campaign)
-        print(json.dumps({"verified": ok}))
-        return 0 if ok else 1
-    config = Config(
+        found = verify_campaign(campaign, args.ledger_dir)
+        print(json.dumps({"verified": not found, "problems": found}))
+        return 0 if not found else EXIT_UNVERIFIED
+    try:
+        config = _config_from_args(args)
+    except ValueError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    return _dispatch(args, config, campaign)
+
+
+def _config_from_args(args: argparse.Namespace) -> Config:
+    return Config(
         matches=args.matches,
         windows_per_match=args.windows_per_match,
         seed=args.seed,
@@ -576,7 +755,11 @@ def main(argv: list[str] | None = None) -> int:
         ignore_sigterm=args.ignore_sigterm,
         crash_after_windows=args.crash_after_windows,
         torn_write_at_match=args.torn_write_at_match,
+        forge_empty_result=args.fault_forge_empty_result,
     )
+
+
+def _dispatch(args: argparse.Namespace, config: Config, campaign: Path) -> int:
     ledger: Path = args.ledger_dir or campaign.parent / f"{campaign.name}.ledger"
     try:
         if args.command == "run":
