@@ -30,8 +30,9 @@ number of scoreable scenes (35.7 - 69.7 min across scenarios).
 Accumulators are small (per-seed, per-match, per-stratum aggregates), so RSS stayed near 164 MiB
 (observed) versus an 8 GiB cap; the synthetic harness peaked at 250 MiB including its own
 generator. Disk: the 6.82 GB snapshot is 83% of the 8 GiB input ceiling and fully duplicates data
-that is re-derivable from the verified source. CPU ceilings (4 h) and wall ceilings (6 h) were
-roughly four times the synthetic projection and were never the binding constraint.
+that is re-derivable from the verified source. The scorer's CPU (4 h) and wall (6 h) ceilings were
+not reached in the observed 30 minutes. The synthetic scoring-path projection (about 1 h nominal) is
+an unqualified extrapolation and does not show that a complete real run would fit.
 
 ## Failure boundaries
 
@@ -47,8 +48,10 @@ roughly four times the synthetic projection and were never the binding constrain
 
 ## Audit conclusions
 
-1. The workload is modest. About one CPU-hour of scoring against a 4 h ceiling means the scientific
-   design is feasible on this hardware; the failure was in execution architecture, not in scale.
+1. The synthetic evidence suggests the scoring path is of the order of one CPU-hour, but this is a
+   conditional estimate, not an end-to-end qualification: unmeasured stages and real data content
+   could change it. What the evidence does support is that the loss mechanisms were architectural
+   (single commit boundary, no signal handling, no telemetry).
 2. The unrecoverable pieces were created by design choices: a single commit boundary, no signal
    handling, consuming the one-shot GO before any durable progress, and no telemetry.
 3. The 6.8 GB intermediate snapshot adds I/O risk and a private-data artefact without being
@@ -98,6 +101,6 @@ What an independently approved future held-out study would need:
 ## Recommendation
 
 **NO-GO** on any real-data scoring now. **GO** to draft a new, separate study design that adopts the
-qualified execution architecture, because the synthetic evidence shows the computation is feasible
-and the architecture removes the identified loss mechanisms. Neither statement authorises
+synthetic-qualified execution architecture, because it removes the identified loss mechanisms. Real
+feasibility would still have to be established in that study design with end-to-end measurement. Neither statement authorises
 execution.

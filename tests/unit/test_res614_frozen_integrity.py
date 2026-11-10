@@ -49,11 +49,13 @@ def test_frozen_sha256_identities_match_the_ratified_values() -> None:
     assert hashlib.sha256(shim.read_bytes()).hexdigest() == sha["entrypoint_shim"]
 
 
-def test_private_snapshot_was_never_opened_or_hashed() -> None:
+def test_evidence_index_declares_snapshot_access_and_marks_it_unverified() -> None:
+    """Checks the recorded declaration only; it is not independent proof of no reads."""
     snapshot = INDEX["private_snapshot_metadata_only"]
     assert snapshot["content_opened"] is False
     assert snapshot["content_hashed"] is False
     assert snapshot["sha256"] is None
+    assert snapshot["access_evidence"]["independently_verified"] is False
     assert snapshot["bytes"] == 6_815_838_287
     for source in INDEX["sources"]:
         assert "evaluation-input" not in source["display_path"]

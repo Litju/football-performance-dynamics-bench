@@ -91,19 +91,22 @@ materialise-write 4.8 min, reread 3.2 min, hashing 0.1 min.
 Sensitivity: scene count is the largest driver (one versus two scoreable scenes changes the total
 by about 40%), then roster size (feature path scales with players x frames), then missingness
 (fewer players present means less to encode, so the heavy-missingness scenario is faster, not
-slower). The scenario range 35.7 - 69.7 min brackets any plausible real mix; the real scene mix was
-not observed.
+slower). The scenario range 35.7 - 69.7 min covers only the four synthetic mixes tested. It is not a bound on
+any real workload: the real scene, roster and missingness mix was not observed, and the stages
+listed under Limitations were not measured.
 
-**Reading against the historical run (inference, not demonstrated).** From file metadata (see
+**Reading against the historical run (illustrative inference, not demonstrated).** From file metadata (see
 the incident report) the real snapshot stopped growing at 05:16:37 UTC and the run ended at
 05:35:25 UTC, so about 18.8 minutes were spent after materialisation. The synthetic scoring-only
 cost (reread + features + inference + metrics) is about 55 minutes in the nominal scenario (range
 roughly 32 - 64 minutes across scenarios). Under this extrapolation the scorer had likely completed
-about a third of its scoring pass (plausible range roughly 30% - 59%) when it ended, i.e. it was not
-close to finishing, and a successful completion would have needed on the order of another 35 - 40
-minutes in the nominal case. Even the pessimistic projection (~70 min plus materialisation and
-source verification) is far below the authorised 14,400 CPU-second (4 h) and 21,600 wall-second (6 h)
-ceilings, so the resource caps were not the binding constraint.
+about a third of its scoring pass (range roughly 30% - 59% across the tested scenarios) when it
+ended. That is only an illustration; real scoring progress was not observable and may differ
+materially. The only observed fact bearing on the resource ceilings is that the real process had used
+about 30 CPU-minutes against a 4 h ceiling when it ended. Nothing here shows that a complete real
+run would finish within the ceilings: source verification, tracking decode, producer replay,
+checkpoint loading, real-size I/O and real data content were not measured, so these projections do
+not establish end-to-end feasibility.
 
 ## Limitations (explicit)
 

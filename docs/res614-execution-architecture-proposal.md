@@ -37,8 +37,14 @@ per-match units only and imports no scorer, model, checkpoint or protected-sourc
 5. **Sealed per-match receipts.** Each receipt carries its content SHA-256 and the previous
    receipt's hash, so removal, reorder, edit or truncation of the middle is detectable
    (`classify` reports `CORRUPT` or a `missing_matches` gap).
-6. **Final commit.** `campaign-result.json` is written once, after every receipt is sealed, and
-   binds the receipt hashes plus its own hash. Its absence defines a partial campaign.
+6. **Final commit and verification.** `campaign-result.json` is written once, after every receipt is
+   sealed. A result file never implies completion. `verify_campaign` fails closed unless the
+   hash-bound campaign metadata agrees with the independent one-shot ledger, exactly the frozen
+   number of ordered, chained, correctly sized receipts exist on disk, and the result's scope,
+   counts, receipt index and final chain equal them. Zero or negative work is refused at start.
+   Supervisor exit status is zero only for a verified completion (distinct nonzero codes for
+   timeout, crash, kill, worker refusal and unverifiable completion), and `status` re-verifies the
+   campaign rather than trusting the recorded outcome. `launch` only reports that supervision began.
 7. **State classifier.** `inspect` (read-only) returns exactly one of NOT_STARTED, COMPLETED,
    FAILED, INTERRUPTED, CRASHED_OR_KILLED, CORRUPT and lists sealed versus missing matches. Partial
    results are always flagged `partial_results_are_scientifically_usable: false`.
@@ -71,8 +77,9 @@ alter code paths and therefore need fresh synthetic equivalence qualification an
 - Run the four matches in four worker processes (one thread each). Output order and per-match
   receipts make this safe; CPU contention must be measured.
 
-None of these is required for feasibility. The nominal scoring path is about one hour of CPU
-versus a 4 hour CPU ceiling.
+Whether any of these is needed depends on end-to-end real-data measurement, which this work did not
+perform. The synthetic nominal scoring path is about one hour of CPU versus a 4 hour ceiling, a
+conditional estimate only.
 
 ## Prototype limits
 

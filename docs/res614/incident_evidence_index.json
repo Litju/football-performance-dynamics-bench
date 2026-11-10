@@ -57,6 +57,11 @@
   "generated_at_utc": "2026-11-10T08:40:00Z",
   "private_snapshot_metadata_only": {
     "access": "stat(2) metadata only",
+    "access_evidence": {
+      "basis": "investigator declaration plus stat(2) metadata (atime unchanged by the investigation)",
+      "independently_verified": false,
+      "limitation": "No auditd, fanotify or eBPF file-access log was active, so the absence of reads by the investigation cannot be independently verified. content_opened and content_hashed are declared values, not measured ones."
+    },
     "atime_utc": "2026-11-07T05:16:38.486824542Z",
     "birth_utc": "2026-11-07T05:07:09.749072057Z",
     "bytes": 6815838287,

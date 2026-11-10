@@ -5,7 +5,10 @@ retained log. Several candidate causes are excluded by direct evidence; one cand
 agent runner that hosted the process) remains the leading but unproven hypothesis.
 
 Scope: execution metadata and logs only. The retained private snapshot was examined with
-`stat(2)` metadata only. It was not opened, read, hashed, copied or parsed. No checkpoint,
+`stat(2)` metadata only. The investigator declares that it was not opened, read, hashed, copied or
+parsed. That statement is a declaration backed by the investigation command history; no
+independent file-access record (auditd, fanotify or eBPF) exists to verify it, and the evidence
+index records `independently_verified: false`. No checkpoint,
 prediction, label or protected source was read, and the original campaign directory and
 authorization ledger were left unchanged (the directory still lists exactly `.started.json` and
 `evaluation-input.private.jsonl`). Evidence hashes are in `docs/res614/incident_evidence_index.json`.
@@ -48,9 +51,10 @@ supports it.
 growing at 05:16:37.76 and was first read 0.73 s later. In the frozen code the only reader is the
 scorer's own SHA-256 readback (`_secure_sha256`, line 2562), which follows materialisation. The run
 therefore spent about 18.8 min after materialisation in hashing, rereading and scoring. The
-synthetic projection (performance report) puts the scoring path at roughly 32 - 64 min, so the run
-was probably between 30% and 59% through scoring. This is inference; scoring progress is not
-observable.
+synthetic scenarios (performance report) put the scoring path at roughly 32 - 64 min, which would
+place the run somewhere around 30% - 59% through scoring if they were representative. That is an
+illustration only: real scoring progress was not observable, the synthetic mixes are not bounds on
+the real workload, and the real run may have been nearer to or further from completion.
 
 **4. Did an OS, container, resource policy or the scorer's own limits cause it?** Excluded:
 - *OOM*: RSS was 164 MiB of a 20 GB VM, the kernel log has no OOM event, and an OOM kill is
