@@ -108,7 +108,8 @@ def test_same_scope_cannot_run_twice_from_different_output_directories(tmp_path:
 
 def test_ledger_root_must_be_owner_private(tmp_path: Path) -> None:
     root = tmp_path / "authority"
-    root.mkdir(mode=0o755)
+    root.mkdir(mode=0o700)
+    root.chmod(0o755)  # explicit, independent of any process-wide umask left by another test
     out = run_cli(
         "run",
         "--campaign-dir",
@@ -437,7 +438,8 @@ def test_supervisor_survives_sighup_of_its_session(tmp_path: Path) -> None:
         "0.03",
     )
     supervisor_pid = json.loads(out.stdout)["supervisor_pid"]
-    time.sleep(0.15)
+    # worker.out is created only after the supervisor has installed its SIGHUP handler.
+    wait_for(tmp_path / "camp.supervisor" / "worker.out")
     os.kill(supervisor_pid, signal.SIGHUP)  # terminal-teardown analogue
     wait_for(tmp_path / "camp" / "campaign-result.json", timeout=20)
     assert r.verify_completed(tmp_path / "camp", ledger(tmp_path))

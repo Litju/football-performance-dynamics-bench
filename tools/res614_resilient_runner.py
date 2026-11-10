@@ -27,6 +27,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,8 @@ SCHEMA_ID = "fpdbench.res614.synthetic-campaign"
 HISTORICAL_SCOPE_SHA256 = "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0"
 FORBIDDEN_FRAGMENTS = ("fpdbench-private", "res594")
 MARKER = "SYNTHETIC_CAMPAIGN.json"
+LEDGER_SCHEMA_ID = SCHEMA_ID + ".ledger"
+LEDGER_STATUS = "CONSUMED_IRREVERSIBLY"
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -210,8 +213,8 @@ def consume_scope(ledger_dir: Path, config: Config, campaign_dir: Path) -> Path:
     except FileExistsError as exc:
         raise DuplicateExecutionRefused(f"scope {scope[:12]} already consumed") from exc
     record = {
-        "schema_id": SCHEMA_ID + ".ledger",
-        "status": "CONSUMED_IRREVERSIBLY",
+        "schema_id": LEDGER_SCHEMA_ID,
+        "status": LEDGER_STATUS,
         "retry_allowed": False,
         "synthetic_only": True,
         "scope_sha256": scope,
@@ -224,6 +227,7 @@ def consume_scope(ledger_dir: Path, config: Config, campaign_dir: Path) -> Path:
         "consumed_at_utc": utc_now(),
         "consumer_pid": os.getpid(),
     }
+    record["record_sha256"] = hashlib.sha256(canonical(record)).hexdigest()
     with os.fdopen(fd, "wb") as stream:
         stream.write(canonical(record) + b"\n")
         stream.flush()
@@ -467,6 +471,18 @@ _RESULT_KEYS = {
     "windows",
     "result_sha256",
 }
+_LEDGER_KEYS = {
+    "schema_id",
+    "status",
+    "retry_allowed",
+    "synthetic_only",
+    "scope_sha256",
+    "config",
+    "campaign_directory",
+    "consumed_at_utc",
+    "consumer_pid",
+    "record_sha256",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -479,6 +495,68 @@ def _load_json(path: Path) -> dict[str, Any] | None:
 
 def _is_sha(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and set(value) <= set("0123456789abcdef")
+
+
+def _ledger_file_problem(path: Path) -> str | None:
+    """The ledger file must be a regular, owner-private file, never a link or shared inode."""
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return "one-shot ledger missing or unreadable"
+    if stat.S_ISLNK(info.st_mode):
+        return "one-shot ledger must not be a symbolic link"
+    if not stat.S_ISREG(info.st_mode):
+        return "one-shot ledger must be a regular file"
+    if info.st_uid != os.geteuid():
+        return "one-shot ledger must be owned by the current user"
+    if stat.S_IMODE(info.st_mode) & 0o077:
+        return "one-shot ledger must be owner-private (mode 0600)"
+    return None
+
+
+def _ledger_record_problems(
+    ledger: dict[str, Any], config: Config, campaign_dir: Path
+) -> list[str]:
+    """Validate the exact consumption record and its binding to this campaign."""
+    if set(ledger) != _LEDGER_KEYS:
+        return ["one-shot ledger schema invalid"]
+    claimed = ledger["record_sha256"]
+    body = {key: value for key, value in ledger.items() if key != "record_sha256"}
+    if not _is_sha(claimed) or hashlib.sha256(canonical(body)).hexdigest() != claimed:
+        return ["one-shot ledger hash mismatch"]
+    scope = config.scope_sha256()
+    problems: list[str] = []
+    if ledger["schema_id"] != LEDGER_SCHEMA_ID:
+        problems.append("one-shot ledger schema identity mismatch")
+    if ledger["synthetic_only"] is not True:
+        problems.append("one-shot ledger is not marked synthetic-only")
+    if ledger["status"] != LEDGER_STATUS:
+        problems.append("one-shot ledger status is not CONSUMED_IRREVERSIBLY")
+    if ledger["retry_allowed"] is not False:
+        problems.append("one-shot ledger permits retry")
+    if ledger["scope_sha256"] != scope:
+        problems.append("one-shot ledger scope mismatch")
+    if ledger["config"] != {
+        "matches": config.matches,
+        "windows_per_match": config.windows_per_match,
+        "seed": config.seed,
+    }:
+        problems.append("one-shot ledger configuration mismatch")
+    if ledger["campaign_directory"] != str(campaign_dir.resolve()):
+        problems.append("one-shot ledger is bound to a different campaign directory")
+    if type(ledger["consumer_pid"]) is not int or ledger["consumer_pid"] < 1:
+        problems.append("one-shot ledger consumer PID invalid")
+    consumed_at = ledger["consumed_at_utc"]
+    try:
+        if not isinstance(consumed_at, str):
+            raise ValueError("not a string")
+        datetime.strptime(consumed_at, "%Y-%m-%dT%H:%M:%SZ")
+        valid_timestamp = True
+    except ValueError:
+        valid_timestamp = False
+    if not valid_timestamp:
+        problems.append("one-shot ledger consumption timestamp invalid")
+    return problems
 
 
 def _frozen_campaign(
@@ -512,14 +590,18 @@ def _frozen_campaign(
     if root_problem is not None:
         problems.append(root_problem)
         return None
-    ledger = _load_json(ledger_dir / f".consumed-{config.scope_sha256()}.json")
-    if (
-        ledger is None
-        or ledger.get("scope_sha256") != config.scope_sha256()
-        or ledger.get("config") != cfg
-        or ledger.get("status") != "CONSUMED_IRREVERSIBLY"
-    ):
-        problems.append("one-shot ledger missing or inconsistent with campaign metadata")
+    ledger_path = ledger_dir / f".consumed-{config.scope_sha256()}.json"
+    file_problem = _ledger_file_problem(ledger_path)
+    if file_problem is not None:
+        problems.append(file_problem)
+        return None
+    ledger = _load_json(ledger_path)
+    if ledger is None:
+        problems.append("one-shot ledger missing, empty or malformed")
+        return None
+    ledger_problems = _ledger_record_problems(ledger, config, campaign_dir)
+    if ledger_problems:
+        problems.extend(ledger_problems)
         return None
     return config
 
