@@ -1,0 +1,160 @@
+{
+  "campaign_directory_listing": [
+    ".started.json",
+    "evaluation-input.private.jsonl"
+  ],
+  "census": {
+    "command_executions": 47510,
+    "exit_143_distinct_end_seconds": 69,
+    "exit_143_durations_s_range": [
+      21,
+      19068
+    ],
+    "exit_143_events": 82,
+    "exit_143_with_duration_ge_1800s": [
+      1849,
+      2295,
+      4087,
+      4658,
+      4945,
+      5074,
+      5412,
+      5551,
+      5756,
+      19068
+    ],
+    "interpretation": "no fixed command or session lifetime limit is visible; exit 143 occurs at many unrelated durations and often in same-second batches",
+    "longest_exit_0_session_s": 11679,
+    "sessions_exit_0_2026_11_04_to_07_ge_1800s_durations_s": [
+      1820,
+      1841,
+      1995,
+      5050,
+      5824,
+      5884,
+      6036
+    ],
+    "sessions_ge_1800s": 54,
+    "sessions_ge_1800s_exit_0": 21,
+    "source": "all Codex rollout files under ~/.codex/sessions (410 files, 2026-09-24..2026-11-07)"
+  },
+  "clock_convention": "UTC. Codex rollout timestamps are millisecond Z strings; filesystem stat values are nanosecond UTC; syslog uses +00:00. The WSL guest clock was stepped repeatedly around 04:00-04:30 and 05:17:06 on 2026-11-07 (systemd-resolved 'Clock change detected', journald 'Time jumped backwards'); cross-source offsets of a few seconds cannot be excluded.",
+  "frozen_identities": {
+    "commit": "7acc2c4e1174935efbe561e072f68c349af5e05f",
+    "git_blob_ids_at_commit": {
+      "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/amended_heldout_evaluation.py": "a7c5803e939f767fc6609ee8b1be32c63000ad78",
+      "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_amendment_v1.json": "7bdc8ee615b24d706572c9d5fea102df51f361a2",
+      "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_checkpoint_manifest_v1.json": "24405b2ee527da762c9686cd4e69f4bb6209c9d9",
+      "tools/score_res594_heldout.py": "0c4d423c4173509368f4081d93138861303c84f5"
+    },
+    "sha256": {
+      "amendment": "e54f067a07479b81c4625428e49e5a5b907c49987d4c5bd7982138e270e66913",
+      "checkpoint_manifest": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
+      "entrypoint_shim": "6572c5088c1a776db37af15986a6aa2b0af6f6c508fecd05088e06e66af9f4d5",
+      "scorer_module": "d14567a6e0ce7b4ace41a75c90b3a68b00f283df1878bb344ec6b2a25ceeb5bf"
+    }
+  },
+  "generated_at_utc": "2026-11-10T08:40:00Z",
+  "private_snapshot_metadata_only": {
+    "access": "stat(2) metadata only",
+    "access_evidence": {
+      "basis": "investigator declaration plus stat(2) metadata (atime unchanged by the investigation)",
+      "independently_verified": false,
+      "limitation": "No auditd, fanotify or eBPF file-access log was active, so the absence of reads by the investigation cannot be independently verified. content_opened and content_hashed are declared values, not measured ones."
+    },
+    "atime_utc": "2026-11-07T05:16:38.486824542Z",
+    "birth_utc": "2026-11-07T05:07:09.749072057Z",
+    "bytes": 6815838287,
+    "content_hashed": false,
+    "content_opened": false,
+    "ctime_utc": "2026-11-07T05:16:37.755734762Z",
+    "display_path": "/srv/fpdbench-private/evidence/res594-amended-heldout-campaign-v1/evaluation-input.private.jsonl",
+    "id": "E7",
+    "inference": "relatime sets atime on the first read after a write: the first read occurred 0.73 s after the last write, consistent with the scorer's own SHA-256 readback beginning immediately after materialisation. Later rereads do not move atime.",
+    "mount_options": "ext4 rw,relatime",
+    "mtime_utc": "2026-11-07T05:16:37.755734762Z",
+    "sha256": null
+  },
+  "schema_id": "fpdbench.res614.incident-evidence-index",
+  "schema_version": "1.0.0",
+  "sources": [
+    {
+      "access": "read",
+      "bytes": 3802229,
+      "display_path": "~/.codex/sessions/2026/11/07/rollout-2026-11-07T03-32-26-01a1b410-8eee-73a1-91b2-90dd4dbfc13c.jsonl",
+      "id": "E1",
+      "kind": "codex_rollout_launch_thread",
+      "sha256": "41bd9fb3ce3798bdcd473efc93b60733074a9aef28c2e1b72f4c4d77677fa840",
+      "used_for": "launch command, unified-exec session 81261, poll cadence, exit 143, ps samples, absence of kill commands"
+    },
+    {
+      "access": "read",
+      "bytes": 80379904,
+      "display_path": "~/.codex/logs_2.sqlite (hashed copy taken 2026-11-10)",
+      "id": "E2",
+      "kind": "codex_app_log_sqlite_copy",
+      "sha256": "e3a7b808c57468125aad57e5c73633a22fcdd4bd3e5c8e001dd5f6bb64bd1144",
+      "used_for": "no kill/terminate/prune log rows for the thread in 05:34:58-05:35:30; app-server process_uuid continuous"
+    },
+    {
+      "access": "read",
+      "bytes": 619743,
+      "display_path": "/var/log/kern.log.1",
+      "id": "E3",
+      "kind": "kernel_log",
+      "sha256": "0ce556438a8cbc76e3ee94a9961875371309e7b6666c44e3db9790bdba73ced1",
+      "used_for": "no OOM, panic, shutdown or Hyper-V event 05:00-05:45; only unrelated docker veth events at 05:15:04 and 05:23:30-52"
+    },
+    {
+      "access": "read",
+      "bytes": 3329107,
+      "display_path": "/var/log/syslog.1",
+      "id": "E4",
+      "kind": "syslog",
+      "sha256": "a7d4721ae2c1afb610a969a5614ce34d588fbd24c5329afe2ad96cb9f9d40557",
+      "used_for": "only journald 'Time jumped backwards' at 05:17:06; clock-step noise 04:00-04:30"
+    },
+    {
+      "access": "read",
+      "bytes": 42706,
+      "display_path": "/var/log/auth.log.1",
+      "id": "E5",
+      "kind": "auth_log",
+      "sha256": "92c0ef5445db334cd776dc350a3e0e35e650729f41e670b858f1c7c893edbed0",
+      "used_for": "no session or user event naming the scorer 05:00-05:45"
+    },
+    {
+      "access": "read",
+      "bytes": 489,
+      "display_path": "/srv/fpdbench-private/evidence/res594-amended-heldout-campaign-v1/.started.json",
+      "id": "E6",
+      "kind": "campaign_started_marker",
+      "sha256": "e797087ffac3d54e45725b05bc4bbad2a05c3620f6a3862c0fc756f2e699a0c9",
+      "used_for": "owner-private execution marker (hashes of public authorities only)"
+    }
+  ],
+  "target_session": {
+    "agent_kill_commands_issued": 0,
+    "command_wrapper": "/bin/bash -lc",
+    "concurrent_live_exec_sessions_in_thread": 1,
+    "cwd": "/tmp/fpdbench-res594-exec-7acc2c4 (no longer exists)",
+    "exec_duration_s": 1849.317594726,
+    "exec_end_utc": "2026-11-07T05:35:25.28Z",
+    "exec_start_utc": "2026-11-07T05:04:35Z",
+    "exit_code": 143,
+    "first_dead_sample_utc": "2026-11-07T05:35:56.2Z",
+    "last_alive_sample": {
+      "cpu_time": "00:29:54",
+      "etime": "30:27",
+      "pcpu": 98.1,
+      "rss_kib": 167636,
+      "stat": "Rsl"
+    },
+    "last_alive_sample_utc": "2026-11-07T05:35:03.44Z",
+    "launcher": "Codex unified_exec_startup, exec_command(yield_time_ms=1000) with polling by write_stdin(yield_time_ms=30000)",
+    "no_nohup_setsid_systemd_run_timeout_or_trap": true,
+    "scorer_pid": 770696,
+    "session_id": 81261,
+    "user_turns_between_launch_and_exit": 0
+  }
+}

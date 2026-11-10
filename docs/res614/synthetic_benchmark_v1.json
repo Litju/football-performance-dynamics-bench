@@ -1,0 +1,1063 @@
+{
+  "budget": {
+    "cpu_seconds_limit": 200.0,
+    "cpu_seconds_used": 90.134248418,
+    "disk_bytes_limit": 1073741824,
+    "peak_rss_bytes": 249647104,
+    "rss_bytes_limit": 2147483648,
+    "wall_seconds": 91.52342128753662
+  },
+  "completed": true,
+  "deterministic_digest": "057cbe74a61f38a4c49e3901fd414fd11c7741e8eb19a7383e753c13c0d32dea",
+  "historical_workload": {
+    "eligible_windows": 51713,
+    "forward_calls": 930834,
+    "snapshot_bytes": 6815838287
+  },
+  "host_loadavg_at_report": [
+    4.40185546875,
+    9.2001953125,
+    8.56298828125
+  ],
+  "issue": "RES614",
+  "limitations": [
+    "Random weights share the real models' FLOP count but not their activation values.",
+    "Synthetic rows imitate shape and byte size only; real content differs.",
+    "Per-window times are extrapolated linearly to 51,713 windows; cache, thermal and contention effects over a ~30-60 minute run are not observed.",
+    "The 6.8 GB real snapshot exceeds the sampled snapshots; page-cache behaviour for the full file is not measured.",
+    "Source verification, tracking decode and producer replay are not benchmarked."
+  ],
+  "runtime": {
+    "cpu_count": 8,
+    "deterministic_algorithms": true,
+    "gpu_used": false,
+    "numpy": "2.2.4",
+    "python": "3.12.8",
+    "threads": 1,
+    "torch": "2.6.0+cpu"
+  },
+  "scenario_sensitivity": {
+    "projected_total_s_max": 4181.256729197622,
+    "projected_total_s_min": 2139.512347634821
+  },
+  "scenarios": {
+    "heavy_missingness": {
+      "cpu_seconds": 20.862237606000008,
+      "cpu_utilisation_hint": 1.0897258482053909,
+      "deterministic_digest": "240479fae0f7bd806804f76759ad776fee8e0ae7942f3af665fb26eeb399d46b",
+      "forward_calls": 5400,
+      "forward_calls_per_window": 18.0,
+      "inference_by_cell_median_s": {
+        "future_ball/absolute_xy/1729": 0.0012412119831424206,
+        "future_ball/absolute_xy/2718": 0.0008557045075576752,
+        "future_ball/absolute_xy/31415": 0.0008064515131991357,
+        "future_ball/origin_relative_displacement/1729": 0.0007883635116741061,
+        "future_ball/origin_relative_displacement/2718": 0.0007948744751047343,
+        "future_ball/origin_relative_displacement/31415": 0.000767376011935994,
+        "future_opponent_plus_ball/absolute_xy/1729": 0.0013730695063713938,
+        "future_opponent_plus_ball/absolute_xy/2718": 0.001025745994411409,
+        "future_opponent_plus_ball/absolute_xy/31415": 0.0009555054712109268,
+        "future_opponent_plus_ball/origin_relative_displacement/1729": 0.0009206885006278753,
+        "future_opponent_plus_ball/origin_relative_displacement/2718": 0.0008890225144568831,
+        "future_opponent_plus_ball/origin_relative_displacement/31415": 0.0008962510037235916,
+        "history_only/absolute_xy/1729": 0.0012526040081866086,
+        "history_only/absolute_xy/2718": 0.0008674984856043011,
+        "history_only/absolute_xy/31415": 0.0007741595036350191,
+        "history_only/origin_relative_displacement/1729": 0.0007265594904311001,
+        "history_only/origin_relative_displacement/2718": 0.0007133494946174324,
+        "history_only/origin_relative_displacement/31415": 0.0007095125038176775
+      },
+      "inference_by_regime_mean_s": {
+        "future_ball": 0.0009674557673861273,
+        "future_opponent_plus_ball": 0.001103263805368139,
+        "history_only": 0.0009227381064879915
+      },
+      "io": {
+        "fsync_seconds": 0.08651957294205204,
+        "hash_readback_mib_per_s": 1196.9194223614395,
+        "hash_readback_seconds": 0.026193517027422786,
+        "reread_parse_mib_per_s": 44.6428944114247,
+        "result_commit_bytes": 6470.0,
+        "result_commit_seconds": 0.010757714975625277,
+        "snapshot_bytes": 33533766.0,
+        "write_mib_per_s": 28.3457829288888,
+        "write_seconds": 1.2374347413424402
+      },
+      "mean_row_bytes": 111779.22,
+      "mean_row_bytes_vs_historical_mean": 0.8480891946754605,
+      "projection_cpu_time_basis": {
+        "clock": "cpu",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          2952.953482019418,
+          3213.8222058569995
+        ],
+        "projected_scoring_path_total_s": 3068.9794789167586,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.02098933652666673,
+            "projected_total_ci95_s": [
+              1056.8991240006337,
+              1114.7948819547958
+            ],
+            "projected_total_s": 1085.4215598035166
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.004466750239999809,
+            "projected_total_ci95_s": [
+              218.5566518313221,
+              245.7467597543914
+            ],
+            "projected_total_s": 230.98905516111014
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.01097586786000037,
+            "projected_total_ci95_s": [
+              549.6865925093091,
+              586.6566886981192
+            ],
+            "projected_total_s": 567.5950546441991
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.01952496257666658,
+            "projected_total_ci95_s": [
+              980.5678427573397,
+              1039.2422400903556
+            ],
+            "projected_total_s": 1009.6943897271588
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.0033021535866669892,
+            "projected_total_ci95_s": [
+              142.7281197673497,
+              222.86648420587377
+            ],
+            "projected_total_s": 170.76426842731001
+          },
+          "sha256_readback": {
+            "projected_total_s": 4.515151153463715
+          }
+        }
+      },
+      "projection_to_historical_workload": {
+        "clock": "wall",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          2718.574365001453,
+          2959.6633142742517
+        ],
+        "projected_scoring_path_total_s": 2826.2090356335834,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.01934268336587896,
+            "projected_total_ci95_s": [
+              973.9396358784084,
+              1027.437705261462
+            ],
+            "projected_total_s": 1000.2681848996986
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.0041247824711414674,
+            "projected_total_ci95_s": [
+              201.82072851394688,
+              227.01504803117902
+            ],
+            "projected_total_s": 213.3048759301387
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.010099581298030291,
+            "projected_total_ci95_s": [
+              505.71264027859604,
+              539.9890839102827
+            ],
+            "projected_total_s": 522.2796476650404
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.017960746075453546,
+            "projected_total_ci95_s": [
+              901.3571471500245,
+              955.7361285790282
+            ],
+            "projected_total_s": 928.8040617999292
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.003036704778011578,
+            "projected_total_ci95_s": [
+              131.2290620270133,
+              204.97019733883627
+            ],
+            "projected_total_s": 157.03711418531273
+          },
+          "sha256_readback": {
+            "projected_total_s": 4.515151153463715
+          }
+        }
+      },
+      "shape": {
+        "ball_missing_p": 0.1,
+        "player_frame_missing_p": 0.15,
+        "roster_per_team": 14,
+        "scoreable_scenes": 2
+      },
+      "stage_latency": {
+        "feature_construction": {
+          "mean_s": 0.01934268336587896,
+          "median_s": 0.018777190503897145,
+          "n": 300.0,
+          "p95_s": 0.02793366084806621,
+          "total_s": 5.802805009763688
+        },
+        "feature_construction__cpu": {
+          "mean_s": 0.02098933652666673,
+          "median_s": 0.020403179500004143,
+          "n": 300.0,
+          "p95_s": 0.030270480449990967,
+          "total_s": 6.296800958000018
+        },
+        "materialize_row": {
+          "mean_s": 0.0041247824711414674,
+          "median_s": 0.0038103254919406027,
+          "n": 300.0,
+          "p95_s": 0.005826703720958905,
+          "total_s": 1.2374347413424402
+        },
+        "materialize_row__cpu": {
+          "mean_s": 0.004466750239999809,
+          "median_s": 0.004125364999998382,
+          "n": 300.0,
+          "p95_s": 0.006339904150000566,
+          "total_s": 1.3400250719999427
+        },
+        "metric_aggregation": {
+          "mean_s": 0.010099581298030291,
+          "median_s": 0.009682001953478903,
+          "n": 300.0,
+          "p95_s": 0.015323534811614081,
+          "total_s": 3.0298743894090876
+        },
+        "metric_aggregation__cpu": {
+          "mean_s": 0.01097586786000037,
+          "median_s": 0.01050641799998786,
+          "n": 300.0,
+          "p95_s": 0.01664591070000512,
+          "total_s": 3.292760358000111
+        },
+        "model_inference": {
+          "mean_s": 0.017960746075453546,
+          "median_s": 0.01710582649684511,
+          "n": 300.0,
+          "p95_s": 0.026516660538618456,
+          "total_s": 5.388223822636064
+        },
+        "model_inference__cpu": {
+          "mean_s": 0.01952496257666658,
+          "median_s": 0.01852068849999533,
+          "n": 300.0,
+          "p95_s": 0.028945106050010595,
+          "total_s": 5.857488772999973
+        },
+        "reread_parse_row": {
+          "mean_s": 0.003036704778011578,
+          "median_s": 0.002560562512371689,
+          "n": 300.0,
+          "p95_s": 0.003788671302027069,
+          "total_s": 0.9110114334034733
+        },
+        "reread_parse_row__cpu": {
+          "mean_s": 0.0033021535866669892,
+          "median_s": 0.0027983520000063322,
+          "n": 300.0,
+          "p95_s": 0.004104532450002552,
+          "total_s": 0.9906460760000968
+        },
+        "synthesize_window": {
+          "mean_s": 0.008838874864353178,
+          "median_s": 0.008682954008691013,
+          "n": 300.0,
+          "p95_s": 0.012560380785726017,
+          "total_s": 2.6516624593059532
+        },
+        "synthesize_window__cpu": {
+          "mean_s": 0.009550490690000081,
+          "median_s": 0.009384976500001585,
+          "n": 300.0,
+          "p95_s": 0.013521403549997759,
+          "total_s": 2.8651472070000246
+        }
+      },
+      "windows": 300
+    },
+    "large_roster": {
+      "cpu_seconds": 28.548927202,
+      "cpu_utilisation_hint": 1.078393262334775,
+      "deterministic_digest": "71e8f0a9656ab64e4326110f7b1ed04c1067e7726b8832ad13200f3970872078",
+      "forward_calls": 5400,
+      "forward_calls_per_window": 18.0,
+      "inference_by_cell_median_s": {
+        "future_ball/absolute_xy/1729": 0.0012345009890850633,
+        "future_ball/absolute_xy/2718": 0.0009249580034520477,
+        "future_ball/absolute_xy/31415": 0.0008455454953946173,
+        "future_ball/origin_relative_displacement/1729": 0.0008386104891542345,
+        "future_ball/origin_relative_displacement/2718": 0.000823494978249073,
+        "future_ball/origin_relative_displacement/31415": 0.0008281070040538907,
+        "future_opponent_plus_ball/absolute_xy/1729": 0.0014007799909450114,
+        "future_opponent_plus_ball/absolute_xy/2718": 0.001103960006730631,
+        "future_opponent_plus_ball/absolute_xy/31415": 0.001032082480378449,
+        "future_opponent_plus_ball/origin_relative_displacement/1729": 0.0009989519894588739,
+        "future_opponent_plus_ball/origin_relative_displacement/2718": 0.0009475554979871958,
+        "future_opponent_plus_ball/origin_relative_displacement/31415": 0.0009998659952543676,
+        "history_only/absolute_xy/1729": 0.0012554300192277879,
+        "history_only/absolute_xy/2718": 0.0008745289815124124,
+        "history_only/absolute_xy/31415": 0.0007946604746393859,
+        "history_only/origin_relative_displacement/1729": 0.0008039175299927592,
+        "history_only/origin_relative_displacement/2718": 0.0007691085047554225,
+        "history_only/origin_relative_displacement/31415": 0.0007825510110706091
+      },
+      "inference_by_regime_mean_s": {
+        "future_ball": 0.0010301008264003838,
+        "future_opponent_plus_ball": 0.001212765005766414,
+        "history_only": 0.0009887942633294087
+      },
+      "io": {
+        "fsync_seconds": 0.12997194397030398,
+        "hash_readback_mib_per_s": 1484.5848902406583,
+        "hash_readback_seconds": 0.04232621198752895,
+        "reread_parse_mib_per_s": 44.76820196874424,
+        "result_commit_bytes": 6470.0,
+        "result_commit_seconds": 0.02492842503124848,
+        "snapshot_bytes": 60356016.0,
+        "write_mib_per_s": 22.580011415908682,
+        "write_seconds": 1.9616611216333695
+      },
+      "mean_row_bytes": 201186.72,
+      "mean_row_bytes_vs_historical_mean": 1.5264400963273617,
+      "projection_cpu_time_basis": {
+        "clock": "cpu",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          3999.700958846815,
+          4394.460061478008
+        ],
+        "projected_scoring_path_total_s": 4181.256729197622,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.03633404311666714,
+            "projected_total_ci95_s": [
+              1816.1443066644356,
+              1948.0431653047854
+            ],
+            "projected_total_s": 1878.9423716922076
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.007057693509999877,
+            "projected_total_ci95_s": [
+              339.38999090656483,
+              394.31569689024684
+            ],
+            "projected_total_s": 364.9745044826236
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.011199965876665345,
+            "projected_total_ci95_s": [
+              556.1019826995389,
+              604.5640248986804
+            ],
+            "projected_total_s": 579.183835379995
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.020895671340000074,
+            "projected_total_ci95_s": [
+              1037.25591986037,
+              1124.9937746435028
+            ],
+            "projected_total_s": 1080.577852005424
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.005226579666666697,
+            "projected_total_ci95_s": [
+              243.51270738086845,
+              315.24734840575576
+            ],
+            "projected_total_s": 270.2821143023349
+          },
+          "sha256_readback": {
+            "projected_total_s": 7.296051335036949
+          }
+        }
+      },
+      "projection_to_historical_workload": {
+        "clock": "wall",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          3717.5404277302605,
+          4084.6885798761455
+        ],
+        "projected_scoring_path_total_s": 3886.147336590468,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.03382191558116271,
+            "projected_total_ci95_s": [
+              1690.4240491570574,
+              1813.3995752644494
+            ],
+            "projected_total_s": 1749.032720448667
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.006538870405444565,
+            "projected_total_ci95_s": [
+              314.5399784577406,
+              365.119122616816
+            ],
+            "projected_total_s": 338.14460527675476
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.01040189806643563,
+            "projected_total_ci95_s": [
+              516.3057364079564,
+              561.502660054816
+            ],
+            "projected_total_s": 537.9133547095857
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.01938996057297724,
+            "projected_total_ci95_s": [
+              962.9119309461615,
+              1044.2254764044844
+            ],
+            "projected_total_s": 1002.713031110372
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.004854631789106255,
+            "projected_total_ci95_s": [
+              226.0626814263077,
+              293.14569420054266
+            ],
+            "projected_total_s": 251.04757371005178
+          },
+          "sha256_readback": {
+            "projected_total_s": 7.296051335036949
+          }
+        }
+      },
+      "shape": {
+        "ball_missing_p": 0.01,
+        "player_frame_missing_p": 0.02,
+        "roster_per_team": 23,
+        "scoreable_scenes": 2
+      },
+      "stage_latency": {
+        "feature_construction": {
+          "mean_s": 0.03382191558116271,
+          "median_s": 0.03241678644553758,
+          "n": 300.0,
+          "p95_s": 0.04859347234596499,
+          "total_s": 10.146574674348813
+        },
+        "feature_construction__cpu": {
+          "mean_s": 0.03633404311666714,
+          "median_s": 0.03479011850000546,
+          "n": 300.0,
+          "p95_s": 0.052300255149998524,
+          "total_s": 10.900212935000141
+        },
+        "materialize_row": {
+          "mean_s": 0.006538870405444565,
+          "median_s": 0.005452886020066217,
+          "n": 300.0,
+          "p95_s": 0.01307053871569224,
+          "total_s": 1.9616611216333695
+        },
+        "materialize_row__cpu": {
+          "mean_s": 0.007057693509999877,
+          "median_s": 0.005902844000001295,
+          "n": 300.0,
+          "p95_s": 0.014204525699999951,
+          "total_s": 2.117308052999963
+        },
+        "metric_aggregation": {
+          "mean_s": 0.01040189806643563,
+          "median_s": 0.009781553962966427,
+          "n": 300.0,
+          "p95_s": 0.015836727133137173,
+          "total_s": 3.120569419930689
+        },
+        "metric_aggregation__cpu": {
+          "mean_s": 0.011199965876665345,
+          "median_s": 0.010506237500006677,
+          "n": 300.0,
+          "p95_s": 0.017059897600005768,
+          "total_s": 3.3599897629996036
+        },
+        "model_inference": {
+          "mean_s": 0.01938996057297724,
+          "median_s": 0.01805507598328404,
+          "n": 300.0,
+          "p95_s": 0.02970501779636835,
+          "total_s": 5.816988171893172
+        },
+        "model_inference__cpu": {
+          "mean_s": 0.020895671340000074,
+          "median_s": 0.019394857499984042,
+          "n": 300.0,
+          "p95_s": 0.032163675400005344,
+          "total_s": 6.268701402000023
+        },
+        "reread_parse_row": {
+          "mean_s": 0.004854631789106255,
+          "median_s": 0.0043784309818875045,
+          "n": 300.0,
+          "p95_s": 0.006911973794922235,
+          "total_s": 1.4563895367318764
+        },
+        "reread_parse_row__cpu": {
+          "mean_s": 0.005226579666666697,
+          "median_s": 0.004703418500003664,
+          "n": 300.0,
+          "p95_s": 0.007469860649998597,
+          "total_s": 1.567973900000009
+        },
+        "synthesize_window": {
+          "mean_s": 0.012580558733122112,
+          "median_s": 0.012033591483486816,
+          "n": 300.0,
+          "p95_s": 0.016914807632565497,
+          "total_s": 3.774167619936634
+        },
+        "synthesize_window__cpu": {
+          "mean_s": 0.013571045663332969,
+          "median_s": 0.0129514240000006,
+          "n": 300.0,
+          "p95_s": 0.01815711525000161,
+          "total_s": 4.071313698999891
+        }
+      },
+      "windows": 300
+    },
+    "nominal": {
+      "cpu_seconds": 24.798338427000004,
+      "cpu_utilisation_hint": 1.0804488851390384,
+      "deterministic_digest": "363247977b30cbc4fa83c29c4711e3550bc81e77a8b9601dea92da7b8d778138",
+      "forward_calls": 5400,
+      "forward_calls_per_window": 18.0,
+      "inference_by_cell_median_s": {
+        "future_ball/absolute_xy/1729": 0.0013702039723284543,
+        "future_ball/absolute_xy/2718": 0.001039054011926055,
+        "future_ball/absolute_xy/31415": 0.000943529506912455,
+        "future_ball/origin_relative_displacement/1729": 0.0009359989780932665,
+        "future_ball/origin_relative_displacement/2718": 0.0009131785191129893,
+        "future_ball/origin_relative_displacement/31415": 0.0008687965164426714,
+        "future_opponent_plus_ball/absolute_xy/1729": 0.001525813015177846,
+        "future_opponent_plus_ball/absolute_xy/2718": 0.0012131239927839488,
+        "future_opponent_plus_ball/absolute_xy/31415": 0.0011323255021125078,
+        "future_opponent_plus_ball/origin_relative_displacement/1729": 0.0011484295246191323,
+        "future_opponent_plus_ball/origin_relative_displacement/2718": 0.001127406518207863,
+        "future_opponent_plus_ball/origin_relative_displacement/31415": 0.00105487450491637,
+        "history_only/absolute_xy/1729": 0.0013433840067591518,
+        "history_only/absolute_xy/2718": 0.0009240115177817643,
+        "history_only/absolute_xy/31415": 0.0008624180045444518,
+        "history_only/origin_relative_displacement/1729": 0.000836773484479636,
+        "history_only/origin_relative_displacement/2718": 0.0008487360028084368,
+        "history_only/origin_relative_displacement/31415": 0.0008753465372137725
+      },
+      "inference_by_regime_mean_s": {
+        "future_ball": 0.0011160242054352742,
+        "future_opponent_plus_ball": 0.0013050644084190328,
+        "history_only": 0.0010536934777175904
+      },
+      "io": {
+        "fsync_seconds": 0.11846801702631637,
+        "hash_readback_mib_per_s": 1004.5057799148146,
+        "hash_readback_seconds": 0.03519115800736472,
+        "reread_parse_mib_per_s": 35.925341137451746,
+        "result_commit_bytes": 6470.0,
+        "result_commit_seconds": 0.013886713946703821,
+        "snapshot_bytes": 38072202.0,
+        "write_mib_per_s": 16.910914678299342,
+        "write_seconds": 1.5577451482531615
+      },
+      "mean_row_bytes": 126907.34,
+      "mean_row_bytes_vs_historical_mean": 0.9628689820791811,
+      "projection_cpu_time_basis": {
+        "clock": "cpu",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          3474.0111392118506,
+          3779.8973694160204
+        ],
+        "projected_scoring_path_total_s": 3612.049774830827,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.025611962926666548,
+            "projected_total_ci95_s": [
+              1290.3050432044797,
+              1360.52572381435
+            ],
+            "projected_total_s": 1324.471438826707
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.005530771456666298,
+            "projected_total_ci95_s": [
+              264.7085343719605,
+              312.80079442142994
+            ],
+            "projected_total_s": 286.01278433858425
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.012337340553333366,
+            "projected_total_ci95_s": [
+              618.8337041071105,
+              657.6783967785017
+            ],
+            "projected_total_s": 638.0008920345283
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.022519302069999952,
+            "projected_total_ci95_s": [
+              1125.3765837502087,
+              1205.589442898467
+            ],
+            "projected_total_s": 1164.5406679459074
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.00373132205000001,
+            "projected_total_ci95_s": [
+              168.72113926464175,
+              237.23687698982224
+            ],
+            "projected_total_s": 192.95785717165052
+          },
+          "sha256_readback": {
+            "projected_total_s": 6.066134513449506
+          }
+        }
+      },
+      "projection_to_historical_workload": {
+        "clock": "wall",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          3223.3293288524696,
+          3509.2887014084945
+        ],
+        "projected_scoring_path_total_s": 3352.1872037088033,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.02377750992231692,
+            "projected_total_ci95_s": [
+              1197.8537250341444,
+              1263.1298418004264
+            ],
+            "projected_total_s": 1229.6063706127748
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.005192483827510538,
+            "projected_total_ci95_s": [
+              248.06272190507968,
+              294.52855176778
+            ],
+            "projected_total_s": 268.51891617205246
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.011428218920094272,
+            "projected_total_ci95_s": [
+              573.2719305054501,
+              609.0940475203979
+            ],
+            "projected_total_s": 590.9874850148351
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.020848692549431388,
+            "projected_total_ci95_s": [
+              1041.7779658841948,
+              1116.3205688806809
+            ],
+            "projected_total_s": 1078.1484378087453
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.0034587020591910307,
+            "projected_total_ci95_s": [
+              156.29685101015113,
+              220.1495569257595
+            ],
+            "projected_total_s": 178.85985958694576
+          },
+          "sha256_readback": {
+            "projected_total_s": 6.066134513449506
+          }
+        }
+      },
+      "shape": {
+        "ball_missing_p": 0.01,
+        "player_frame_missing_p": 0.02,
+        "roster_per_team": 14,
+        "scoreable_scenes": 2
+      },
+      "stage_latency": {
+        "feature_construction": {
+          "mean_s": 0.02377750992231692,
+          "median_s": 0.023090608476195484,
+          "n": 300.0,
+          "p95_s": 0.03382977714645677,
+          "total_s": 7.133252976695076
+        },
+        "feature_construction__cpu": {
+          "mean_s": 0.025611962926666548,
+          "median_s": 0.02494629399999937,
+          "n": 300.0,
+          "p95_s": 0.03632757960000151,
+          "total_s": 7.683588877999965
+        },
+        "materialize_row": {
+          "mean_s": 0.005192483827510538,
+          "median_s": 0.004408342996612191,
+          "n": 300.0,
+          "p95_s": 0.009372682409593837,
+          "total_s": 1.5577451482531615
+        },
+        "materialize_row__cpu": {
+          "mean_s": 0.005530771456666298,
+          "median_s": 0.004763156500004584,
+          "n": 300.0,
+          "p95_s": 0.00942928129999981,
+          "total_s": 1.6592314369998893
+        },
+        "metric_aggregation": {
+          "mean_s": 0.011428218920094272,
+          "median_s": 0.011002490966347978,
+          "n": 300.0,
+          "p95_s": 0.01787471370480489,
+          "total_s": 3.4284656760282815
+        },
+        "metric_aggregation__cpu": {
+          "mean_s": 0.012337340553333366,
+          "median_s": 0.01189341100001684,
+          "n": 300.0,
+          "p95_s": 0.019185632849999967,
+          "total_s": 3.7012021660000096
+        },
+        "model_inference": {
+          "mean_s": 0.020848692549431388,
+          "median_s": 0.01959543491830118,
+          "n": 300.0,
+          "p95_s": 0.03206282143073622,
+          "total_s": 6.254607764829416
+        },
+        "model_inference__cpu": {
+          "mean_s": 0.022519302069999952,
+          "median_s": 0.021104779000011398,
+          "n": 300.0,
+          "p95_s": 0.03438432594999861,
+          "total_s": 6.755790620999986
+        },
+        "reread_parse_row": {
+          "mean_s": 0.0034587020591910307,
+          "median_s": 0.0030279154889285564,
+          "n": 300.0,
+          "p95_s": 0.004730330588063225,
+          "total_s": 1.0376106177573092
+        },
+        "reread_parse_row__cpu": {
+          "mean_s": 0.00373132205000001,
+          "median_s": 0.003274810999999822,
+          "n": 300.0,
+          "p95_s": 0.005146139400006166,
+          "total_s": 1.119396615000003
+        },
+        "synthesize_window": {
+          "mean_s": 0.011242189347588768,
+          "median_s": 0.009998160996474326,
+          "n": 300.0,
+          "p95_s": 0.018036460771691055,
+          "total_s": 3.3726568042766303
+        },
+        "synthesize_window__cpu": {
+          "mean_s": 0.012032111463333377,
+          "median_s": 0.010746509000000515,
+          "n": 300.0,
+          "p95_s": 0.019318709250000055,
+          "total_s": 3.609633439000013
+        }
+      },
+      "windows": 300
+    },
+    "single_scene": {
+      "cpu_seconds": 15.305333508999986,
+      "cpu_utilisation_hint": 1.098330670559191,
+      "deterministic_digest": "7d92c47186e2aacd415df143249e86242f0564057a8720b0e6c609e5a51f6f83",
+      "forward_calls": 5400,
+      "forward_calls_per_window": 18.0,
+      "inference_by_cell_median_s": {
+        "future_ball/absolute_xy/1729": 0.0010877320019062608,
+        "future_ball/absolute_xy/2718": 0.0007315374969039112,
+        "future_ball/absolute_xy/31415": 0.0006763064884580672,
+        "future_ball/origin_relative_displacement/1729": 0.000645338004687801,
+        "future_ball/origin_relative_displacement/2718": 0.0006411515059880912,
+        "future_ball/origin_relative_displacement/31415": 0.0006234419706743211,
+        "future_opponent_plus_ball/absolute_xy/1729": 0.001231688482221216,
+        "future_opponent_plus_ball/absolute_xy/2718": 0.0008593669917900115,
+        "future_opponent_plus_ball/absolute_xy/31415": 0.000792299018939957,
+        "future_opponent_plus_ball/origin_relative_displacement/1729": 0.000788335019024089,
+        "future_opponent_plus_ball/origin_relative_displacement/2718": 0.000793992483522743,
+        "future_opponent_plus_ball/origin_relative_displacement/31415": 0.000788299017585814,
+        "history_only/absolute_xy/1729": 0.0011252224794588983,
+        "history_only/absolute_xy/2718": 0.0007227380119729787,
+        "history_only/absolute_xy/31415": 0.0006440044962801039,
+        "history_only/origin_relative_displacement/1729": 0.0006161314959172159,
+        "history_only/origin_relative_displacement/2718": 0.0006040249718353152,
+        "history_only/origin_relative_displacement/31415": 0.0005836534837726504
+      },
+      "inference_by_regime_mean_s": {
+        "future_ball": 0.0008011390965030943,
+        "future_opponent_plus_ball": 0.0009453975584215691,
+        "history_only": 0.0007865013164377564
+      },
+      "io": {
+        "fsync_seconds": 0.08984402898931876,
+        "hash_readback_mib_per_s": 1327.3504250222702,
+        "hash_readback_seconds": 0.03600939508760348,
+        "reread_parse_mib_per_s": 42.87345070026972,
+        "result_commit_bytes": 6470.0,
+        "result_commit_seconds": 0.013299114012625068,
+        "snapshot_bytes": 36828699.0,
+        "write_mib_per_s": 29.88391308749512,
+        "write_seconds": 1.1113244880107231
+      },
+      "mean_row_bytes": 122762.33,
+      "mean_row_bytes_vs_historical_mean": 0.9314200402023124,
+      "projection_cpu_time_basis": {
+        "clock": "cpu",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          2065.2769524627874,
+          2219.1141965632983
+        ],
+        "projected_scoring_path_total_s": 2139.512347634821,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.011722629420000708,
+            "projected_total_ci95_s": [
+              587.7276947535498,
+              626.1254421836269
+            ],
+            "projected_total_s": 606.2123351964966
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.004056018529999707,
+            "projected_total_ci95_s": [
+              201.5198238821835,
+              219.3122874792918
+            ],
+            "projected_total_s": 209.74888624187486
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.005924094670000185,
+            "projected_total_ci95_s": [
+              294.11588808577835,
+              319.89738209842517
+            ],
+            "projected_total_s": 306.35270766971956
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.016642977840000663,
+            "projected_total_ci95_s": [
+              829.9918450783011,
+              892.222004443078
+            ],
+            "projected_total_s": 860.6583130399542
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.0029070625566664297,
+            "projected_total_ci95_s": [
+              145.7145211690903,
+              155.349900864992
+            ],
+            "projected_total_s": 150.3329259928911
+          },
+          "sha256_readback": {
+            "projected_total_s": 6.207179493884129
+          }
+        }
+      },
+      "projection_to_historical_workload": {
+        "clock": "wall",
+        "excludes": [
+          "pinned source verification and research-population reconciliation",
+          "real tracking-file decode and producer-stream replay during materialisation",
+          "checkpoint loading"
+        ],
+        "projected_scoring_path_total_ci95_s": [
+          1887.84257766879,
+          2028.5944977079403
+        ],
+        "projected_scoring_path_total_s": 1955.373901507014,
+        "stages": {
+          "feature_construction": {
+            "per_window_mean_s": 0.010725557937985287,
+            "projected_total_ci95_s": [
+              537.8126530653893,
+              573.1365242726007
+            ],
+            "projected_total_s": 554.6507776470331
+          },
+          "materialize_row": {
+            "per_window_mean_s": 0.0037044149600357437,
+            "projected_total_ci95_s": [
+              184.00619893778816,
+              200.50649880050636
+            ],
+            "projected_total_s": 191.5664108283284
+          },
+          "metric_aggregation": {
+            "per_window_mean_s": 0.005407391091769871,
+            "projected_total_ci95_s": [
+              268.4424726923997,
+              292.00422269547903
+            ],
+            "projected_total_s": 279.63241552869533
+          },
+          "model_inference": {
+            "per_window_mean_s": 0.015198227828174518,
+            "projected_total_ci95_s": [
+              758.2183938442103,
+              814.8660004911277
+            ],
+            "projected_total_s": 785.9459556783888
+          },
+          "reread_parse_row": {
+            "per_window_mean_s": 0.002656414486312618,
+            "projected_total_ci95_s": [
+              133.15567963511864,
+              141.87407195434244
+            ],
+            "projected_total_s": 137.3711623306844
+          },
+          "sha256_readback": {
+            "projected_total_s": 6.207179493884129
+          }
+        }
+      },
+      "shape": {
+        "ball_missing_p": 0.01,
+        "player_frame_missing_p": 0.02,
+        "roster_per_team": 14,
+        "scoreable_scenes": 1
+      },
+      "stage_latency": {
+        "feature_construction": {
+          "mean_s": 0.010725557937985287,
+          "median_s": 0.010562260984443128,
+          "n": 300.0,
+          "p95_s": 0.015814346636761914,
+          "total_s": 3.217667381395586
+        },
+        "feature_construction__cpu": {
+          "mean_s": 0.011722629420000708,
+          "median_s": 0.011530157500002858,
+          "n": 300.0,
+          "p95_s": 0.017152745250004747,
+          "total_s": 3.5167888260002123
+        },
+        "materialize_row": {
+          "mean_s": 0.0037044149600357437,
+          "median_s": 0.0036725105019286275,
+          "n": 300.0,
+          "p95_s": 0.0053772328537888825,
+          "total_s": 1.1113244880107231
+        },
+        "materialize_row__cpu": {
+          "mean_s": 0.004056018529999707,
+          "median_s": 0.004003797000002862,
+          "n": 300.0,
+          "p95_s": 0.005847587949991962,
+          "total_s": 1.216805558999912
+        },
+        "metric_aggregation": {
+          "mean_s": 0.005407391091769871,
+          "median_s": 0.005123254552017897,
+          "n": 300.0,
+          "p95_s": 0.00885551044484601,
+          "total_s": 1.6222173275309615
+        },
+        "metric_aggregation__cpu": {
+          "mean_s": 0.005924094670000185,
+          "median_s": 0.005647451000001524,
+          "n": 300.0,
+          "p95_s": 0.009838733750009968,
+          "total_s": 1.7772284010000554
+        },
+        "model_inference": {
+          "mean_s": 0.015198227828174518,
+          "median_s": 0.014621003501815721,
+          "n": 300.0,
+          "p95_s": 0.025830980090540835,
+          "total_s": 4.559468348452356
+        },
+        "model_inference__cpu": {
+          "mean_s": 0.016642977840000663,
+          "median_s": 0.016035125000010808,
+          "n": 300.0,
+          "p95_s": 0.02805587044999456,
+          "total_s": 4.992893352000198
+        },
+        "reread_parse_row": {
+          "mean_s": 0.002656414486312618,
+          "median_s": 0.002641629514982924,
+          "n": 300.0,
+          "p95_s": 0.0038268184842309002,
+          "total_s": 0.7969243458937854
+        },
+        "reread_parse_row__cpu": {
+          "mean_s": 0.0029070625566664297,
+          "median_s": 0.0028910580000065522,
+          "n": 300.0,
+          "p95_s": 0.00424931944999969,
+          "total_s": 0.8721187669999289
+        },
+        "synthesize_window": {
+          "mean_s": 0.008294442084152252,
+          "median_s": 0.00835823200759478,
+          "n": 300.0,
+          "p95_s": 0.011604378579067999,
+          "total_s": 2.4883326252456754
+        },
+        "synthesize_window__cpu": {
+          "mean_s": 0.009062303350000344,
+          "median_s": 0.009150882500001956,
+          "n": 300.0,
+          "p95_s": 0.012809071300000776,
+          "total_s": 2.718691005000103
+        }
+      },
+      "windows": 300
+    }
+  },
+  "schema_id": "fpdbench.res614.synthetic-benchmark",
+  "synthetic_only": true
+}
