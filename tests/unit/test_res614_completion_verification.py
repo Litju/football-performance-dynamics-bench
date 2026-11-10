@@ -41,7 +41,7 @@ def done(tmp_path: Path) -> Path:
         "4",
     )
     assert out.returncode == 0, out.stderr
-    assert r.verify_campaign(tmp_path / "camp") == []
+    assert r.verify_campaign(tmp_path / "camp", tmp_path / "camp.ledger") == []
     return tmp_path / "camp"
 
 
@@ -68,27 +68,47 @@ def _reseal_receipts(camp: Path, mutate: Callable[[int, dict[str, Any]], None]) 
         path.write_text(json.dumps({**doc, "sha256": chain}))
 
 
-def _assert_rejected(camp: Path, fragment: str) -> None:
-    problems = r.verify_campaign(camp)
+def _assert_rejected(camp: Path, fragment: str, ledger_dir: Path | None = None) -> None:
+    ledger = ledger_dir or camp.parent / f"{camp.name}.ledger"
+    problems = r.verify_campaign(camp, ledger)
     assert problems, "forged or altered bundle must not verify"
     assert any(fragment in p for p in problems), problems
-    info = r.classify(camp)
+    info = r.classify(camp, ledger)
     assert info["state"] != "COMPLETED"
-    assert not r.verify_completed(camp)
+    assert not r.verify_completed(camp, ledger)
 
 
 def test_untouched_campaign_is_completed(done: Path) -> None:
-    assert r.classify(done)["state"] == "COMPLETED"
-    assert cli("verify", "--campaign-dir", str(done)).returncode == 0
+    assert r.classify(done, done.parent / "camp.ledger")["state"] == "COMPLETED"
+    assert (
+        cli(
+            "verify",
+            "--campaign-dir",
+            str(done),
+            "--ledger-dir",
+            str(done.parent / "camp.ledger"),
+        ).returncode
+        == 0
+    )
+
+
+def test_verification_without_a_ledger_root_fails_closed(done: Path) -> None:
+    problems = r.verify_campaign(done)
+    assert any("ledger root not supplied" in problem for problem in problems)
+    assert not r.verify_completed(done)
+    assert r.classify(done)["state"] == "CORRUPT"
+    out = cli("verify", "--campaign-dir", str(done))
+    assert out.returncode == r.EXIT_BAD_INPUT
+    assert "ledger-dir" in out.stderr
 
 
 def test_result_file_alone_is_not_completion(tmp_path: Path) -> None:
     camp = tmp_path / "camp"
     camp.mkdir()
     (camp / "campaign-result.json").write_text("{}")
-    info = r.classify(camp)
+    info = r.classify(camp, tmp_path / "camp.ledger")
     assert info["state"] == "CORRUPT"
-    assert not r.verify_completed(camp)
+    assert not r.verify_completed(camp, tmp_path / "camp.ledger")
 
 
 def test_self_consistent_zero_receipt_result_is_rejected(done: Path) -> None:
@@ -250,5 +270,14 @@ def test_forged_empty_result_written_by_a_worker_is_not_completed(tmp_path: Path
     )
     assert out.returncode == 0  # the worker itself cannot vouch for completion
     assert (tmp_path / "camp" / "campaign-result.json").exists()
-    assert r.classify(tmp_path / "camp")["state"] == "CORRUPT"
-    assert cli("verify", "--campaign-dir", str(tmp_path / "camp")).returncode == r.EXIT_UNVERIFIED
+    assert r.classify(tmp_path / "camp", tmp_path / "camp.ledger")["state"] == "CORRUPT"
+    assert (
+        cli(
+            "verify",
+            "--campaign-dir",
+            str(tmp_path / "camp"),
+            "--ledger-dir",
+            str(tmp_path / "camp.ledger"),
+        ).returncode
+        == r.EXIT_UNVERIFIED
+    )

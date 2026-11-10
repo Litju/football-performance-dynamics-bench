@@ -31,7 +31,11 @@ def run_cli(*args: str, timeout: float = 30.0) -> subprocess.CompletedProcess[st
 
 
 def common(tmp: Path, name: str = "camp") -> list[str]:
-    return ["--campaign-dir", str(tmp / name), "--ledger-dir", str(tmp / f"{name}.ledger")]
+    return ["--campaign-dir", str(tmp / name), "--ledger-dir", str(ledger(tmp, name))]
+
+
+def ledger(tmp: Path, name: str = "camp") -> Path:
+    return tmp / f"{name}.ledger"
 
 
 def start_worker(tmp: Path, *extra: str, name: str = "camp") -> subprocess.Popen[str]:
@@ -53,10 +57,10 @@ def wait_for(path: Path, timeout: float = 10.0) -> None:
 def test_happy_path_completes_and_verifies(tmp_path: Path) -> None:
     done = run_cli("run", *common(tmp_path), "--matches", "3", "--windows-per-match", "5")
     assert done.returncode == r.EXIT_OK, done.stderr
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["state"] == "COMPLETED"
     assert info["sealed_matches"] == [0, 1, 2]
-    assert r.verify_completed(tmp_path / "camp")
+    assert r.verify_completed(tmp_path / "camp", ledger(tmp_path))
     assert oct((tmp_path / "camp" / "campaign-result.json").stat().st_mode & 0o777) == "0o600"
     assert not info["stray_tmp_files"]
 
@@ -72,6 +76,91 @@ def test_duplicate_scope_is_refused_even_after_directory_removal(tmp_path: Path)
 
     shutil.rmtree(tmp_path / "camp")
     assert run_cli(*args).returncode == r.EXIT_DUPLICATE
+
+
+def test_ledger_root_is_required_and_fails_closed(tmp_path: Path) -> None:
+    out = run_cli(
+        "run",
+        "--campaign-dir",
+        str(tmp_path / "camp"),
+        "--matches",
+        "1",
+        "--windows-per-match",
+        "1",
+    )
+    assert out.returncode == r.EXIT_BAD_INPUT
+    assert "ledger-dir" in out.stderr
+    assert not (tmp_path / "camp").exists()
+    assert not list(tmp_path.glob("*.ledger"))
+
+
+def test_same_scope_cannot_run_twice_from_different_output_directories(tmp_path: Path) -> None:
+    authority = ["--ledger-dir", str(tmp_path / "authority")]
+    work = ["--matches", "2", "--windows-per-match", "3"]
+    first = run_cli("run", "--campaign-dir", str(tmp_path / "a"), *authority, *work)
+    assert first.returncode == r.EXIT_OK, first.stderr
+    # Same scope and same explicit authority, but a different campaign output path.
+    second = run_cli("run", "--campaign-dir", str(tmp_path / "b"), *authority, *work)
+    assert second.returncode == r.EXIT_DUPLICATE
+    assert not (tmp_path / "b").exists()
+    assert r.classify(tmp_path / "a", tmp_path / "authority")["state"] == "COMPLETED"
+
+
+def test_ledger_root_must_be_owner_private(tmp_path: Path) -> None:
+    root = tmp_path / "authority"
+    root.mkdir(mode=0o755)
+    out = run_cli(
+        "run",
+        "--campaign-dir",
+        str(tmp_path / "camp"),
+        "--ledger-dir",
+        str(root),
+        "--matches",
+        "1",
+        "--windows-per-match",
+        "1",
+    )
+    assert out.returncode == r.EXIT_BAD_INPUT
+    assert "owner-private" in out.stderr
+    assert not (tmp_path / "camp").exists()
+
+
+def test_ledger_root_symlink_is_refused(tmp_path: Path) -> None:
+    target = tmp_path / "real-authority"
+    target.mkdir(mode=0o700)
+    link = tmp_path / "authority-link"
+    link.symlink_to(target)
+    out = run_cli(
+        "run",
+        "--campaign-dir",
+        str(tmp_path / "camp"),
+        "--ledger-dir",
+        str(link),
+        "--matches",
+        "1",
+        "--windows-per-match",
+        "1",
+    )
+    assert out.returncode == r.EXIT_BAD_INPUT
+    assert "symbolic link" in out.stderr
+    assert not (tmp_path / "camp").exists()
+
+
+def test_ledger_root_inside_campaign_directory_is_refused(tmp_path: Path) -> None:
+    out = run_cli(
+        "run",
+        "--campaign-dir",
+        str(tmp_path / "camp"),
+        "--ledger-dir",
+        str(tmp_path / "camp" / "authority"),
+        "--matches",
+        "1",
+        "--windows-per-match",
+        "1",
+    )
+    assert out.returncode == r.EXIT_BAD_INPUT
+    assert "outside the campaign" in out.stderr
+    assert not (tmp_path / "camp").exists()
 
 
 def test_concurrent_starts_allow_exactly_one_execution(tmp_path: Path) -> None:
@@ -130,7 +219,7 @@ def test_sigterm_is_graceful_attributed_and_leaves_sealed_prefix(tmp_path: Path)
     assert event["signal"] == "SIGTERM"
     assert event["sender_pid"] == os.getpid(), "sender must be attributed to the test process"
     assert event["sender_uid"] == os.getuid()
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["state"] == "INTERRUPTED"
     assert info["sealed_matches"] and info["missing_matches"]
     assert info["partial_results_are_scientifically_usable"] is False
@@ -169,7 +258,7 @@ def test_sigkill_leaves_no_false_completion_and_is_classified(tmp_path: Path) ->
     wait_for(tmp_path / "camp" / "receipts" / "match-1.json")
     os.kill(worker.pid, signal.SIGKILL)
     assert worker.wait(timeout=10) == -signal.SIGKILL
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["state"] == "CRASHED_OR_KILLED"
     assert info["sealed_matches"][:2] == [0, 1]
     assert not (tmp_path / "camp" / "campaign-result.json").exists()
@@ -192,7 +281,7 @@ def test_injected_crash_between_windows_keeps_durable_telemetry(tmp_path: Path) 
     assert done.returncode == r.EXIT_CRASH_INJECTED
     lines = (tmp_path / "camp" / "telemetry.jsonl").read_text().splitlines()
     assert [json.loads(line)["windows_done"] for line in lines] == [5, 10, 15]
-    assert r.classify(tmp_path / "camp")["sealed_matches"] == [0]
+    assert r.classify(tmp_path / "camp", ledger(tmp_path))["sealed_matches"] == [0]
 
 
 def test_torn_write_never_becomes_a_receipt(tmp_path: Path) -> None:
@@ -207,7 +296,7 @@ def test_torn_write_never_becomes_a_receipt(tmp_path: Path) -> None:
         "1",
     )
     assert done.returncode == r.EXIT_CRASH_INJECTED
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["sealed_matches"] == [0]
     assert info["stray_tmp_files"], "torn temporary file must be surfaced, never trusted"
     assert info["state"] == "CRASHED_OR_KILLED"
@@ -239,7 +328,7 @@ def test_resource_ceilings_stop_with_failure_marker(
     assert done.returncode == r.EXIT_FAILED
     doc = json.loads((tmp_path / "camp" / ".failed.json").read_text())
     assert reason in doc["reason"] and doc["retry_allowed"] is False
-    assert r.classify(tmp_path / "camp")["state"] == "FAILED"
+    assert r.classify(tmp_path / "camp", ledger(tmp_path))["state"] == "FAILED"
 
 
 def test_tampered_receipt_chain_is_detected(tmp_path: Path) -> None:
@@ -251,10 +340,10 @@ def test_tampered_receipt_chain_is_detected(tmp_path: Path) -> None:
     doc = json.loads(receipt.read_text())
     doc["mean_score"] = 0.123456
     receipt.write_text(json.dumps(doc))
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["state"] == "CORRUPT"
     assert any("match-1" in problem for problem in info["problems"])
-    assert not r.verify_completed(tmp_path / "camp")
+    assert not r.verify_completed(tmp_path / "camp", ledger(tmp_path))
 
 
 def test_missing_middle_receipt_is_a_partial_gap(tmp_path: Path) -> None:
@@ -263,9 +352,9 @@ def test_missing_middle_receipt_is_a_partial_gap(tmp_path: Path) -> None:
         == 0
     )
     (tmp_path / "camp" / "receipts" / "match-1.json").unlink()
-    info = r.classify(tmp_path / "camp")
+    info = r.classify(tmp_path / "camp", ledger(tmp_path))
     assert info["missing_matches"] == [1, 2]
-    assert not r.verify_completed(tmp_path / "camp")
+    assert not r.verify_completed(tmp_path / "camp", ledger(tmp_path))
 
 
 def test_supervisor_enforces_hard_timeout_and_records_the_sender(tmp_path: Path) -> None:
@@ -311,7 +400,7 @@ def test_supervisor_sigkills_a_worker_that_ignores_sigterm(tmp_path: Path) -> No
     sup = json.loads((tmp_path / "camp.supervisor" / "supervisor.json").read_text())
     assert sup["terminated_by"] == "supervisor_timeout_sigkill_after_grace"
     assert sup["worker_signal"] == "SIGKILL"
-    assert r.classify(tmp_path / "camp")["state"] == "CRASHED_OR_KILLED"
+    assert r.classify(tmp_path / "camp", ledger(tmp_path))["state"] == "CRASHED_OR_KILLED"
 
 
 def test_detached_launch_survives_launcher_exit_and_new_session(tmp_path: Path) -> None:
@@ -330,7 +419,7 @@ def test_detached_launch_survives_launcher_exit_and_new_session(tmp_path: Path) 
     # The launcher has exited; supervision continues in its own session.
     assert os.getsid(supervisor_pid) == supervisor_pid
     wait_for(tmp_path / "camp" / "campaign-result.json", timeout=20)
-    assert r.verify_completed(tmp_path / "camp")
+    assert r.verify_completed(tmp_path / "camp", ledger(tmp_path))
     wait_for(tmp_path / "camp.supervisor" / "supervisor.json")
     sup = json.loads((tmp_path / "camp.supervisor" / "supervisor.json").read_text())
     assert sup["worker_returncode"] == 0 and sup["terminated_by"] == "none"
@@ -351,7 +440,7 @@ def test_supervisor_survives_sighup_of_its_session(tmp_path: Path) -> None:
     time.sleep(0.15)
     os.kill(supervisor_pid, signal.SIGHUP)  # terminal-teardown analogue
     wait_for(tmp_path / "camp" / "campaign-result.json", timeout=20)
-    assert r.verify_completed(tmp_path / "camp")
+    assert r.verify_completed(tmp_path / "camp", ledger(tmp_path))
 
 
 def test_atomic_write_is_all_or_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -20,6 +20,7 @@ import os
 import random
 import resource
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -155,13 +156,54 @@ def append_durable(path: Path, record: dict[str, Any]) -> None:
         os.close(fd)
 
 
+def _ledger_root_problem(ledger_dir: Path, campaign_dir: Path) -> str | None:
+    """Describe why an existing ledger root is unusable, or return None when it is valid."""
+    try:
+        assert_synthetic_location(ledger_dir)
+    except PermissionError as exc:
+        return str(exc)
+    ledger_root = ledger_dir.resolve()
+    campaign_root = campaign_dir.resolve()
+    if ledger_root == campaign_root or campaign_root in ledger_root.parents:
+        return "the one-shot ledger root must be outside the campaign output directory"
+    try:
+        info = os.lstat(ledger_dir)
+    except OSError:
+        return "the one-shot ledger root is missing or unreadable"
+    if stat.S_ISLNK(info.st_mode):
+        return "the one-shot ledger root must not be a symbolic link"
+    if not stat.S_ISDIR(info.st_mode):
+        return "the one-shot ledger root must be a directory"
+    if info.st_uid != os.geteuid():
+        return "the one-shot ledger root must be owned by the current user"
+    if stat.S_IMODE(info.st_mode) & 0o077:
+        return "the one-shot ledger root must be owner-private (mode 0700)"
+    return None
+
+
+def _prepare_ledger_root(ledger_dir: Path, campaign_dir: Path) -> None:
+    """Create and validate the explicit, stable, owner-private one-shot authority root."""
+    ledger_root = ledger_dir.resolve()
+    campaign_root = campaign_dir.resolve()
+    if ledger_root == campaign_root or campaign_root in ledger_root.parents:
+        raise PermissionError(
+            "the one-shot ledger root must be outside the campaign output directory"
+        )
+    try:
+        os.lstat(ledger_dir)
+    except FileNotFoundError:
+        ledger_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    problem = _ledger_root_problem(ledger_dir, campaign_dir)
+    if problem is not None:
+        raise PermissionError(problem)
+
+
 def consume_scope(ledger_dir: Path, config: Config, campaign_dir: Path) -> Path:
     """One-shot consumption; O_EXCL refuses concurrent and repeated starts, even after a crash."""
     scope = config.scope_sha256()
     if scope == HISTORICAL_SCOPE_SHA256:
         raise PermissionError("the historical RES594 scope can never be consumed here")
-    assert_synthetic_location(ledger_dir)
-    ledger_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _prepare_ledger_root(ledger_dir, campaign_dir)
     path = ledger_dir / f".consumed-{scope}.json"
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
@@ -178,7 +220,7 @@ def consume_scope(ledger_dir: Path, config: Config, campaign_dir: Path) -> Path:
             "windows_per_match": config.windows_per_match,
             "seed": config.seed,
         },
-        "campaign_directory": str(campaign_dir),
+        "campaign_directory": str(campaign_dir.resolve()),
         "consumed_at_utc": utc_now(),
         "consumer_pid": os.getpid(),
     }
@@ -458,7 +500,11 @@ def _frozen_campaign(
         problems.append("campaign metadata scope does not match its configuration")
         return None
     if ledger_dir is None:
-        problems.append("one-shot ledger location not supplied; frozen scope cannot be confirmed")
+        problems.append("one-shot ledger root not supplied; frozen scope cannot be confirmed")
+        return None
+    root_problem = _ledger_root_problem(ledger_dir, campaign_dir)
+    if root_problem is not None:
+        problems.append(root_problem)
         return None
     ledger = _load_json(ledger_dir / f".consumed-{config.scope_sha256()}.json")
     if (
@@ -512,8 +558,6 @@ def _check_receipts(
 def verify_campaign(campaign_dir: Path, ledger_dir: Path | None = None) -> list[str]:
     """Fail-closed completion verification; an empty list means fully verified COMPLETED."""
     problems: list[str] = []
-    if ledger_dir is None:
-        ledger_dir = campaign_dir.parent / f"{campaign_dir.name}.ledger"
     config = _frozen_campaign(campaign_dir, ledger_dir, problems)
     if config is None:
         return problems
@@ -561,8 +605,6 @@ def classify(campaign_dir: Path, ledger_dir: Path | None = None) -> dict[str, An
         if any(campaign_dir.glob("campaign-result.json")):
             return {"state": "CORRUPT", "problems": ["result present without campaign metadata"]}
         return {"state": "NOT_STARTED"}
-    if ledger_dir is None:
-        ledger_dir = campaign_dir.parent / f"{campaign_dir.name}.ledger"
     framing: list[str] = []
     config = _frozen_campaign(campaign_dir, ledger_dir, framing)
     if config is None:
@@ -756,7 +798,14 @@ def _parser() -> argparse.ArgumentParser:
         "command", choices=["run", "supervise", "launch", "inspect", "verify", "status"]
     )
     parser.add_argument("--campaign-dir", type=Path, required=True)
-    parser.add_argument("--ledger-dir", type=Path)
+    parser.add_argument(
+        "--ledger-dir",
+        type=Path,
+        help=(
+            "required stable owner-private one-shot ledger root, independent of the "
+            "campaign output path"
+        ),
+    )
     parser.add_argument("--matches", type=int, default=4)
     parser.add_argument("--windows-per-match", type=int, default=40)
     parser.add_argument("--seed", type=int, default=614)
@@ -781,6 +830,13 @@ def main(argv: list[str] | None = None) -> int:
         assert_synthetic_location(campaign)
     except PermissionError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    if args.ledger_dir is None:
+        print(
+            "REFUSED: --ledger-dir is required and must be a stable owner-private root "
+            "independent of the campaign output path",
+            file=sys.stderr,
+        )
         return EXIT_BAD_INPUT
     if args.command == "inspect":
         print(json.dumps(classify(campaign, args.ledger_dir), indent=2, sort_keys=True))
@@ -820,7 +876,8 @@ def _config_from_args(args: argparse.Namespace) -> Config:
 
 
 def _dispatch(args: argparse.Namespace, config: Config, campaign: Path) -> int:
-    ledger: Path = args.ledger_dir or campaign.parent / f"{campaign.name}.ledger"
+    assert args.ledger_dir is not None
+    ledger: Path = args.ledger_dir
     try:
         if args.command == "run":
             return run_campaign(config, campaign, ledger)

@@ -18,7 +18,7 @@ per-match units only and imports no scorer, model, checkpoint or protected-sourc
 | 6.8 GB private snapshot materialised, hashed, re-read | Stream windows from the verified source straight into the scoring loop; bind the input by per-match streaming digests instead of a second full copy | prototype is streaming by construction; real-data equivalence is a protocol question |
 | All 72 records committed only after a full pass | Seal one receipt per match when the match completes; commit the campaign result only when every match is sealed | `test_sigkill_leaves_no_false_completion_and_is_classified`, `test_tampered_receipt_chain_is_detected` |
 | No progress visibility | Fsynced periodic telemetry (windows, wall, CPU, RSS, sealed count) | `test_injected_crash_between_windows_keeps_durable_telemetry` |
-| Duplicate execution only guarded by a ledger file next to the output | Ledger outside the campaign directory, created with `O_EXCL`; survives deleting the campaign; concurrent starts allow exactly one | `test_duplicate_scope_is_refused_even_after_directory_removal`, `test_concurrent_starts_allow_exactly_one_execution` |
+| Duplicate execution only guarded by a ledger file next to the output | Explicit, stable, owner-private ledger root outside the campaign directory, created with `O_EXCL`; a missing root fails closed; the same scope is refused under any campaign output path; concurrent starts allow exactly one | `test_duplicate_scope_is_refused_even_after_directory_removal`, `test_same_scope_cannot_run_twice_from_different_output_directories`, `test_concurrent_starts_allow_exactly_one_execution`, `test_ledger_root_is_required_and_fails_closed` |
 
 ## Components
 
@@ -38,7 +38,10 @@ per-match units only and imports no scorer, model, checkpoint or protected-sourc
    receipt's hash, so removal, reorder, edit or truncation of the middle is detectable
    (`classify` reports `CORRUPT` or a `missing_matches` gap).
 6. **Final commit and verification.** `campaign-result.json` is written once, after every receipt is
-   sealed. A result file never implies completion. `verify_campaign` fails closed unless the
+   sealed. A result file never implies completion. The one-shot ledger root must be supplied
+   explicitly, must be owner-private (`0700`, owned by the invoking user), and must be independent
+   of the campaign output path; there is no output-derived default and inspection/verification
+   without a root fails closed. `verify_campaign` fails closed unless the
    hash-bound campaign metadata agrees with the independent one-shot ledger, exactly the frozen
    number of ordered, chained, correctly sized receipts exist on disk, and the result's scope,
    counts, receipt index and final chain equal them. Zero or negative work is refused at start.
