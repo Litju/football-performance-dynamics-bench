@@ -407,6 +407,12 @@ def run_campaign(config: Config, campaign_dir: Path, ledger_dir: Path) -> int:
             result.update(receipts=[], final_chain_sha256="0" * 64, matches=0, windows=0)
         result["result_sha256"] = hashlib.sha256(canonical(result)).hexdigest()
         atomic_write(campaign_dir / "campaign-result.json", canonical(result) + b"\n")
+        problems = verify_campaign(campaign_dir, ledger_dir)
+        if problems:
+            reason = "completion verification failed: " + "; ".join(problems)
+            _write_terminal(campaign_dir, "FAILED", reason[:2000], watcher, sealed, windows_done)
+            print(f"UNVERIFIED: {reason}", file=sys.stderr)
+            return EXIT_UNVERIFIED
         return EXIT_OK
     except Interrupted:
         _write_terminal(campaign_dir, "INTERRUPTED", "signal", watcher, sealed, windows_done)
@@ -676,6 +682,27 @@ def _worker_args(config: Config, campaign: Path, ledger: Path) -> list[str]:
     return args
 
 
+def _supervisor_outcome(
+    campaign: Path, ledger: Path, worker_returncode: int | None, terminated_by: str
+) -> tuple[str, list[str]]:
+    """Map the observable worker outcome to an independently verified supervisor status."""
+    if terminated_by != "none":
+        return "WORKER_TIMED_OUT", []
+    if worker_returncode is not None and worker_returncode < 0:
+        return "WORKER_KILLED", []
+    if worker_returncode == EXIT_UNVERIFIED:
+        problems = verify_campaign(campaign, ledger)
+        if not problems:
+            problems = ["worker reported completion unverified"]
+        return "COMPLETION_UNVERIFIED", problems
+    if worker_returncode != 0:
+        return "WORKER_FAILED", []
+    problems = verify_campaign(campaign, ledger)
+    if problems:
+        return "COMPLETION_UNVERIFIED", problems
+    return "COMPLETED_VERIFIED", []
+
+
 def supervise(config: Config, campaign: Path, ledger: Path, hard_timeout_s: float) -> int:
     """Run the worker in its own session; enforce a hard timeout; record who ended it."""
     signal.signal(signal.SIGHUP, signal.SIG_IGN)  # terminal teardown must not kill supervision
@@ -710,16 +737,7 @@ def supervise(config: Config, campaign: Path, ledger: Path, hard_timeout_s: floa
             break
         time.sleep(0.02)
     code = worker.returncode
-    problems: list[str] = []
-    if terminated_by != "none":
-        status = "WORKER_TIMED_OUT"
-    elif code is not None and code < 0:
-        status = "WORKER_KILLED"
-    elif code != 0:
-        status = "WORKER_FAILED"
-    else:
-        problems = verify_campaign(campaign, ledger)
-        status = "COMPLETION_UNVERIFIED" if problems else "COMPLETED_VERIFIED"
+    status, problems = _supervisor_outcome(campaign, ledger, code, terminated_by)
     record = {
         "schema_id": SCHEMA_ID + ".supervisor",
         "supervisor_status": status,

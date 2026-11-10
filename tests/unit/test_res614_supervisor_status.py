@@ -123,6 +123,66 @@ def test_forged_completion_is_reported_unverified(tmp_path: Path) -> None:
     assert out.returncode == r.EXIT_UNVERIFIED
     rec = record(tmp_path)
     assert rec["supervisor_status"] == "COMPLETION_UNVERIFIED" and rec["verification_problems"]
+    # The worker now fails closed itself; the supervisor must not downgrade that to a generic crash.
+    assert rec["worker_returncode"] == r.EXIT_UNVERIFIED
+
+
+def test_direct_supervised_and_status_paths_agree_on_forged_completion(tmp_path: Path) -> None:
+    direct = cli(
+        "run",
+        "--campaign-dir",
+        str(tmp_path / "direct"),
+        "--ledger-dir",
+        str(tmp_path / "direct.ledger"),
+        "--matches",
+        "3",
+        "--windows-per-match",
+        "3",
+        "--fault-forge-empty-result",
+    )
+    assert direct.returncode == r.EXIT_UNVERIFIED
+    assert r.classify(tmp_path / "direct", tmp_path / "direct.ledger")["state"] == "CORRUPT"
+    supervised = cli(
+        "supervise",
+        "--campaign-dir",
+        str(tmp_path / "supervised"),
+        "--ledger-dir",
+        str(tmp_path / "supervised.ledger"),
+        "--matches",
+        "3",
+        "--windows-per-match",
+        "3",
+        "--fault-forge-empty-result",
+    )
+    assert supervised.returncode == r.EXIT_UNVERIFIED
+    assert (
+        cli(
+            "status",
+            "--campaign-dir",
+            str(tmp_path / "supervised"),
+            "--ledger-dir",
+            str(tmp_path / "supervised.ledger"),
+        ).returncode
+        == r.EXIT_UNVERIFIED
+    )
+    rec = json.loads((tmp_path / "supervised.supervisor" / "supervisor.json").read_text())
+    assert rec["supervisor_status"] == "COMPLETION_UNVERIFIED"
+
+
+def test_supervisor_rejects_a_zero_exit_worker_with_an_unverifiable_result(
+    tmp_path: Path,
+) -> None:
+    out = cli("run", *common(tmp_path), "--matches", "3", "--windows-per-match", "3")
+    assert out.returncode == 0
+    path = tmp_path / "camp" / "campaign-result.json"
+    doc = json.loads(path.read_text())
+    doc.pop("result_sha256")
+    doc.update(receipts=[], matches=0, windows=0, final_chain_sha256=None)
+    doc["result_sha256"] = hashlib.sha256(r.canonical(doc)).hexdigest()
+    path.write_text(json.dumps(doc))
+    # Simulate a worker that claims success: the supervisor must verify the campaign itself.
+    status, problems = r._supervisor_outcome(tmp_path / "camp", tmp_path / "camp.ledger", 0, "none")
+    assert status == "COMPLETION_UNVERIFIED" and problems
 
 
 def test_status_without_record_is_not_success(tmp_path: Path) -> None:

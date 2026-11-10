@@ -268,8 +268,10 @@ def test_forged_empty_result_written_by_a_worker_is_not_completed(tmp_path: Path
         "3",
         "--fault-forge-empty-result",
     )
-    assert out.returncode == 0  # the worker itself cannot vouch for completion
+    assert out.returncode == r.EXIT_UNVERIFIED
+    assert "completion verification failed" in out.stderr
     assert (tmp_path / "camp" / "campaign-result.json").exists()
+    assert (tmp_path / "camp" / ".failed.json").exists()
     assert r.classify(tmp_path / "camp", tmp_path / "camp.ledger")["state"] == "CORRUPT"
     assert (
         cli(
