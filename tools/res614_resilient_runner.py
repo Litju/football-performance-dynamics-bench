@@ -42,6 +42,17 @@ EXIT_INTERRUPTED = 143
 EXIT_CRASH_INJECTED = 86
 EXIT_WATCHDOG = 144
 EXIT_UNVERIFIED = 7
+EXIT_SUPERVISED_TIMEOUT = 5
+EXIT_WORKER_FAILED = 6
+EXIT_NOT_FINISHED = 8
+
+STATUS_EXIT = {
+    "COMPLETED_VERIFIED": EXIT_OK,
+    "WORKER_TIMED_OUT": EXIT_SUPERVISED_TIMEOUT,
+    "WORKER_FAILED": EXIT_WORKER_FAILED,
+    "WORKER_KILLED": EXIT_WORKER_FAILED,
+    "COMPLETION_UNVERIFIED": EXIT_UNVERIFIED,
+}
 
 
 class DuplicateExecutionRefused(RuntimeError):
@@ -657,8 +668,21 @@ def supervise(config: Config, campaign: Path, ledger: Path, hard_timeout_s: floa
             break
         time.sleep(0.02)
     code = worker.returncode
+    problems: list[str] = []
+    if terminated_by != "none":
+        status = "WORKER_TIMED_OUT"
+    elif code is not None and code < 0:
+        status = "WORKER_KILLED"
+    elif code != 0:
+        status = "WORKER_FAILED"
+    else:
+        problems = verify_campaign(campaign, ledger)
+        status = "COMPLETION_UNVERIFIED" if problems else "COMPLETED_VERIFIED"
     record = {
         "schema_id": SCHEMA_ID + ".supervisor",
+        "supervisor_status": status,
+        "exit_code_returned": STATUS_EXIT[status],
+        "verification_problems": problems,
         "supervisor_pid": os.getpid(),
         "worker_pid": worker.pid,
         "worker_returncode": code,
@@ -668,8 +692,29 @@ def supervise(config: Config, campaign: Path, ledger: Path, hard_timeout_s: floa
         "elapsed_s": round(time.monotonic() - started, 3),
         "ended_at_utc": utc_now(),
     }
+    record["record_sha256"] = hashlib.sha256(canonical(record)).hexdigest()
     atomic_write(log_dir / "supervisor.json", canonical(record) + b"\n")
-    return 0
+    return STATUS_EXIT[status]
+
+
+def read_status(campaign: Path, ledger: Path | None = None) -> tuple[str, int]:
+    """Fail-closed status for callers of a detached launch.
+
+    Success requires an intact supervisor record AND independent re-verification of the campaign;
+    the recorded status alone is never trusted.
+    """
+    record = _load_json(campaign.parent / f"{campaign.name}.supervisor" / "supervisor.json")
+    if record is None:
+        return "NOT_FINISHED_OR_NO_RECORD", EXIT_NOT_FINISHED
+    claimed = record.pop("record_sha256", None)
+    if claimed != hashlib.sha256(canonical(record)).hexdigest():
+        return "SUPERVISOR_RECORD_INVALID", EXIT_UNVERIFIED
+    status = record.get("supervisor_status")
+    if status not in STATUS_EXIT:
+        return "SUPERVISOR_RECORD_INVALID", EXIT_UNVERIFIED
+    if status == "COMPLETED_VERIFIED" and verify_campaign(campaign, ledger):
+        return "COMPLETION_UNVERIFIED", EXIT_UNVERIFIED
+    return str(status), STATUS_EXIT[str(status)]
 
 
 def launch_detached(config: Config, campaign: Path, ledger: Path, hard_timeout_s: float) -> int:
@@ -692,13 +737,24 @@ def launch_detached(config: Config, campaign: Path, ledger: Path, hard_timeout_s
             start_new_session=True,
             close_fds=True,
         )
-    print(json.dumps({"supervisor_pid": proc.pid, "campaign_directory": str(campaign)}))
+    print(
+        json.dumps(
+            {
+                "supervisor_pid": proc.pid,
+                "campaign_directory": str(campaign),
+                "launched_only": True,
+                "note": "exit 0 means launched; run the status command for the verified outcome",
+            }
+        )
+    )
     return 0
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="RES614 synthetic-only resilient runner")
-    parser.add_argument("command", choices=["run", "supervise", "launch", "inspect", "verify"])
+    parser.add_argument(
+        "command", choices=["run", "supervise", "launch", "inspect", "verify", "status"]
+    )
     parser.add_argument("--campaign-dir", type=Path, required=True)
     parser.add_argument("--ledger-dir", type=Path)
     parser.add_argument("--matches", type=int, default=4)
@@ -733,6 +789,10 @@ def main(argv: list[str] | None = None) -> int:
         found = verify_campaign(campaign, args.ledger_dir)
         print(json.dumps({"verified": not found, "problems": found}))
         return 0 if not found else EXIT_UNVERIFIED
+    if args.command == "status":
+        label, code = read_status(campaign, args.ledger_dir)
+        print(json.dumps({"status": label, "exit_code": code}))
+        return code
     try:
         config = _config_from_args(args)
     except ValueError as exc:

@@ -283,7 +283,7 @@ def test_supervisor_enforces_hard_timeout_and_records_the_sender(tmp_path: Path)
         "--grace-s",
         "2",
     )
-    assert done.returncode == 0, done.stderr
+    assert done.returncode == r.EXIT_SUPERVISED_TIMEOUT, done.stderr
     sup = json.loads((tmp_path / "camp.supervisor" / "supervisor.json").read_text())
     assert sup["terminated_by"] == "supervisor_timeout_sigterm"
     assert sup["worker_returncode"] == r.EXIT_INTERRUPTED
@@ -307,7 +307,7 @@ def test_supervisor_sigkills_a_worker_that_ignores_sigterm(tmp_path: Path) -> No
         "0.5",
         "--ignore-sigterm",
     )
-    assert done.returncode == 0
+    assert done.returncode == r.EXIT_SUPERVISED_TIMEOUT
     sup = json.loads((tmp_path / "camp.supervisor" / "supervisor.json").read_text())
     assert sup["terminated_by"] == "supervisor_timeout_sigkill_after_grace"
     assert sup["worker_signal"] == "SIGKILL"
