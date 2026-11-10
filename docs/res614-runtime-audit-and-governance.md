@@ -62,6 +62,14 @@ learned result, or authorise retry. RES594 stays Canceled; RES593 stays Done; RE
 it, or computing on it, would be a new access to held-out material that the consumed scope does not
 cover.
 
+Relationship to the tracked requirements: RES594 asked that any unavoidable interrupted or partial
+run have explicit, predeclared fail-close handling. The frozen scorer's fail-close (the
+`.failed.json` marker) only runs for Python exceptions, so a signal bypassed it. That is a gap in
+the execution contract, not an unrecorded scientific decision, and it produced no outcome that
+could steer analysis choices. RES440 (the downstream match-level result package) depends on 72
+learned result records that do not exist, so it has nothing to consume; its state is not changed
+here. Its inputs would come only from a future, separately authorised campaign.
+
 What an independently approved future held-out study would need:
 
 1. **A new amendment and protocol identity**, not an edit of RES593. It must declare that matches
