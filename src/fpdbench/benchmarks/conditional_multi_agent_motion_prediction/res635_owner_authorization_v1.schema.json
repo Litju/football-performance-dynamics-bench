@@ -49,7 +49,13 @@
     "retry_after_unknown_interruption": {"const": false},
     "res594_scope_reuse": {"const": false},
     "res594_go_phrase_reuse": {"const": false},
-    "protocol_sha256": {"$ref": "#/$defs/sha256"},
+    "protocol_sha256": {
+      "description": "SHA-256 of the proposed RES635 study protocol JSON. This is not the frozen original v2 input protocol.",
+      "allOf": [
+        {"$ref": "#/$defs/sha256"},
+        {"not": {"$ref": "#/$defs/original_v2_protocol_sha256"}}
+      ]
+    },
     "checkpoint_manifest_sha256": {
       "const": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0"
     },
@@ -60,7 +66,13 @@
     "evaluation_match_ids": {
       "const": ["1874553", "1925299", "2006229", "2010085"]
     },
-    "new_scope_sha256": {"$ref": "#/$defs/sha256"},
+    "new_scope_sha256": {
+      "description": "New RES635 one-shot scope. The historical consumed RES594 scope is prohibited.",
+      "allOf": [
+        {"$ref": "#/$defs/sha256"},
+        {"not": {"$ref": "#/$defs/res594_consumed_scope_sha256"}}
+      ]
+    },
     "ledger_root_identity_sha256": {"$ref": "#/$defs/sha256"},
     "independent_verifier_identity": {"type": "string", "minLength": 1},
     "independent_validation_report_sha256": {"$ref": "#/$defs/sha256"},
@@ -68,6 +80,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "budget_scope",
+        "continuation_must_fit_remaining_budget",
         "cpu_seconds",
         "wall_seconds",
         "rss_bytes",
@@ -77,6 +91,8 @@
         "gpu"
       ],
       "properties": {
+        "budget_scope": {"const": "cumulative_campaign_and_one_continuation"},
+        "continuation_must_fit_remaining_budget": {"const": true},
         "cpu_seconds": {"const": 14400},
         "wall_seconds": {"const": 21600},
         "rss_bytes": {"const": 2147483648},
@@ -105,30 +121,55 @@
       "required": [
         "mode",
         "max_continuations",
-        "bitwise_parity_required",
+        "same_scope_only",
+        "same_new_res635_scope_only",
+        "match_boundary_only",
+        "sealed_receipt_parity_required",
+        "deterministic_sealed_receipt_parity_required",
+        "continuation_state",
+        "cumulative_cpu_seconds_ceiling",
+        "cumulative_wall_seconds_ceiling",
+        "refuse_if_cumulative_budget_exhausted",
+        "refuse_if_remaining_budget_insufficient",
         "no_human_access_to_interim_results",
         "no_outcome_dependent_decision",
+        "worker_terminal_record_required_after_sudden_kill",
+        "independent_postmortem_attestation_required",
         "scientific_or_integrity_failure_terminal",
-        "unknown_interruption_terminal"
+        "unknown_or_untrustworthy_cause_terminal"
       ],
       "properties": {
-        "mode": {"const": "FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION"},
+        "mode": {
+          "const": "FAIL_CLOSED_WITH_ONE_PREAPPROVED_OUTCOME_BLIND_CONTINUATION"
+        },
         "max_continuations": {"const": 1},
-        "bitwise_parity_required": {"const": true},
+        "same_scope_only": {"const": true},
+        "same_new_res635_scope_only": {"const": true},
+        "match_boundary_only": {"const": true},
+        "sealed_receipt_parity_required": {"const": true},
+        "deterministic_sealed_receipt_parity_required": {"const": true},
+        "continuation_state": {"const": "CONTINUATION_READY_SAME_SCOPE"},
+        "cumulative_cpu_seconds_ceiling": {"const": 14400},
+        "cumulative_wall_seconds_ceiling": {"const": 21600},
+        "refuse_if_cumulative_budget_exhausted": {"const": true},
+        "refuse_if_remaining_budget_insufficient": {"const": true},
         "no_human_access_to_interim_results": {"const": true},
         "no_outcome_dependent_decision": {"const": true},
+        "worker_terminal_record_required_after_sudden_kill": {"const": false},
+        "independent_postmortem_attestation_required": {"const": true},
         "scientific_or_integrity_failure_terminal": {"const": true},
-        "unknown_interruption_terminal": {"const": true}
+        "unknown_or_untrustworthy_cause_terminal": {"const": true}
       }
     },
     "evaluation_input_identity": {
+      "description": "The frozen original v2 input-generation identity. This is distinct from the top-level RES635 study protocol identity.",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "research_admission_sha256",
         "source_release_hash",
         "source_population_hash",
-        "protocol_sha256"
+        "original_v2_input_protocol_sha256"
       ],
       "properties": {
         "research_admission_sha256": {
@@ -140,7 +181,8 @@
         "source_population_hash": {
           "const": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
         },
-        "protocol_sha256": {
+        "original_v2_input_protocol_sha256": {
+          "description": "Frozen original v2 input protocol, not the RES635 study protocol.",
           "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
         }
       }
@@ -150,6 +192,12 @@
     }
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "res594_consumed_scope_sha256": {
+      "const": "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0"
+    },
+    "original_v2_protocol_sha256": {
+      "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    }
   }
 }

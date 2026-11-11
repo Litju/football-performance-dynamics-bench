@@ -25,7 +25,7 @@ DETERMINISTIC_RESULTS = ROOT / "res337_deterministic_results_v1.md"
 DECISION = REPO / "docs/res635-admissibility-decision.md"
 PROTOCOL_DOC = REPO / "docs/res635-post-failure-descriptive-protocol-v1.md"
 
-PROTOCOL_SHA256 = "525d2954bf3aed0215b5960262e0fce844fdd164bfcdd0e548a16a90315a72a0"
+PROTOCOL_SHA256 = "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305"
 HEX64 = set("0123456789abcdef")
 
 
@@ -47,6 +47,28 @@ def _cell_key(cell: dict[str, Any]) -> tuple[str, str, int]:
     )
 
 
+def _resolve_schema_node(schema: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
+    ref = node.get("$ref")
+    if isinstance(ref, str):
+        assert ref.startswith("#/$defs/")
+        resolved = schema["$defs"][ref.rsplit("/", 1)[-1]]
+        assert isinstance(resolved, dict)
+        return resolved
+    return node
+
+
+def _accepts_sha256(schema: dict[str, Any], prop: dict[str, Any], value: str) -> bool:
+    if len(value) != 64 or not set(value) <= HEX64:
+        return False
+    for clause in prop.get("allOf", [prop]):
+        resolved = _resolve_schema_node(schema, clause)
+        if "not" in resolved:
+            forbidden = _resolve_schema_node(schema, resolved["not"])
+            if "const" in forbidden and value == forbidden["const"]:
+                return False
+    return True
+
+
 def test_protocol_file_identity_is_frozen() -> None:
     assert _sha256(PROTOCOL) == PROTOCOL_SHA256
 
@@ -56,7 +78,12 @@ def test_protocol_is_proposed_and_not_an_execution_go() -> None:
     assert protocol["status"] == "PROPOSED_UNRATIFIED"
     decision = protocol["decision"]
     assert decision["ticket_token"] == "DESIGN_GO_FOR_OWNER_REVIEW"
-    assert decision["harness_token"] == "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW"
+    assert decision["prior_review_token"] == "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW"
+    assert decision["current_status_token"] == (
+        "RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW"
+    )
+    assert decision["review_disposition"] == "RES635_SCIENTIFICALLY_ADMISSIBLE_CONDITIONAL_REPAIRS"
+    assert len(decision["review_corrections_applied"]) == 3
     assert decision["route"] == "OPTION_B_POST_FAILURE_DESCRIPTIVE_SAME_FOUR_MATCHES"
     assert decision["confirmatory"] is False
     assert decision["authorizes_execution"] is False
@@ -69,6 +96,13 @@ def test_protocol_is_proposed_and_not_an_execution_go() -> None:
     assert authorization["retry_after_failure"] is False
     assert authorization["reuse_res594_scope"] is False
     assert authorization["reuse_res594_go_phrase"] is False
+    assert authorization["new_scope_sha256_must_not_equal_forbidden_scope"] is True
+    assert authorization["original_v2_input_protocol_sha256"] == (
+        "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    )
+    assert authorization["forbidden_historical_res594_scope_sha256"] == (
+        "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0"
+    )
     template = authorization["go_phrase_template"]
     assert template.startswith("RES635-OWNER-GO:")
     assert "RES594-OWNER-GO" not in template
@@ -328,33 +362,86 @@ def test_claims_are_descriptive_only_and_forbid_confirmatory_overreach() -> None
 def test_interruption_policy_is_fail_closed_and_does_not_reauthorize_the_old_scope() -> None:
     protocol = _load(PROTOCOL)
     policy = protocol["interruption_policy"]
-    assert policy["mode"] == "FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION"
+    assert policy["mode"] == "FAIL_CLOSED_WITH_ONE_PREAPPROVED_OUTCOME_BLIND_CONTINUATION"
     assert policy["scientific_or_integrity_failure"] == {
         "terminal": True,
         "retry": False,
+        "continuation": False,
         "new_owner_go_required": True,
     }
-    assert policy["unknown_interruption_cause"] == {
+    assert policy["unknown_or_untrustworthy_cause"] == {
         "terminal": True,
         "retry": False,
+        "continuation": False,
         "new_owner_go_required": True,
     }
     continuation = policy["proven_infrastructure_interruption"]
     assert continuation["continuation_allowed"] is True
+    assert continuation["max_continuations"] == 1
     assert continuation["same_frozen_scope_only"] is True
+    assert continuation["same_scope_only"] is True
+    assert continuation["same_new_res635_scope_only"] is True
     assert continuation["match_boundary_only"] is True
     assert continuation["sealed_receipts_only"] is True
-    assert continuation["bitwise_parity_required"] is True
+    assert continuation["sealed_receipt_parity_required"] is True
+    assert continuation["deterministic_sealed_receipt_parity_required"] is True
     assert continuation["no_human_access_to_interim_results"] is True
     assert continuation["no_outcome_dependent_decision"] is True
-    assert continuation["max_continuations"] == 1
-    assert continuation["max_total_cpu_seconds"] == 14400
-    assert continuation["max_total_wall_seconds"] == 21600
+    assert continuation["continuation_state"] == "CONTINUATION_READY_SAME_SCOPE"
+    assert continuation["cumulative_cpu_seconds_ceiling"] == 14400
+    assert continuation["cumulative_wall_seconds_ceiling"] == 21600
+    assert continuation["refuse_if_cumulative_budget_exhausted"] is True
+    assert continuation["refuse_if_remaining_budget_insufficient"] is True
     assert continuation["reuse_consumed_res594_scope"] is False
     assert continuation["new_scope_per_continuation"] is False
+    evidence = policy["evidence_contract"]
+    assert evidence["worker_terminal_record_required_for_controlled_exit"] is True
+    assert evidence["worker_terminal_record_required_after_sudden_kill"] is False
+    assert evidence["independent_postmortem_attestation_required"] is True
+    assert evidence["attestation_must_be_produced_outside_worker_process"] is True
+    assert evidence["attestation_must_bind_study_protocol_scope_and_campaign"] is True
+    assert evidence["attestation_must_include_worker_wait_status"] is True
+    assert evidence["attestation_must_include_sealed_receipt_prefix"] is True
+    assert evidence["attestation_must_include_cumulative_cpu_and_wall"] is True
+    assert evidence["attestation_must_include_host_boot_identity_when_host_level_event"] is True
+    assert evidence["attestation_must_include_kernel_or_cgroup_evidence_for_oom"] is True
+    assert (
+        evidence["attestation_must_include_journal_or_boot_id_change_for_power_loss_or_reboot"]
+        is True
+    )
+    assert evidence["independent_supervisor_record_required"] is True
+    assert evidence["untrusted_or_absent_evidence"] == "terminal failure; no continuation"
+    required_for = " ".join(evidence["host_or_kernel_attestation_required_for"]).lower()
+    for phrase in ("power loss", "host reboot", "oom kill", "sigkill", "filesystem i/o failure"):
+        assert phrase in required_for
+    trusted = " ".join(evidence["trusted_evidence_sources"]).lower()
+    for phrase in (
+        "waitpid",
+        "boot id",
+        "systemd journal",
+        "kernel log",
+        "memory.events",
+        "host attestation",
+    ):
+        assert phrase in trusted
+    causes = " ".join(policy["predeclared_infrastructure_causes"]).lower()
+    for phrase in (
+        "per-attempt timeout",
+        "remaining cumulative budget",
+        "match boundary",
+        "cgroup oom",
+        "host attestation",
+    ):
+        assert phrase in causes
+    noncontinuable = " ".join(policy["noncontinuable_causes"]).lower()
+    for phrase in (
+        "cumulative cpu or wall budget exhausted",
+        "remaining budget insufficient",
+        "untrusted",
+        "historical consumed res594 scope",
+    ):
+        assert phrase in noncontinuable
     assert policy["partial_results_scientifically_usable"] is False
-    assert policy["sender_attribution_required"] is True
-    assert policy["terminal_record_required"] is True
 
 
 def test_resource_budget_is_cpu_only_zero_paid_and_no_training() -> None:
@@ -383,6 +470,7 @@ def test_resource_budget_is_cpu_only_zero_paid_and_no_training() -> None:
 def test_authorization_schema_rejects_the_old_scope_and_old_go_phrase() -> None:
     schema = _load(AUTH_SCHEMA)
     properties = schema["properties"]
+    defs = schema["$defs"]
     assert properties["schema_id"]["const"] == "fpdbench.res635.owner-execution-authorization"
     assert properties["study_id"]["const"] == (
         "fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0"
@@ -405,6 +493,18 @@ def test_authorization_schema_rejects_the_old_scope_and_old_go_phrase() -> None:
         "2006229",
         "2010085",
     ]
+    assert defs["res594_consumed_scope_sha256"]["const"] == (
+        "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0"
+    )
+    assert defs["original_v2_protocol_sha256"]["const"] == (
+        "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    )
+    input_identity = properties["evaluation_input_identity"]
+    assert input_identity["properties"]["original_v2_input_protocol_sha256"]["const"] == (
+        "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+    )
+    assert "original_v2_input_protocol_sha256" in input_identity["required"]
+    assert "protocol_sha256" not in input_identity["required"]
     template = properties["go_phrase_template"]["const"]
     assert template.startswith("RES635-OWNER-GO:")
     assert "RES594-OWNER-GO" not in template
@@ -420,12 +520,30 @@ def test_authorization_schema_rejects_the_old_scope_and_old_go_phrase() -> None:
         assert field in required
 
 
+def test_authorization_schema_adversarially_rejects_forbidden_authority_swaps() -> None:
+    schema = _load(AUTH_SCHEMA)
+    properties = schema["properties"]
+    old_scope = schema["$defs"]["res594_consumed_scope_sha256"]["const"]
+    original_v2 = schema["$defs"]["original_v2_protocol_sha256"]["const"]
+    assert _accepts_sha256(schema, properties["new_scope_sha256"], old_scope) is False
+    assert _accepts_sha256(schema, properties["new_scope_sha256"], "a" * 64) is True
+    assert _accepts_sha256(schema, properties["protocol_sha256"], original_v2) is False
+    assert _accepts_sha256(schema, properties["protocol_sha256"], "b" * 64) is True
+    assert "res594" in properties["new_scope_sha256"]["description"].lower()
+    assert "original v2" in properties["protocol_sha256"]["description"].lower()
+
+
 def test_authorization_schema_is_consistent_with_the_protocol() -> None:
     protocol = _load(PROTOCOL)
     schema = _load(AUTH_SCHEMA)
     properties = schema["properties"]
     budget = protocol["resource_budget"]
     limits = properties["resource_limits"]["properties"]
+    assert limits["budget_scope"]["const"] == budget["budget_scope"]
+    assert (
+        limits["continuation_must_fit_remaining_budget"]["const"]
+        == budget["continuation_must_fit_remaining_budget"]
+    )
     assert limits["cpu_seconds"]["const"] == budget["cpu_seconds_ceiling"]
     assert limits["wall_seconds"]["const"] == budget["wall_seconds_ceiling"]
     assert limits["rss_bytes"]["const"] == budget["rss_bytes_ceiling"]
@@ -446,11 +564,50 @@ def test_authorization_schema_is_consistent_with_the_protocol() -> None:
     policy = properties["interruption_policy"]["properties"]
     assert policy["mode"]["const"] == protocol["interruption_policy"]["mode"]
     assert policy["max_continuations"]["const"] == 1
-    assert policy["bitwise_parity_required"]["const"] is True
+    assert policy["same_scope_only"]["const"] is True
+    assert policy["same_new_res635_scope_only"]["const"] is True
+    assert policy["match_boundary_only"]["const"] is True
+    assert policy["sealed_receipt_parity_required"]["const"] is True
+    assert policy["deterministic_sealed_receipt_parity_required"]["const"] is True
+    assert policy["continuation_state"]["const"] == "CONTINUATION_READY_SAME_SCOPE"
+    assert policy["cumulative_cpu_seconds_ceiling"]["const"] == 14400
+    assert policy["cumulative_wall_seconds_ceiling"]["const"] == 21600
+    assert policy["refuse_if_cumulative_budget_exhausted"]["const"] is True
+    assert policy["refuse_if_remaining_budget_insufficient"]["const"] is True
     assert policy["no_human_access_to_interim_results"]["const"] is True
     assert policy["no_outcome_dependent_decision"]["const"] is True
+    assert policy["worker_terminal_record_required_after_sudden_kill"]["const"] is False
+    assert policy["independent_postmortem_attestation_required"]["const"] is True
     assert policy["scientific_or_integrity_failure_terminal"]["const"] is True
-    assert policy["unknown_interruption_terminal"]["const"] is True
+    assert policy["unknown_or_untrustworthy_cause_terminal"]["const"] is True
+    authorization = protocol["authorization"]
+    input_identity = properties["evaluation_input_identity"]["properties"]
+    assert (
+        authorization["original_v2_input_protocol_sha256"]
+        == (input_identity["original_v2_input_protocol_sha256"]["const"])
+    )
+    assert (
+        authorization["forbidden_historical_res594_scope_sha256"]
+        == (schema["$defs"]["res594_consumed_scope_sha256"]["const"])
+    )
+    continuation = authorization["continuation_policy"]
+    assert continuation["max_continuations"] == policy["max_continuations"]["const"]
+    assert continuation["same_scope_only"] == policy["same_scope_only"]["const"]
+    assert continuation["match_boundary_only"] == policy["match_boundary_only"]["const"]
+    assert (
+        continuation["cumulative_cpu_seconds_ceiling"]
+        == (policy["cumulative_cpu_seconds_ceiling"]["const"])
+    )
+    assert (
+        continuation["cumulative_wall_seconds_ceiling"]
+        == (policy["cumulative_wall_seconds_ceiling"]["const"])
+    )
+    assert continuation["refuse_if_cumulative_budget_exhausted"] is True
+    assert continuation["refuse_if_remaining_budget_insufficient"] is True
+    assert continuation["outcome_blind"] is True
+    assert continuation["no_human_access_to_interim_results"] is True
+    assert continuation["worker_terminal_record_required_after_sudden_kill"] is False
+    assert continuation["independent_postmortem_attestation_required"] is True
 
 
 def test_protocol_has_no_private_paths_or_historical_entrypoint_reuse() -> None:
@@ -536,12 +693,16 @@ def test_publication_requirements_and_rights_boundaries_are_explicit() -> None:
 def test_decision_memo_is_evidence_linked_and_not_an_execution_go() -> None:
     text = DECISION.read_text()
     assert "DESIGN_GO_FOR_OWNER_REVIEW" in text
-    assert "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW" in text
+    assert "RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW" in text
+    assert "RES635_SCIENTIFICALLY_ADMISSIBLE_CONDITIONAL_REPAIRS" in text
     assert PROTOCOL_SHA256 in text
     assert "No execution GO is granted" in text
     assert "Option 2, descriptive only" in text
     assert "not qualified now" in text.lower()
     assert "new authorization hash is not sufficient" in text.lower()
+    assert "scalar-coordinate rmse" in text.lower()
+    assert "sigterm_cause_undetermined" in text.lower()
+    assert "infrastructure, not scientific" not in text.lower()
     assert "RES594-OWNER-GO" not in text
     for forbidden in (
         "evaluation-input.private",
@@ -558,9 +719,20 @@ def test_protocol_document_matches_the_machine_readable_identity() -> None:
     assert PROTOCOL_SHA256 in text
     assert "PROPOSED / UNRATIFIED / NOT AUTHORIZED FOR EXECUTION" in text
     assert "Execution GO" in text
+    assert "RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW" in text
     for match_id in protocol["population"]["match_ids"]:
         assert match_id in text
-    for phrase in ("sealed receipts", "detached supervisor", "fail-closed", "n=4", "NOT_QUALIFIED"):
+    for phrase in (
+        "sealed receipts",
+        "detached supervisor",
+        "fail-closed",
+        "n=4",
+        "NOT_QUALIFIED",
+        "scalar-coordinate",
+        "worker terminal record",
+        "cumulative",
+        "trustworthy evidence is unavailable",
+    ):
         assert phrase.lower() in text.lower()
 
 

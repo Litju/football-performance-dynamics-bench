@@ -4,8 +4,9 @@
 **Study ID:** `fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0`
 **Protocol schema:** `fpdbench.res635.post-failure-descriptive-protocol/1.0.0`
 **Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`
-**Protocol file SHA-256:** `525d2954bf3aed0215b5960262e0fce844fdd164bfcdd0e548a16a90315a72a0`
-**Decision:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket) / `RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW` (review)
+**Protocol file SHA-256:** `ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305`
+**Decision:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket) / `RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW` (review)
+**Review:** `RES635_SCIENTIFICALLY_ADMISSIBLE_CONDITIONAL_REPAIRS`; the three precision corrections are applied.
 **Execution GO:** **not granted.**
 
 This is a separately versioned proposal for a new, descriptive, research-only study. It is not the original v2 protocol, not the RES593 amendment, not a retry or reuse of the RES594 consumed authorization, and not a completion of either the original 234-fit study or the deferred 216-fit LOMO campaign. It has no owner ratification and no execution authorization.
@@ -171,7 +172,7 @@ The deterministic baselines were already scored on the four evaluation matches. 
 
 The published precision is four decimal places; the rounding bound is at most 0.00005 m. The study reads the pinned aggregate reference and never reruns or silently recomputes the historical baselines. Baseline comparisons are secondary descriptive results. The primary C1/C2 contrasts use only learned-model ADE and are independent of baseline metric rounding.
 
-The fact that these values were observed before the RES593 amendment is disclosed. It may have influenced analysis choices; the protocol does not claim outcome-blind design. It does claim that the learned evaluation outcome was never observed.
+The fact that these values were observed before the RES593 amendment is disclosed. It may have influenced analysis choices; the protocol does not claim outcome-blind design. It does claim that no learned result bundle was committed, recovered or observed by the scientific analyst.
 
 ## 8. Prior information exposure and outcome-dependence controls
 
@@ -212,7 +213,7 @@ The study requires a new scorer and a new entrypoint. The historical RES594 scor
 | Receipts | One sealed receipt per match, content SHA-256 and previous-receipt hash. |
 | Final commit | Written once after all four receipts are sealed and verified. |
 | Verification | Worker re-verifies its bundle; supervisor independently re-verifies every zero-exit worker; `status` re-verifies again. |
-| Failure records | Terminal record written atomically on every controlled exit. |
+| Failure records | Terminal record written atomically on every controlled exit. Sudden SIGKILL, OOM or power loss may leave no worker record; §12 requires independent postmortem attestation instead. |
 | Partial results | Never scientifically usable. |
 
 The new scorer must not import or invoke the RES594 scorer, entrypoint, authorization or ledger. The new entrypoint is proposed as `fpdbench-res635`; the module is proposed as `fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res635_post_failure_evaluation`. Neither is implemented by this protocol.
@@ -253,33 +254,40 @@ The final `campaign-result.json` is written once, after every receipt is sealed.
 
 ## 12. Predeclared infrastructure-interruption policy
 
-**Mode:** `FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION` (fail-closed for scientific, integrity and unknown causes).
+**Mode:** `FAIL_CLOSED_WITH_ONE_PREAPPROVED_OUTCOME_BLIND_CONTINUATION` (fail-closed for scientific, integrity, unknown and untrustworthy causes).
 
-| Situation | Outcome | Continuation |
-|---|---|---|
-| Scientific or integrity failure | Terminal; no retry; new owner GO required for a new study. | No |
-| Unknown interruption cause | Terminal; no retry; new owner GO required for a new study. | No |
-| Proven infrastructure interruption | Same frozen scope may continue once, at a match boundary, from sealed receipts. | Yes, under the conditions below |
-| Completed | Verified result; no further run. | No |
-| SIGKILL / power loss | No terminal record; sealed prefix intact; classified `CRASHED_OR_KILLED`. | Only if the cause is later proven to be a predeclared infrastructure cause and the continuation conditions are met |
-| Torn write | Temp file never promoted; reported as stray temp. | Only under the same conditions |
+| Situation | Worker terminal record | Required independent evidence | Continuation |
+|---|---|---|---|
+| Scientific or integrity failure | Required if the worker is alive to write it | Supervisor outcome record and failure classification | No |
+| Unknown or untrustworthy cause | Not sufficient by itself | None sufficient | No |
+| Supervisor per-attempt timeout with remaining cumulative budget | Required if the worker is alive | Supervisor `waitpid` status, sender, fsynced telemetry, cumulative budget and a verified match boundary | Yes, at most one |
+| Worker SIGTERM from an external process | Required if the worker handles it; not guaranteed | Supervisor `waitpid` status; sender PID/UID if available; host audit or journal if available | Only if the independent evidence establishes a predeclared cause and the match boundary |
+| SIGKILL | Not required; the worker cannot write one | Supervisor `waitpid` status with signal 9; if the supervisor is also lost, host attestation | Only if the independent evidence establishes a predeclared cause and the match boundary |
+| OOM kill | Not required | Supervisor record plus cgroup `memory.events` OOM count and kernel log with cgroup and PID | Only if the independent evidence establishes a predeclared cause and the match boundary |
+| Power loss or host reboot | Not required | Host boot ID change, systemd journal shutdown/reboot record, supervisor last fsynced telemetry and sealed receipt chain | Only if the independent evidence establishes a predeclared cause and the match boundary |
+| Filesystem I/O failure | Not required | Supervisor record plus kernel or filesystem error evidence from the host | Only if the independent evidence establishes a predeclared cause and the match boundary |
+| Completed | Verified result | Independent completion verification | No |
+| Torn write | Not a terminal record | Stray temp file and sealed prefix inspection | Only under the same conditions |
 
-A proven infrastructure interruption must satisfy all of the following:
+A continuation is permitted only when all of the following hold:
 
-* the cause is one of the predeclared causes: supervisor hard-timeout SIGTERM with recorded sender and exit status, recorded node shutdown/reboot, recorded cgroup OOM kill with kernel evidence, or recorded filesystem I/O failure;
-* sender attribution and terminal record are present;
-* the continuation uses the same frozen scope, same protocol, same checkpoint manifest, same research admission and same scorer code;
-* the continuation starts only at a match boundary and reuses only sealed receipts;
+* the cause is a predeclared infrastructure cause, established by evidence produced outside the worker process;
+* the evidence is trustworthy and independent: it comes from the supervisor's `waitpid` or outcome record, supervisor fsynced telemetry, host boot identity, systemd journal, kernel log, cgroup `memory.events`, or an independent host attestation bundle;
+* the evidence binds the study protocol, scope, campaign and worker identity, and includes the worker wait status, the sealed receipt prefix, the cumulative CPU and wall consumed, and the remaining budget;
+* the interruption occurred at a verified match boundary: every match in the sealed prefix is complete, no partial match receipt exists, and the next match has not started;
+* the continuation uses the same new RES635 scope, same protocol, same checkpoint manifest, same research admission and same scorer code;
+* the continuation is a `CONTINUATION_READY_SAME_SCOPE` state, not a new run, new scope or new authorization;
+* the deterministic sealed-receipt parity was proven on synthetic fixtures before the GO; the resumed match is bitwise identical to an uninterrupted match under the same runtime;
 * the supervisor may verify receipt existence, match identity and hash-chain integrity, but must not read or use metric values for the continuation decision;
-* the resumed match is bitwise identical to an uninterrupted match under the same runtime; the independent verifier must prove this on synthetic fixtures before the GO;
-* no human accesses interim results for a continuation decision;
+* no human accesses interim metric values for the continuation decision;
 * the continuation decision is automatic and outcome-blind;
 * at most one continuation is allowed;
-* total CPU and wall time across the original run and the continuation stay within 14,400 CPU-seconds and 21,600 wall-seconds;
+* cumulative CPU and wall time across the original attempt and the continuation stay within 14,400 CPU-seconds and 21,600 wall-seconds;
+* the continuation is refused if the cumulative budget is exhausted or if the remaining budget is insufficient for the next match under the predeclared per-match budget;
 * no new scope is created for a continuation; the scope remains the same;
-* the old RES594 scope is never reused.
+* the historical consumed RES594 scope is never reused.
 
-If any condition is not met, the default is permanent failure. Partial results are never scientifically usable.
+If trustworthy evidence is unavailable, the default is permanent failure. A missing worker terminal record after a sudden SIGKILL, OOM kill, power loss or reboot is not itself a reason to refuse a continuation if independent postmortem attestation satisfies the conditions above; it is a reason to refuse if that attestation is absent, incomplete or untrusted. Partial results are never scientifically usable.
 
 ## 13. Independent scorer validation
 
@@ -291,6 +299,7 @@ The scorer implementer and the scorer verifier must be different people or indep
 * the frozen metric core and the new scorer agree on masks, denominators, scene weighting, window weighting, representation parity and final targets, including the scalar-coordinate `trajectory.xy_rmse_m.v1` formula and its `2 * N_masked_points` denominator;
 * adversarial cases cover wrong match/role, mask identity mismatch, scoreable count mismatch, representation parity failure, duplicate reads, incomplete 18-cell matrix, missing final target, non-finite prediction/truth, overlapping-window independence misuse, and receipt removal/reorder/edit/truncation;
 * an independent aggregate calculator recomputes the 72 records, the four match-level aggregates and the C1/C2 contrasts from the sealed receipts;
+* the deterministic sealed-receipt parity required for any continuation is proven on synthetic fixtures, including the match-boundary prefix and the resumed match;
 * the verification report is frozen and hash-bound before the owner GO;
 * real-data verification is limited to aggregate and provenance verification; it is not a second learned evaluation.
 
@@ -301,7 +310,9 @@ A failure at this gate is a NO-GO. It is not a reason to weaken the gate or to r
 The study requires:
 
 * a new study ID and new protocol SHA-256;
+* a clear separation between the top-level RES635 study protocol SHA-256 and the frozen original v2 input protocol SHA-256 `3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f`; the nested evaluation-input identity uses the original v2 input protocol, not the RES635 study protocol;
 * a new scope SHA-256 derived from the new study/protocol/manifest/admission/scorer/runtime/limits;
+* an explicit prohibition on the historical consumed RES594 scope SHA-256 `d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0`; the authorization schema rejects that value and the later executor must enforce the same rejection;
 * a new, distinct owner authorization record;
 * a new owner-private ledger root, independent of the campaign output path;
 * a single authoritative ledger root preserved across sessions; no copying, renaming or deletion;
@@ -312,7 +323,7 @@ The study requires:
 * an owner-private retention policy for raw predictions (if retained), checkpoints, source data, ledger and receipts;
 * a public output limited to aggregate tables, non-reconstructive figures, hashes, provenance and limitations.
 
-The new ledger must not be the RES594 ledger. The new authorization must not be the RES594 authorization. The new GO phrase template is:
+The new ledger must not be the RES594 ledger. The new authorization must not be the RES594 authorization. The new scope must not be the RES594 scope, and the new study protocol must not be the original v2 input protocol. The new GO phrase template is:
 
 `RES635-OWNER-GO:<protocol-sha256>:<checkpoint-manifest-sha256>:<research-admission-sha256>:<scorer-code-sha256>`
 
@@ -330,6 +341,8 @@ The template is not a GO. No owner authorization exists for this proposal.
 | PyTorch | 2.6.0+cpu |
 | CPU seconds | 14,400 |
 | Wall seconds | 21,600 |
+| Budget scope | Cumulative across the one campaign and at most one continuation |
+| Continuation budget check | Refused if cumulative budget exhausted or remaining budget insufficient |
 | Peak RSS | 2 GiB |
 | Private working disk | 2 GiB |
 | Full private snapshot | 0 bytes (streaming) |
@@ -342,7 +355,7 @@ The template is not a GO. No owner authorization exists for this proposal.
 | Forward-call estimate | 930,834 |
 | Telemetry interval | 60 seconds |
 
-The budgets are engineering ceilings, not scientific endpoints. They are set from the synthetic qualification and conservative margins, not from the failed run's partial progress. The private working-disk ceiling excludes the read-only verified source tree; it bounds transient buffers, receipts and telemetry. A resource breach is a controlled terminal stop and is reported; it is not a scientific result.
+The budgets are engineering ceilings, not scientific endpoints. They are set from the synthetic qualification and conservative margins, not from the interrupted attempt's partial progress. The private working-disk ceiling excludes the read-only verified source tree; it bounds transient buffers, receipts and telemetry. A resource breach is a controlled terminal stop and is reported; it is not a scientific result.
 
 ## 16. Gates
 
@@ -429,6 +442,7 @@ This protocol prohibits:
 | Workload shape known | Disclosed | Engineering budgets set from synthetic qualification and conservative margins. |
 | New scorer not implemented | Open | Synthetic qualification and independent validation are mandatory before real input. |
 | New supervisor not implemented for real data | Open | Durable execution qualification is mandatory before real input. |
+| Continuation evidence | Open | A continuation requires independent postmortem attestation; absent, incomplete or untrusted evidence is terminal. |
 | n=4 representativeness | Irreducible | No generalization to other matches, leagues, seasons, teams or providers. |
 | Original v2 LOMO incomplete | Preserved | The study is not v2 completion and does not qualify the protected population. |
 

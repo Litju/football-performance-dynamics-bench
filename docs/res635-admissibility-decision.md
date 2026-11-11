@@ -2,9 +2,10 @@
 
 **Issue:** RES635 (Linear Research; the issue identifier is the administrative authority)
 **Date:** 2026-11-11
-**Status:** Proposed for independent scientific review. **No execution GO is granted.**
-**Decision token:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket token) / `RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW` (review token)
-**Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`, file SHA-256 `525d2954bf3aed0215b5960262e0fce844fdd164bfcdd0e548a16a90315a72a0`
+**Status:** Corrected after independent scientific review; ready for final scientific ratification review. **No execution GO is granted.**
+**Decision token:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket token) / `RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW` (review token)
+**Review disposition:** `RES635_SCIENTIFICALLY_ADMISSIBLE_CONDITIONAL_REPAIRS`; the three precision corrections are applied.
+**Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`, file SHA-256 `ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305`
 
 ## Bottom line
 
@@ -20,6 +21,16 @@ The conditional route — a separately ratified, post-failure **descriptive** st
 * the claims are descriptive, bounded to the four fixed matches and the 18 fixed checkpoints, with no significance, confidence intervals, population generalization, deployment or ex-ante future-context claims.
 
 Under those conditions, the recommended path is **Option 2, descriptive only**. It is not confirmatory, not a completion of original v2, not a substitute for a new cohort, and not evidence of protected-population qualification. If the owner's publication goal requires confirmatory or population-level inference, the correct decision is **Option 3 (no new evaluation)** until Option 1 becomes feasible.
+
+## Review corrections applied
+
+The independent scientific review accepted Option 2 conditionally and required three precision repairs. All three are applied:
+
+1. **XY RMSE definition.** The protocol now states that `trajectory.xy_rmse_m.v1` is scalar-coordinate RMSE, `sqrt(sum(dx^2 + dy^2) / (2 * N_masked_points))`, not root mean squared Euclidean displacement. The machine-readable metric contract carries the metric ID, formula and denominator, and an invariant test compares the frozen implementation with a hand-computed value. The frozen implementation and historical values are unchanged.
+2. **Historical and causal wording.** The protocol now records that RES594 materialized its snapshot and entered the hashing/scoring phase, and that some in-memory learned forward passes may have occurred. No learned result bundle was committed, recovered or observed by the scientific analyst. `SIGTERM_CAUSE_UNDETERMINED` is preserved; no scientific failure was demonstrated and no termination cause is claimed. The proposed study is post-failure and pre-observation of learned held-out outcomes.
+3. **Interruption and authorization contracts.** The protocol now specifies independent supervisor/host postmortem evidence, does not require a worker terminal record after sudden SIGKILL, OOM or power loss, and fails permanently when trustworthy evidence is unavailable. At most one preapproved outcome-blind continuation is allowed at a verified match boundary, under the same new scope and within cumulative CPU/wall limits; an exhausted or insufficient budget is terminal. The authorization schema rejects the historical consumed RES594 scope and distinguishes the original v2 input protocol from the RES635 study protocol.
+
+These are protocol-precision corrections. They do not add data, models, analyses or benchmarks, and they do not authorize execution.
 
 ## Evidence reviewed
 
@@ -127,7 +138,7 @@ If any condition fails, the design is `DESIGN_NO_GO`.
 
 The recommendation is conditional on:
 
-* independent scientific review of the protocol and this memo;
+* final scientific ratification review of the corrected protocol and this memo;
 * express owner ratification of the new study identity, claims matrix and gate sequence;
 * a separately approved synthetic-only engineering qualification of the new scorer and supervisor;
 * a private non-consuming preflight;
@@ -161,6 +172,7 @@ This memo and the proposed protocol do **not** authorize:
 * loading private learned truth or generating real model predictions;
 * training, warm starts, checkpoint reselection, hyperparameter search or LOMO;
 * GPU or paid compute;
+* any continuation without independent postmortem attestation, a verified match boundary and sufficient cumulative CPU/wall budget;
 * changing RES594 to Done, RES593 to incomplete, RES614 to a real-data qualification, RES501 to qualified, or RES340 to executed;
 * claiming that RES440 is unblocked by closing forensic issues;
 * merging the draft PR or treating PR approval as scientific ratification or execution GO.

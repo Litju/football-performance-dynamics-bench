@@ -5,7 +5,14 @@
   "status": "PROPOSED_UNRATIFIED",
   "decision": {
     "ticket_token": "DESIGN_GO_FOR_OWNER_REVIEW",
-    "harness_token": "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW",
+    "prior_review_token": "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW",
+    "current_status_token": "RES635_READY_FOR_FINAL_SCIENTIFIC_RATIFICATION_REVIEW",
+    "review_disposition": "RES635_SCIENTIFICALLY_ADMISSIBLE_CONDITIONAL_REPAIRS",
+    "review_corrections_applied": [
+      "scalar-coordinate XY RMSE contract and parity test",
+      "post-failure and SIGTERM causal wording",
+      "interruption and authorization contracts"
+    ],
     "route": "OPTION_B_POST_FAILURE_DESCRIPTIVE_SAME_FOUR_MATCHES",
     "classification": "post-failure-pre-observation-of-learned-held-out-outcomes descriptive study",
     "prior_attempt_entered_scoring_phase": true,
@@ -509,40 +516,89 @@
     "real_data_qualified": false
   },
   "interruption_policy": {
-    "mode": "FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION",
+    "mode": "FAIL_CLOSED_WITH_ONE_PREAPPROVED_OUTCOME_BLIND_CONTINUATION",
     "scientific_or_integrity_failure": {
       "terminal": true,
       "retry": false,
+      "continuation": false,
       "new_owner_go_required": true
     },
-    "unknown_interruption_cause": {
+    "unknown_or_untrustworthy_cause": {
       "terminal": true,
       "retry": false,
+      "continuation": false,
       "new_owner_go_required": true
     },
     "proven_infrastructure_interruption": {
       "terminal": false,
       "continuation_allowed": true,
+      "max_continuations": 1,
       "same_frozen_scope_only": true,
+      "same_scope_only": true,
+      "same_new_res635_scope_only": true,
       "match_boundary_only": true,
       "sealed_receipts_only": true,
-      "bitwise_parity_required": true,
+      "sealed_receipt_parity_required": true,
+      "deterministic_sealed_receipt_parity_required": true,
       "no_human_access_to_interim_results": true,
       "no_outcome_dependent_decision": true,
-      "max_continuations": 1,
-      "max_total_cpu_seconds": 14400,
-      "max_total_wall_seconds": 21600,
+      "continuation_state": "CONTINUATION_READY_SAME_SCOPE",
+      "cumulative_cpu_seconds_ceiling": 14400,
+      "cumulative_wall_seconds_ceiling": 21600,
+      "refuse_if_cumulative_budget_exhausted": true,
+      "refuse_if_remaining_budget_insufficient": true,
       "reuse_consumed_res594_scope": false,
       "new_scope_per_continuation": false
     },
+    "evidence_contract": {
+      "worker_terminal_record_required_for_controlled_exit": true,
+      "worker_terminal_record_required_after_sudden_kill": false,
+      "independent_postmortem_attestation_required": true,
+      "attestation_must_be_produced_outside_worker_process": true,
+      "attestation_must_bind_study_protocol_scope_and_campaign": true,
+      "attestation_must_include_worker_wait_status": true,
+      "attestation_must_include_sealed_receipt_prefix": true,
+      "attestation_must_include_cumulative_cpu_and_wall": true,
+      "attestation_must_include_host_boot_identity_when_host_level_event": true,
+      "attestation_must_include_kernel_or_cgroup_evidence_for_oom": true,
+      "attestation_must_include_journal_or_boot_id_change_for_power_loss_or_reboot": true,
+      "independent_supervisor_record_required": true,
+      "host_or_kernel_attestation_required_for": [
+        "power loss",
+        "host reboot",
+        "OOM kill",
+        "SIGKILL when the supervisor is also lost",
+        "filesystem I/O failure"
+      ],
+      "trusted_evidence_sources": [
+        "supervisor waitpid status and fsynced supervisor outcome record",
+        "supervisor fsynced cumulative telemetry",
+        "host boot ID and systemd journal shutdown or reboot record",
+        "kernel log OOM or filesystem error record with cgroup and PID",
+        "cgroup memory.events OOM count and cgroup identity",
+        "independent host attestation service or signed postmortem bundle"
+      ],
+      "untrusted_or_absent_evidence": "terminal failure; no continuation"
+    },
     "predeclared_infrastructure_causes": [
-      "supervisor hard-timeout SIGTERM with recorded sender and exit status",
-      "recorded node shutdown or reboot",
-      "recorded cgroup OOM kill with kernel evidence",
-      "recorded filesystem I/O failure"
+      "supervisor per-attempt timeout SIGTERM with recorded sender, remaining cumulative budget, and a verified match boundary",
+      "recorded node shutdown or reboot with host attestation",
+      "recorded cgroup OOM kill with kernel and cgroup evidence",
+      "recorded filesystem I/O failure with independent host evidence",
+      "worker SIGKILL with independent supervisor waitpid status or host attestation and a verified match-boundary prefix"
     ],
-    "sender_attribution_required": true,
-    "terminal_record_required": true,
+    "noncontinuable_causes": [
+      "scientific or integrity failure",
+      "unknown or unverifiable cause",
+      "missing or untrusted independent attestation",
+      "worker terminal record absent when a controlled exit should have produced one",
+      "no verified sealed match-boundary prefix",
+      "cumulative CPU or wall budget exhausted",
+      "remaining budget insufficient for the next match",
+      "sealed-receipt parity not proven",
+      "any human access to interim metric values",
+      "reuse of the historical consumed RES594 scope"
+    ],
     "partial_results_scientifically_usable": false
   },
   "independent_validation": {
@@ -598,6 +654,9 @@
     "pytorch": "2.6.0+cpu",
     "cpu_seconds_ceiling": 14400,
     "wall_seconds_ceiling": 21600,
+    "budget_scope": "cumulative_campaign_and_one_continuation",
+    "continuation_must_fit_remaining_budget": true,
+    "cumulative_cpu_and_wall_across_original_and_continuation": true,
     "rss_bytes_ceiling": 2147483648,
     "private_working_disk_bytes_ceiling": 2147483648,
     "paid_compute_units": 0,
@@ -617,12 +676,29 @@
     "owner_authorization_present": false,
     "owner_go_granted": false,
     "go_phrase_template": "RES635-OWNER-GO:<protocol-sha256>:<checkpoint-manifest-sha256>:<research-admission-sha256>:<scorer-code-sha256>",
+    "new_study_protocol_sha256_role": "the top-level protocol_sha256 is the proposed RES635 study protocol identity, not the original v2 input protocol",
+    "original_v2_input_protocol_sha256": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f",
+    "forbidden_historical_res594_scope_sha256": "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0",
+    "new_scope_sha256_must_not_equal_forbidden_scope": true,
     "new_scope_required": true,
     "one_campaign_only": true,
     "retry_after_failure": false,
     "reuse_res594_scope": false,
     "reuse_res594_go_phrase": false,
-    "protected_status_required": "NOT_QUALIFIED"
+    "protected_status_required": "NOT_QUALIFIED",
+    "continuation_policy": {
+      "max_continuations": 1,
+      "same_scope_only": true,
+      "match_boundary_only": true,
+      "cumulative_cpu_seconds_ceiling": 14400,
+      "cumulative_wall_seconds_ceiling": 21600,
+      "refuse_if_cumulative_budget_exhausted": true,
+      "refuse_if_remaining_budget_insufficient": true,
+      "outcome_blind": true,
+      "no_human_access_to_interim_results": true,
+      "worker_terminal_record_required_after_sudden_kill": false,
+      "independent_postmortem_attestation_required": true
+    }
   },
   "gates": [
     {
