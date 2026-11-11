@@ -25,7 +25,7 @@ DETERMINISTIC_RESULTS = ROOT / "res337_deterministic_results_v1.md"
 DECISION = REPO / "docs/res635-admissibility-decision.md"
 PROTOCOL_DOC = REPO / "docs/res635-post-failure-descriptive-protocol-v1.md"
 
-PROTOCOL_SHA256 = "e53f83ec7096d00a391ecb5dd82822ff9165b612f9a3f92e7b639944357d77da"
+PROTOCOL_SHA256 = "525d2954bf3aed0215b5960262e0fce844fdd164bfcdd0e548a16a90315a72a0"
 HEX64 = set("0123456789abcdef")
 
 
@@ -98,6 +98,36 @@ def test_historical_authorities_match_the_repository_bytes() -> None:
     assert authorities["res594_learned_result_records_observed"] == 0
     assert authorities["protected_population_status"] == "NOT_QUALIFIED"
     assert authorities["lomo_216_fit_status"] == "DEFERRED_NOT_EXECUTED"
+
+
+def test_prior_attempt_history_and_sigterm_wording_are_precise() -> None:
+    protocol = _load(PROTOCOL)
+    decision = protocol["decision"]
+    exposure = protocol["prior_information_exposure"]
+    for record in (decision, exposure):
+        assert record["prior_attempt_entered_scoring_phase"] is True
+        assert record["in_memory_learned_forward_passes_may_have_occurred"] is True
+        assert record["learned_result_bundle_committed"] is False
+        assert record["learned_result_bundle_recovered"] is False
+        assert record["termination_cause"] == "SIGTERM_CAUSE_UNDETERMINED"
+        assert record["scientific_failure_demonstrated"] is False
+        assert record["methodological_error_recorded"] is False
+    assert decision["learned_result_bundle_observed_by_scientific_analyst"] is False
+    assert exposure["learned_evaluation_outcome_observed_by_scientific_analyst"] is False
+    assert exposure["aborted_campaign_outcome_observed_by_scientific_analyst"] is False
+    assert decision["classification"] == (
+        "post-failure-pre-observation-of-learned-held-out-outcomes descriptive study"
+    )
+    doc = PROTOCOL_DOC.read_text().lower()
+    memo = DECISION.read_text().lower()
+    for text in (doc, memo):
+        assert "sigterm_cause_undetermined" in text
+        assert "no scientific failure was demonstrated" in text
+        assert "pre-observation of learned held-out outcomes" in text
+        assert "infrastructure, not scientific" not in text
+        assert "post-failure, pre-learned-evaluation" not in text
+        assert "scoring phase" in text
+    assert "committed, recovered or observed" in doc
 
 
 def test_protocol_binds_every_res614_qualification_artifact() -> None:

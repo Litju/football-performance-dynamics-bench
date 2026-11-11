@@ -4,7 +4,7 @@
 **Study ID:** `fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0`
 **Protocol schema:** `fpdbench.res635.post-failure-descriptive-protocol/1.0.0`
 **Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`
-**Protocol file SHA-256:** `e53f83ec7096d00a391ecb5dd82822ff9165b612f9a3f92e7b639944357d77da`
+**Protocol file SHA-256:** `525d2954bf3aed0215b5960262e0fce844fdd164bfcdd0e548a16a90315a72a0`
 **Decision:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket) / `RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW` (review)
 **Execution GO:** **not granted.**
 
@@ -40,7 +40,9 @@ The old scope is permanently closed. This proposal does not reuse the RES594 sco
 | Attribute | Value |
 |---|---|
 | Study type | Descriptive, fixed-population, fixed-model measurement |
-| Timing | Post-failure, pre-learned-evaluation |
+| Timing | Post-failure, pre-observation of learned held-out outcomes |
+| Prior attempt entered scoring phase | Yes (snapshot materialized; hashing/scoring began) |
+| Learned result bundle committed/recovered/observed | No |
 | Original preregistration | No |
 | Confirmatory | No |
 | Owner ratified | No |
@@ -51,9 +53,9 @@ The old scope is permanently closed. This proposal does not reuse the RES594 sco
 | LOMO completion | No |
 | Protected population | `NOT_QUALIFIED` |
 
-The study exists because the RES594 measurement was never consummated: the campaign consumed its one-shot scope, terminated with exit 143, and committed no learned 72-record result bundle. No learned evaluation outcome was observed. No learned evaluation result was committed or observed for the four evaluation matches. The study is therefore a re-execution of an unconsummated measurement, not a rerun after an observed result.
+The study exists because the RES594 measurement was not consummated in a committed result. The campaign consumed its one-shot scope, materialized its private snapshot and entered the hashing/scoring phase; some in-memory learned forward passes may have occurred. It then terminated with exit 143. No learned result bundle was committed, recovered or observed by the scientific analyst, and no 72-record result, campaign result or report exists. The proposed study is therefore **post-failure and pre-observation of learned held-out outcomes**: it is a re-execution of an unconsummated measurement, not a rerun after an observed result.
 
-The failure was an execution-architecture loss, not a scientific or metric failure. RES614 found `SIGTERM_CAUSE_UNDETERMINED` and excluded OOM, host shutdown, scorer resource ceilings and agent kill. The frozen scorer had one commit boundary, no signal handling and no telemetry. This proposal adopts the synthetic-qualified detached supervisor, streaming input, sealed per-match receipts, fsynced telemetry and independent completion verification described in the RES614 architecture proposal. Those are engineering changes, not scientific changes.
+The execution was interrupted by an unexplained SIGTERM; RES614 reports `SIGTERM_CAUSE_UNDETERMINED`. OOM, host shutdown, scorer resource ceilings and agent kill were excluded by the available evidence, but the signal sender and underlying trigger were not proven. No scientific or methodological error was recorded and no scientific failure was demonstrated; this protocol does not claim the termination cause was established. The loss mechanisms were architectural: one commit boundary, no signal handling and no telemetry. This proposal adopts the synthetic-qualified detached supervisor, streaming input, sealed per-match receipts, fsynced telemetry and independent completion verification described in the RES614 architecture proposal. Those are engineering changes, not scientific changes.
 
 ## 3. Population and dependence
 
@@ -394,7 +396,7 @@ Required disclosures for any Paper B use:
 * the original v2 234-fit study is incomplete and the 216-fit LOMO remains deferred;
 * the four evaluation matches were already used by deterministic baselines;
 * validation means were observed before the RES593 amendment and used for checkpoint selection;
-* the RES594 campaign was consumed and terminated without a learned result bundle;
+* the RES594 campaign was consumed and entered the scoring phase, but no learned result bundle was committed, recovered or observed, and the SIGTERM cause remains undetermined;
 * the four matches are the only independent evaluation units; overlapping windows are not independent;
 * future-ball and future-opponent-plus-ball use realized future observations and are conditional;
 * the protected population remains `NOT_QUALIFIED`;
@@ -423,7 +425,7 @@ This protocol prohibits:
 | No verified new rights-cleared cohort | Open | Option 1 cannot be claimed; this descriptive study is the only current route. |
 | Four matches only; overlapping windows | Irreducible | Descriptive only; no significance, CIs or population inference. |
 | Validation means and deterministic baselines observed | Disclosed | Possible influence on analysis choices; primary learned contrasts are inherited and baseline-independent. |
-| Aborted RES594 attempt | Disclosed | No learned outcome observed; the old snapshot and scope are not used. |
+| Aborted RES594 attempt | Disclosed | Entered the scoring phase; no learned result bundle committed, recovered or observed; old snapshot and scope are not used. |
 | Workload shape known | Disclosed | Engineering budgets set from synthetic qualification and conservative margins. |
 | New scorer not implemented | Open | Synthetic qualification and independent validation are mandatory before real input. |
 | New supervisor not implemented for real data | Open | Durable execution qualification is mandatory before real input. |
