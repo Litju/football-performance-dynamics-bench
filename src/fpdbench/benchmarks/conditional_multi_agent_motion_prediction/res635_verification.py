@@ -142,6 +142,8 @@ def verify_prefix(
 
     if not 0 <= len(seals) <= 4:
         raise ValueError("invalid receipt prefix")
+    if any(directory.glob("*.tmp")) or any(directory.glob(".*.tmp")):
+        raise ValueError("partial receipt write present")
     names = sorted(p.name for p in directory.glob("match-*.json"))
     if names != [f"match-{i}.json" for i in range(len(seals))]:
         raise ValueError("partial, extra, duplicated or missing receipt")

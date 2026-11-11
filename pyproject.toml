@@ -16,6 +16,8 @@ dependencies = []
 fpdbench = "fpdbench.cli:main"
 fpdbench-res594 = "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.amended_heldout_evaluation:main"
 
+fpdbench-res635 = "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res635_execution:main"
+
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.12", "pyright>=1.1"]
 research-training = ["numpy==2.2.4", "torch==2.6.0+cpu"]

@@ -1,5 +1,5 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
-"""RES-643 synthetic-only preparation for the unratified RES-635 protocol.
+"""RES643 synthetic-only preparation for the unratified RES635 protocol.
 
 No file-based inputs, authorizations, checkpoints, or real match identifiers are accepted.
 """
@@ -54,7 +54,7 @@ def runtime() -> Document:
     return {
         "python": platform.python_version(),
         "numpy": np.__version__,
-        "torch": torch.__version__,
+        "torch": str(torch.__version__),
         "device": "cpu",
         "threads": 1,
         "precision": "float32",
@@ -63,7 +63,14 @@ def runtime() -> Document:
 
 def provenance() -> Document:
     root = Path(__file__).parent
-    files = (Path(__file__), root / "learned_deepsets.py", root / "information.py")
+    files = (
+        Path(__file__),
+        root / "learned_deepsets.py",
+        root / "information.py",
+        root / "res635_execution.py",
+        root / "res635_verification.py",
+        root.parents[1] / "evaluation" / "metrics" / "trajectory.py",
+    )
     protocol = root / "res635_post_failure_descriptive_protocol_v1.json"
     if hashlib.sha256(protocol.read_bytes()).hexdigest() != PROTOCOL_SHA256:
         raise ValueError("frozen protocol changed")

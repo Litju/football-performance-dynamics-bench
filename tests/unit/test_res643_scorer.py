@@ -131,3 +131,34 @@ def test_stream_memory_is_bounded():
     assert large_peak < small_peak * 2
     assert small["input_sha256"] != large["input_sha256"]
     assert len(hashlib.sha256(s.canonical(large)).hexdigest()) == 64
+
+
+def test_census_lightweight_denominators_match_full_source():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / "tools" / "res643_synthetic_qualification.py"
+    spec = importlib.util.spec_from_file_location("res643_census", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    result = module.census(32)
+    identities = []
+    digest = hashlib.sha256()
+    for match in s.MATCHES:
+        identity = s.StreamIdentity(match)
+        for row in s.windows(match, 8):
+            identity.observe(row)
+            mask = np.array([scene["truth_mask"] for scene in row["scenes"]])
+            digest.update(np.packbits(np.concatenate([mask[0], mask[1]], axis=1)).tobytes())
+        identities.append(identity.result())
+    for key in (
+        "windows",
+        "scoreable_windows",
+        "scoreable_scenes",
+        "scored_points",
+        "final_targets",
+        "scalar_coordinates",
+    ):
+        assert result[key] == sum(i[key] for i in identities)
+    assert result["mask_sha256"] == digest.hexdigest()
+    assert result["snapshot_bytes"] == result["forward_calls"] == 0
