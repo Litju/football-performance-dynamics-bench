@@ -60,6 +60,8 @@ def _resolve_schema_node(schema: dict[str, Any], node: dict[str, Any]) -> dict[s
 def _accepts_sha256(schema: dict[str, Any], prop: dict[str, Any], value: str) -> bool:
     if len(value) != 64 or not set(value) <= HEX64:
         return False
+    if "const" in prop and value != prop["const"]:
+        return False
     for clause in prop.get("allOf", [prop]):
         resolved = _resolve_schema_node(schema, clause)
         if "not" in resolved:
@@ -475,6 +477,7 @@ def test_authorization_schema_rejects_the_old_scope_and_old_go_phrase() -> None:
     assert properties["study_id"]["const"] == (
         "fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0"
     )
+    assert properties["protocol_sha256"]["const"] == PROTOCOL_SHA256
     assert properties["res594_scope_reuse"]["const"] is False
     assert properties["res594_go_phrase_reuse"]["const"] is False
     assert properties["retry_after_scientific_failure"]["const"] is False
@@ -528,7 +531,8 @@ def test_authorization_schema_adversarially_rejects_forbidden_authority_swaps() 
     assert _accepts_sha256(schema, properties["new_scope_sha256"], old_scope) is False
     assert _accepts_sha256(schema, properties["new_scope_sha256"], "a" * 64) is True
     assert _accepts_sha256(schema, properties["protocol_sha256"], original_v2) is False
-    assert _accepts_sha256(schema, properties["protocol_sha256"], "b" * 64) is True
+    assert _accepts_sha256(schema, properties["protocol_sha256"], PROTOCOL_SHA256) is True
+    assert _accepts_sha256(schema, properties["protocol_sha256"], "b" * 64) is False
     assert "res594" in properties["new_scope_sha256"]["description"].lower()
     assert "original v2" in properties["protocol_sha256"]["description"].lower()
 

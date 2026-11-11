@@ -51,6 +51,7 @@
     "res594_go_phrase_reuse": {"const": false},
     "protocol_sha256": {
       "description": "SHA-256 of the proposed RES635 study protocol JSON. This is not the frozen original v2 input protocol.",
+      "const": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
       "allOf": [
         {"$ref": "#/$defs/sha256"},
         {"not": {"$ref": "#/$defs/original_v2_protocol_sha256"}}
