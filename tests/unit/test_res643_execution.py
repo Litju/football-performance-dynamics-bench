@@ -198,6 +198,7 @@ def interrupted_fixture(tmp_path, prefix):
         "host_loss_without_attestation",
         "peeked",
         "scientific",
+        "scientific_terminal",
         "cpu",
         "wall",
         "receipt",
@@ -215,6 +216,8 @@ def test_adversarial_continuations_fail_permanently(tmp_path, prefix, fault):
     elif fault in ("oom_without_host_evidence", "host_loss_without_attestation", "scientific"):
         attestation["reason"] = fault
         e.atomic(output / "postmortem.json", e.signed(attestation, record["key"]))
+    elif fault == "scientific_terminal":
+        e.atomic(output / "worker-terminal.json", {"status": "SCIENTIFIC_OR_INTEGRITY_FAILURE"})
     elif fault == "peeked":
         attestation["outcome_accessed"] = True
         e.atomic(output / "postmortem.json", e.signed(attestation, record["key"]))
@@ -314,3 +317,15 @@ def test_new_modules_do_not_import_or_execute_historical_scorer():
         )
         assert "torch.load(" not in source
         assert "load_checkpoint_verified(" not in source
+
+
+def test_scientific_failure_remains_terminal_after_sigkill(tmp_path):
+    root, output = tmp_path / "ledger", tmp_path / "failed"
+    e.launch(root, output, 1, continuation=True, pause=0)
+    boundary = wait_file(output / "boundary.json")
+    e.atomic(output / "worker-terminal.json", {"status": "SCIENTIFIC_OR_INTEGRITY_FAILURE"})
+    os.kill(boundary["pid"], signal.SIGKILL)
+    status = wait_file(output / "status.json")
+    assert status == {"status": "FAILED_PERMANENTLY", "exit_code": e.EXIT_INTEGRITY}
+    with pytest.raises(ValueError):
+        e.continue_campaign(root, output, 1)

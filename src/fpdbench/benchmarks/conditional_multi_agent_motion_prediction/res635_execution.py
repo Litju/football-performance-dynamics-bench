@@ -414,6 +414,9 @@ def supervise(
     result_code = EXIT_BUDGET if reason == "BUDGET" else EXIT_WORKER
     try:
         receipts = v.verify_prefix(output, count, seals)
+        terminal_path = output / "worker-terminal.json"
+        if terminal_path.exists() and read(terminal_path)["status"] != "INTERRUPTED":
+            raise ValueError("known scientific or integrity failure overrides signal status")
         if code == 0 and reason == "EXIT" and len(receipts) == 4:
             aggregate = v.aggregate(receipts)
             # Commit only after independent full readback and numerical recomputation.
@@ -504,6 +507,9 @@ def continue_campaign(root: Path, output: Path, count: int) -> None:
             ("EXIT", -signal.SIGKILL),
         ):
             raise ValueError("noncontinuable cause")
+        terminal_path = output / "worker-terminal.json"
+        if terminal_path.exists() and read(terminal_path)["status"] != "INTERRUPTED":
+            raise ValueError("known scientific or integrity failure is permanently terminal")
         # Conservative predeclared reserve; never choose budgets based on metric values.
         if any(
             record["budget"][k] - record[u] < 30 * (4 - len(record["seals"]))

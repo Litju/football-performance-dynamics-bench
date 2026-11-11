@@ -248,7 +248,7 @@
     "wall_s": 0.6064255780074745,
     "windows": 517
   },
-  "cpu_seconds_including_supervisor_verification": 24.176322548,
+  "cpu_seconds_including_supervisor_verification": 19.247524027,
   "full_snapshot_bytes": 0,
   "gates": {
     "formal_gate_4_complete": false,
@@ -257,14 +257,14 @@
     "owner_ratified": false
   },
   "independent_max_absolute_metric_error_m": 8.881784197001252e-15,
-  "output_storage_bytes": 80943,
+  "output_storage_bytes": 80487,
   "parity_absolute_tolerance_m": 1e-12,
-  "peak_combined_monitored_rss_bytes": 449413120,
+  "peak_combined_monitored_rss_bytes": 449499136,
   "provenance": {
     "code_sha256": {
       "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
       "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
-      "res635_execution.py": "88a1bcfc7a72b84cec59d87c310f8d678c45229468fe4b65a80d03316ef4a8b6",
+      "res635_execution.py": "e57a91c6f18ff3a2f500f69bd540229bebe026dbdc1e01733724231dfbeb8c20",
       "res635_post_failure_evaluation.py": "c03ce2bd20c2e0ad34bd259c87566ccbd9e656841039cbdf1598bd66dc7adf68",
       "res635_verification.py": "d0fa7ff1a8a180c43c67f12d2241fed9b48fd761aa1f442622a86d3d1faf168f",
       "trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
@@ -288,17 +288,17 @@
     "actual OOM/host reboot and real data not qualified"
   ],
   "receipt_sha256_chain": [
-    "81672add2606cc10aa224a4bca1236e965bb9091771d4c84d7e4619f26899a54",
-    "264fd020b0cfa360bba2dc3df35ccdb7a7a75605e498056bea87ac36e9016cd6",
-    "594bb3ac5a6c16bb3fa0f0863510699b95e96c9b9637d0e301f412a0bb07a1e2",
-    "9c08e86f946a05f3185bdb027cd6f365de756a75fb9ee7b7f3df81619ff093c7"
+    "ec0b9661194ad03e2e662e74bfbcdbd86287cb6c5359df17b536e6d899109d9a",
+    "cf50a63b54016fa5e03815746217953a0842c38977a12b9c91f4e4652c3bd618",
+    "324e2d5258c3422f7e1d7f4190623da4deaee32b2ab9c507b1c9628d830e5e6b",
+    "190cfea583272a6b0336973435e3445a69e13c50e499e4b108e1d621e592db56"
   ],
-  "scientific_manifest_sha256": "b9727fa64b14b5cf6e92599ec12f61ca1ac0aca03459b5364bea81f894239c58",
+  "scientific_manifest_sha256": "21fa23c6e2f472290841ae9fa901309b356b9dbe2fdb0214d4520e5c9e3942f9",
   "status": "SYNTHETIC_PREPARATION_ONLY_NOT_FORMAL_GATE_4",
   "validation": {
     "core_isolated_wheel_sdist_smoke": "passed on system Python 3.12.3",
     "evidence_validation": "passed",
-    "extracted_package_scientific_receipt_sha256": "d78de30d9bd19734041450e2cd4c1ee56f705e2508cc3635fe00d473df20089e",
+    "extracted_package_scientific_receipt_sha256": "65aa349aa441299b7d41347ae4852f15b63db296fb6c9e9177d4862156b6d5ce",
     "extracted_synthetic_wheel_sdist_parity": "passed on pinned Python 3.12.8",
     "naming": "passed",
     "registry_validation": "passed",
@@ -308,10 +308,10 @@
     "strict_pyright": "passed",
     "targeted_synthetic_tests": {
       "command": "uv run pytest -q tests/unit/test_res643_execution.py tests/unit/test_res643_scorer.py",
-      "passed": 37
+      "passed": 39
     },
     "wheel_and_sdist_build": "passed"
   },
-  "wall_seconds_including_supervisor_verification": 21.378752586024348,
+  "wall_seconds_including_supervisor_verification": 16.228575807996094,
   "windows_per_artificial_match": 8
 }
