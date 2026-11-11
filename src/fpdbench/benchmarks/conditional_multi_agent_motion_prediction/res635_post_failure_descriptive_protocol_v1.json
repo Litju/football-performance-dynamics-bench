@@ -1,0 +1,681 @@
+{
+  "schema_id": "fpdbench.res635.post-failure-descriptive-protocol",
+  "schema_version": "1.0.0",
+  "study_id": "fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0",
+  "status": "PROPOSED_UNRATIFIED",
+  "decision": {
+    "ticket_token": "DESIGN_GO_FOR_OWNER_REVIEW",
+    "harness_token": "RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW",
+    "route": "OPTION_B_POST_FAILURE_DESCRIPTIVE_SAME_FOUR_MATCHES",
+    "classification": "post-failure-pre-learned-evaluation descriptive study",
+    "confirmatory": false,
+    "authorizes_execution": false,
+    "owner_ratification_required": true,
+    "independent_scientific_review_required": true,
+    "execution_go_granted": false
+  },
+  "historical_authorities": {
+    "original_v2_plan_sha256": "a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62",
+    "original_v2_protocol_sha256": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f",
+    "research_admission_sha256": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1",
+    "res593_amendment_sha256": "e54f067a07479b81c4625428e49e5a5b907c49987d4c5bd7982138e270e66913",
+    "res593_frozen_main_commit": "7acc2c4e1174935efbe561e072f68c349af5e05f",
+    "res593_checkpoint_manifest_sha256": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
+    "res593_baseline_reference_sha256": "21b19a2370d5b4a45652a6ce132cb3e78a4abe2027a096a71f383b1191ea9b36",
+    "res593_private_baseline_manifest_index_sha256": "8962fd40437c4aca50b86c8f918b653c35e2aa4277010fe10cbd19ffe8d32d4e",
+    "res337_deterministic_results_document_sha256": "c98d8d29254c674e1011bb4b05912c5d12921c550a133eb8cdecc328c9263a68",
+    "res337_deterministic_implementation_commit": "f14537acc17f4381d0c95907f1f1a1654152410a",
+    "res337_deterministic_execution_identity_sha256": "05f6e22566e6781d7465bce00ae5e32fb7c5f7d163ea9efbfed1ad4640c9fb1e",
+    "res594_one_shot_scope_sha256": "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0",
+    "res594_authorization_record_sha256": "bad96973cf6f0759386544d24bc17de3368a578546e07826769bc9f727361868",
+    "res594_terminal_status": "CONSUMED_IRREVERSIBLY",
+    "res594_retry_allowed": false,
+    "res594_issue_status": "Canceled",
+    "res594_result_bundle_committed": false,
+    "res594_learned_result_records_observed": 0,
+    "res594_scorer_module_sha256": "d14567a6e0ce7b4ace41a75c90b3a68b00f283df1878bb344ec6b2a25ceeb5bf",
+    "res594_entrypoint_shim_sha256": "6572c5088c1a776db37af15986a6aa2b0af6f6c508fecd05088e06e66af9f4d5",
+    "res614_merged_main_commit": "cc3f1587e6837dd3c060a24b01236df8139b5c14",
+    "res614_incident_evidence_index_sha256": "ce0c280fd6e95f8cf12b46d26df675b962c13d6f5b068836e6a280d22f869b17",
+    "res614_incident_report_sha256": "f7deab64c6cc0010f601fe6c5034ce33781bd58c0a7d22c578b9157521dd9208",
+    "res614_execution_architecture_proposal_sha256": "4b3b761860ca4e118d032e341a03cf944f2d4ed5e92f597e32fed117cef272e7",
+    "res614_runtime_audit_governance_sha256": "844e3f64f34173f169efd0f70908aa04c24c83b87b03ff02359e7070734b0b34",
+    "res614_synthetic_performance_report_sha256": "1e63f40c02f88fac398bb9ab13dde397e463c0936267b4f71bba9f00c88c8ea1",
+    "res614_synthetic_benchmark_v1_sha256": "42d23c51fae6779960f3ba6920167073e9e5f3eb1273e99d72903e6f32e997ae",
+    "res614_resilient_runner_sha256": "97e138c3c744cde386a779adc2971b853e89ad9c04216d8ed031dce90d3e3d47",
+    "protected_population_status": "NOT_QUALIFIED",
+    "lomo_216_fit_status": "DEFERRED_NOT_EXECUTED"
+  },
+  "non_modification": {
+    "historical_files_modified": false,
+    "res593_amendment_modified": false,
+    "res593_checkpoint_manifest_modified": false,
+    "res594_files_modified": false,
+    "res614_files_modified": false,
+    "old_scope_reused": false,
+    "old_go_phrase_reused": false,
+    "old_ledger_reused": false,
+    "old_snapshot_opened": false,
+    "old_output_directory_reused": false,
+    "new_study_id_distinct": true
+  },
+  "prior_information_exposure": {
+    "validation_means_observed_before_res593": true,
+    "validation_means_used_for_checkpoint_selection": true,
+    "deterministic_evaluation_results_observed_before_res593": true,
+    "deterministic_evaluation_metrics": {
+      "origin_persistence_v1": {
+        "ade_m": 3.5219,
+        "fde_m": 6.3739,
+        "xy_rmse_m": 3.0952
+      },
+      "constant_velocity_1s_v1": {
+        "ade_m": 2.2433,
+        "fde_m": 4.9257,
+        "xy_rmse_m": 2.2384
+      },
+      "published_precision_decimal_places": 4,
+      "rounding_bound_m": 0.00005
+    },
+    "learned_evaluation_results_observed": false,
+    "learned_evaluation_result_records_observed": 0,
+    "aborted_campaign_result_bundle_present": false,
+    "aborted_campaign_outcome_observed": false,
+    "aborted_campaign_workload_shape_observed": true,
+    "workload_shape_is_scientific_outcome": false,
+    "outcome_dependent_design_change": false,
+    "analysis_plan_inherited_from_pre_failure_authority": true,
+    "post_failure_analysis_plan_changes": []
+  },
+  "population": {
+    "role": "evaluation",
+    "match_ids": [
+      "1874553",
+      "1925299",
+      "2006229",
+      "2010085"
+    ],
+    "n_independent_matches": 4,
+    "window_census": 51713,
+    "scene_census": 103426,
+    "overlapping_windows_independent": false,
+    "seeds_independent_matches": false,
+    "source_release_hash": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07",
+    "source_population_hash": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4",
+    "measurement_state_hash": "1ecf355b3e6e2f04967e8363c1fdecc7f40707a7dda9966ebee1b3d90e97e671",
+    "eligibility_policy_hash": "ed1cdc20ca7a93040fd4aabc91655819c5c4b8c58021c6540c6aaea325dafa11",
+    "history_intervals": 25,
+    "history_origin_included": true,
+    "future_steps": 15,
+    "step_seconds": 0.2,
+    "horizon_seconds": 3.0,
+    "support_slots": 41,
+    "coordinate_frame": "source pitch XY in metres, without scene reflection",
+    "target_mask": "the original v2 per-player, per-step finite physical truth mask",
+    "eligibility_and_window_identity": "the original frozen research-only admission and v2 window identity",
+    "training_matches_scored": false,
+    "validation_matches_scored": false,
+    "provider_mixing": false
+  },
+  "model_matrix": {
+    "model_id": "per_target_context_deepsets_mlp_v1",
+    "checkpoint_manifest_sha256": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
+    "regimes": [
+      "history_only",
+      "future_ball",
+      "future_opponent_plus_ball"
+    ],
+    "representations": [
+      "absolute_xy",
+      "origin_relative_displacement"
+    ],
+    "seeds": [
+      1729,
+      2718,
+      31415
+    ],
+    "checkpoint_count": 18,
+    "cell_count": 18,
+    "match_scoped_result_count": 72,
+    "new_fits": 0,
+    "checkpoint_reselection": false,
+    "checkpoint_substitution": false,
+    "warm_start": false,
+    "hyperparameter_search": false,
+    "optimizer_steps": 0,
+    "cells": [
+      {
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy",
+        "seed": 1729,
+        "checkpoint_sha256": "19b2ca2b6ef1cc35095040fe95b15144f1b53f095f58af0d37237499d6fba5ef",
+        "configuration_sha256": "bcdc213363bf01120c2b79872ed9d739912b057c63866c507852dc6eea73043a",
+        "selected_step": 2100,
+        "optimizer_steps": 3100,
+        "receipt_sha256": "137f95e90ff69b40dd946c970182933098de57635b1c73959381041f0d7aed07"
+      },
+      {
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy",
+        "seed": 2718,
+        "checkpoint_sha256": "e7bd90aebf3d9ac794a74fcdf8a560c24eeb85fa488905d7d8e396b65de54126",
+        "configuration_sha256": "5f3f7889b0afa04645ef0b64f94ee7cdc74b330d25f77aef34128180e7e21418",
+        "selected_step": 3900,
+        "optimizer_steps": 4900,
+        "receipt_sha256": "e6ac40a59a8eb1141cc1dbcb00dd0d6ae9f6f86cb4fc93babf006e3f299d6de1"
+      },
+      {
+        "information_regime": "history_only",
+        "target_representation": "absolute_xy",
+        "seed": 31415,
+        "checkpoint_sha256": "65340e506b1607fb82df35910081faf52ac80c663f893a1cdc3c09fe84d480c0",
+        "configuration_sha256": "8dea8839e40ea7c21aae300c1d40e3a79a72f77428329740060fb87aae17cc83",
+        "selected_step": 1300,
+        "optimizer_steps": 2300,
+        "receipt_sha256": "b5988f9942212b6bbafcc22c31d022d21e52ffbe30915b53187e096d203038ec"
+      },
+      {
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement",
+        "seed": 1729,
+        "checkpoint_sha256": "0d61bec05776351dd5da1bec4751c6d92e02d1c3d1c6a902c1f04c372e795dc1",
+        "configuration_sha256": "e6dd303669591760d9cba84ff55da60fd6e489830315c0e03daddeb5597150b5",
+        "selected_step": 4900,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "ab553658bc6caa12b1dd94b817b6e9fda74034e8354646e975c90da18c6747b7"
+      },
+      {
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement",
+        "seed": 2718,
+        "checkpoint_sha256": "1117833382654142ea4e8a89bd5c99ab1a76af46c382c82521a81766238c981d",
+        "configuration_sha256": "aa51abf73c2b5ef352dfcfa16aaa5fe8c8570f70cdfd662fa084515d5abc174e",
+        "selected_step": 4600,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "293a5e030caa0bc509d568a4eac1e6e0ec59b9793a575605391d56b6daa1c1e8"
+      },
+      {
+        "information_regime": "history_only",
+        "target_representation": "origin_relative_displacement",
+        "seed": 31415,
+        "checkpoint_sha256": "b82ced8285e19db0a63ee0b7e0f6164edf3b36aa3a118e0c5ab949e5500bb01f",
+        "configuration_sha256": "eb8a04f5884736ba0bc833740fa6354ee75fe57f5afc710966fdb38f349ac26a",
+        "selected_step": 4500,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "a7ed256b2ed4aeb8bf3501e656def71789c7fef1be16e71ab2a55798f1d1df07"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy",
+        "seed": 1729,
+        "checkpoint_sha256": "d79c52eeb17d650378d8444df13bbf301f7c76223e7a56fc358540b7923a02e1",
+        "configuration_sha256": "573bfa2d4ded3cefb34fe8b672f4629ee5e02df8b645be67788c825b4992351a",
+        "selected_step": 5000,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "c80d8a79b5b0abd73f1f8827caf08d2dbfe81c6dc9a5847581211214386dac67"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy",
+        "seed": 2718,
+        "checkpoint_sha256": "2c9196571908d2230f34e56aabd8e6b0b7d66b09459819eaf9895dd909933541",
+        "configuration_sha256": "b95a98c0a160f28d1eab895d19021f672082020d9fa82eb754115dff684ba2e9",
+        "selected_step": 3100,
+        "optimizer_steps": 4100,
+        "receipt_sha256": "d69126c3d09da0a9a7ef441b3c9b0fe13e46bcd224e49437946a45759fd2a8f0"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "absolute_xy",
+        "seed": 31415,
+        "checkpoint_sha256": "72836aeb07a5c6ee0be712f39dc7cc32c35f760d1622d8e4afbb4a0169a62d00",
+        "configuration_sha256": "e79cd148dcdeba97aaaf6c2a7d37a15e3defad51f0a490446bab32648f33409c",
+        "selected_step": 2300,
+        "optimizer_steps": 3300,
+        "receipt_sha256": "acecd1bc792ded9f280528a66f56a45d6ff8903b651302c79b255c07aebaf20f"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 1729,
+        "checkpoint_sha256": "e8cc3dbf83a0258b35c4b8929ed56c141850c6dd91d24449978405f7b25f4e8b",
+        "configuration_sha256": "96396f86218448daf7fe65f89154fc953d1ff7fd3aa808c25aab01a9e7b9ad50",
+        "selected_step": 5000,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "a6081092b17ad76c52482b4b7868f1a12ea870c9b882e1396d8ee41cbeb5bf83"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 2718,
+        "checkpoint_sha256": "7d1fa53a644fff008e33b6f93a5b811ff0e1606df70ef4e41669685e620bf2e4",
+        "configuration_sha256": "1671aa5036f2e4850d63014b6137da75a21c9ef291a8b0eb4f54ef0d8c082dfb",
+        "selected_step": 4500,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "f87d204956286e56f6b378a67f022eb4ac7e93f7f7b9c11a38761f311334b6d2"
+      },
+      {
+        "information_regime": "future_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 31415,
+        "checkpoint_sha256": "b177d305ac03de513fbc05634bbd4a0c63b063b1808e02a317e0bbb8742a356f",
+        "configuration_sha256": "b29b2fc3d2e8ed658cf0b2afd0859fe932e68fcf018cca4a6c8898f54ad2198d",
+        "selected_step": 4600,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "d3cd1278479cee6bc8769cd523988b00c2f2410fedfb38b6c9e21256c6d67640"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy",
+        "seed": 1729,
+        "checkpoint_sha256": "74f427d8e70e6d722e6283372b5d35edaa268211ac6136c5ac55d87a116b1b1e",
+        "configuration_sha256": "e6bf5b3ab85947759024032057f79d6a276ab726c6667d0a7384bd7e04b91022",
+        "selected_step": 4800,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "40468e870c26f6641be8cfa5dcfc51f7498bd484349819175e47b4d2361d8a36"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy",
+        "seed": 2718,
+        "checkpoint_sha256": "bc9461a95b0e8d66943f3e6a6fd816c2c931083ef00e822832c3f59bbfeb821e",
+        "configuration_sha256": "6369d0b8d30c7220f95980bfbaf3710128129e3e867e126d1ad76b2b31800d49",
+        "selected_step": 2100,
+        "optimizer_steps": 3100,
+        "receipt_sha256": "aea9c63e9c71910665c4c27196ad791dd3e4d3865897e2099e75bc001ab25f6d"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "absolute_xy",
+        "seed": 31415,
+        "checkpoint_sha256": "0f4cac13fc85ba55cc9ad67b35462394f0b000b41071039c05b71990cd1c874a",
+        "configuration_sha256": "e24d10f641af07b3f1addfc27c0b636ddfe0866c271aa34ad5fe3d9abc536c27",
+        "selected_step": 3700,
+        "optimizer_steps": 4700,
+        "receipt_sha256": "28d636a25b00d18fa99456ea585cf81584165dd110c72a3c493018f0ee41cf83"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 1729,
+        "checkpoint_sha256": "cb0442a96092890ae4148e415893125e2813b1bc8aeb00602afc1d74e6546024",
+        "configuration_sha256": "c33597ab9b036f11e11c48dc3f27c2c393736c8995f9ae81fde5a9a8707c27a1",
+        "selected_step": 4700,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "4668cabd196f6f47dcbde9c0b599b8aad54ab5d0149536d4156ac845304d16b3"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 2718,
+        "checkpoint_sha256": "b580e08670f367f2626dd8ffc8aca53d1151812a8b4adca458fb6f9ee1625527",
+        "configuration_sha256": "6222fe080c9893ec6e94daf37fce95878c826c1e6f106d82d9a85ad5247ccf04",
+        "selected_step": 4700,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "c2c6a868c276605b14c3fb4a03ae737ca06a04e84c4158d6f0537094265990da"
+      },
+      {
+        "information_regime": "future_opponent_plus_ball",
+        "target_representation": "origin_relative_displacement",
+        "seed": 31415,
+        "checkpoint_sha256": "720571f53a0e35904287a3750e3bc18e31db8ae49140884380794ec3c5015dcb",
+        "configuration_sha256": "94c3160ba2068972ac2a6d18b078dbee7786dbfd8e09e9b712a3f694cada7293",
+        "selected_step": 4600,
+        "optimizer_steps": 5000,
+        "receipt_sha256": "1aaea15c0930d07d8d5a976a0e7164bab10d400212e3a965c8e00a4067b0a46a"
+      }
+    ]
+  },
+  "endpoints": {
+    "primary": "physical XY ADE in metres",
+    "secondary": [
+      "physical XY FDE in metres",
+      "physical XY RMSE in metres"
+    ],
+    "truth_frame": "absolute source XY in metres",
+    "displacement_prediction_reconstruction": "add each player's frozen origin XY before scoring",
+    "truth_mask": "the original v2 per-player, per-step finite physical truth mask",
+    "units": "metres",
+    "new_endpoints": false,
+    "endpoint_changes_after_failure": false
+  },
+  "aggregation": {
+    "scene_to_window": "equal mean over scoreable directed scenes",
+    "window_to_match": "equal mean over scoreable eligible windows",
+    "seed_to_match": "arithmetic mean of three frozen seed values within each match",
+    "match_to_configuration": "equal arithmetic mean of the four match-level seed means",
+    "preserve_all_records": true,
+    "record_count": 72,
+    "pool_overlapping_windows": false,
+    "inferential_tests": false,
+    "confidence_intervals": false,
+    "p_values": false,
+    "significance_claims": false
+  },
+  "contrasts": [
+    {
+      "id": "C1",
+      "representation": "absolute_xy",
+      "formula": "history_only ADE - future_ball ADE"
+    },
+    {
+      "id": "C1",
+      "representation": "origin_relative_displacement",
+      "formula": "history_only ADE - future_ball ADE"
+    },
+    {
+      "id": "C2",
+      "representation": "absolute_xy",
+      "formula": "future_ball ADE - future_opponent_plus_ball ADE"
+    },
+    {
+      "id": "C2",
+      "representation": "origin_relative_displacement",
+      "formula": "future_ball ADE - future_opponent_plus_ball ADE"
+    }
+  ],
+  "contrast_interpretation": {
+    "positive_means": "lower ADE with the added realized context",
+    "paired_within_match": true,
+    "seed_aggregation": "within match before contrast",
+    "report_all_four_match_values": true,
+    "report_equal_match_mean": true,
+    "conditional_not_ex_ante": true
+  },
+  "deterministic_reference": {
+    "baseline_reference_sha256": "21b19a2370d5b4a45652a6ce132cb3e78a4abe2027a096a71f383b1191ea9b36",
+    "private_manifest_index_sha256": "8962fd40437c4aca50b86c8f918b653c35e2aa4277010fe10cbd19ffe8d32d4e",
+    "published_values_reused": true,
+    "rerun_baselines": false,
+    "comparison_role": "secondary descriptive",
+    "rounding_bound_m": 0.00005,
+    "primary_contrasts_independent_of_baselines": true
+  },
+  "planned_descriptive_strata": {
+    "horizon_seconds": {
+      "early": [
+        0.2,
+        1.0
+      ],
+      "middle": [
+        1.2,
+        2.0
+      ],
+      "late": [
+        2.2,
+        3.0
+      ]
+    },
+    "target_quality": [
+      "detected_only",
+      "with_provider_extrapolation"
+    ],
+    "missing_quality_flag_accounting": "unclassified scenes are reported separately and are not included in either planned quality stratum",
+    "post_result_strata_label": "exploratory",
+    "strata_change_primary_score": false
+  },
+  "claims": {
+    "classification": "descriptive only",
+    "allowed": [
+      "descriptive physical ADE, FDE and XY RMSE for the 18 frozen checkpoints on the four fixed evaluation matches",
+      "descriptive within-match paired C1 and C2 contrasts with all four match values and the equal-match mean",
+      "descriptive seed variation, match heterogeneity, denominators and masks",
+      "descriptive comparison with the previously observed deterministic baselines under the documented rounding bound",
+      "descriptive evaluation-match deletion sensitivity",
+      "descriptive predeclared horizon and target-quality strata",
+      "statements bounded to the fixed four matches and the fixed 18 checkpoints",
+      "statements that future-ball and future-opponent-plus-ball use realized future observations and are conditional, not deployable forecasts"
+    ],
+    "forbidden": [
+      "statistical significance, p-values, confidence intervals or population-level inference from four matches",
+      "generalization to other matches, leagues, seasons, teams or providers",
+      "deployment readiness or ex-ante forecasting skill for the realized-future regimes",
+      "completion of the original v2 234-fit prospective study",
+      "completion of the 216-fit training LOMO campaign",
+      "protected population qualification",
+      "treating the aborted RES594 run as a result or a scientific failure",
+      "claiming that a new authorization hash alone justifies the study",
+      "claiming the four evaluation matches are untouched by all study activity",
+      "confirmatory or original-preregistration status for this post-failure protocol",
+      "retrying or reusing the consumed RES594 scope"
+    ],
+    "confirmatory_hypothesis_tests": false,
+    "population_generalization": false,
+    "deployment_claims": false,
+    "ex_ante_future_context_claims": false,
+    "original_v2_completion": false,
+    "lomo_completion": false,
+    "protected_qualification": false
+  },
+  "execution": {
+    "new_scorer_required": true,
+    "proposed_scorer_module": "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res635_post_failure_evaluation",
+    "proposed_entrypoint": "fpdbench-res635",
+    "reuse_res594_scorer": false,
+    "reuse_res594_entrypoint": false,
+    "streaming_input": true,
+    "full_private_snapshot": false,
+    "bounded_memory": true,
+    "per_match_sealed_receipts": true,
+    "receipt_hash_chain": true,
+    "fsynced_telemetry": true,
+    "atomic_final_commit": true,
+    "independent_completion_verification": true,
+    "detached_supervisor": true,
+    "own_session": true,
+    "worker_process_group": true,
+    "signal_attribution": true,
+    "hard_wall_timeout": true,
+    "graceful_shutdown": true,
+    "transient_agent_session_supervision": false,
+    "resume_path": "only the predeclared infrastructure continuation policy",
+    "synthetic_end_to_end_qualification_required": true,
+    "real_data_qualified": false
+  },
+  "interruption_policy": {
+    "mode": "FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION",
+    "scientific_or_integrity_failure": {
+      "terminal": true,
+      "retry": false,
+      "new_owner_go_required": true
+    },
+    "unknown_interruption_cause": {
+      "terminal": true,
+      "retry": false,
+      "new_owner_go_required": true
+    },
+    "proven_infrastructure_interruption": {
+      "terminal": false,
+      "continuation_allowed": true,
+      "same_frozen_scope_only": true,
+      "match_boundary_only": true,
+      "sealed_receipts_only": true,
+      "bitwise_parity_required": true,
+      "no_human_access_to_interim_results": true,
+      "no_outcome_dependent_decision": true,
+      "max_continuations": 1,
+      "max_total_cpu_seconds": 14400,
+      "max_total_wall_seconds": 21600,
+      "reuse_consumed_res594_scope": false,
+      "new_scope_per_continuation": false
+    },
+    "predeclared_infrastructure_causes": [
+      "supervisor hard-timeout SIGTERM with recorded sender and exit status",
+      "recorded node shutdown or reboot",
+      "recorded cgroup OOM kill with kernel evidence",
+      "recorded filesystem I/O failure"
+    ],
+    "sender_attribution_required": true,
+    "terminal_record_required": true,
+    "partial_results_scientifically_usable": false
+  },
+  "independent_validation": {
+    "implementer_must_differ_from_verifier": true,
+    "synthetic_fixtures_only_before_go": true,
+    "same_runtime_bitwise_replay": {
+      "rtol": 0.0,
+      "atol": 0.0
+    },
+    "truth_origin_reconstruction_abs_tolerance": 1e-12,
+    "adversarial_cases": [
+      "wrong match or role",
+      "mask identity mismatch",
+      "scoreable count mismatch",
+      "representation parity failure",
+      "duplicate reads",
+      "incomplete 18-cell matrix",
+      "missing final target",
+      "non-finite prediction or truth",
+      "overlapping-window independence misuse",
+      "receipt removal, reorder, edit or truncation"
+    ],
+    "aggregate_calculator_independent": true,
+    "verification_report_required": true,
+    "verification_report_frozen_before_go": true,
+    "real_data_verification_scope": "aggregate and provenance verification, not a second learned evaluation"
+  },
+  "provenance": {
+    "new_study_id_required": true,
+    "new_protocol_sha256_required": true,
+    "new_scope_sha256_required": true,
+    "new_authorization_record_sha256_required": true,
+    "new_ledger_root_required": true,
+    "ledger_root_independent_of_output": true,
+    "owner_private_ledger": true,
+    "single_owner_private_ledger_root": true,
+    "ledger_record_hash_required": true,
+    "checkpoint_readback_required": true,
+    "source_readback_required": true,
+    "per_match_receipt_sha256_required": true,
+    "final_result_sha256_required": true,
+    "independent_verifier_readback_required": true,
+    "public_output": "aggregate tables, non-reconstructive figures, hashes, provenance, limitations",
+    "private_output": "raw predictions (if retained), checkpoints, source data, ledger, per-match receipts",
+    "raw_or_row_level_publication": false
+  },
+  "resource_budget": {
+    "device": "cpu",
+    "precision": "float32",
+    "threads": 1,
+    "python": "3.12.8",
+    "numpy": "2.2.4",
+    "pytorch": "2.6.0+cpu",
+    "cpu_seconds_ceiling": 14400,
+    "wall_seconds_ceiling": 21600,
+    "rss_bytes_ceiling": 2147483648,
+    "private_working_disk_bytes_ceiling": 2147483648,
+    "paid_compute_units": 0,
+    "paid_cost_usd": 0,
+    "gpu": false,
+    "training": false,
+    "lomo_fits": 0,
+    "checkpoint_loads": 18,
+    "forward_calls_estimate": 930834,
+    "full_snapshot_bytes": 0,
+    "telemetry_interval_seconds": 60
+  },
+  "authorization": {
+    "schema_id": "fpdbench.res635.owner-execution-authorization",
+    "schema_version": "1.0.0",
+    "schema_path": "res635_owner_authorization_v1.schema.json",
+    "owner_authorization_present": false,
+    "owner_go_granted": false,
+    "go_phrase_template": "RES635-OWNER-GO:<protocol-sha256>:<checkpoint-manifest-sha256>:<research-admission-sha256>:<scorer-code-sha256>",
+    "new_scope_required": true,
+    "one_campaign_only": true,
+    "retry_after_failure": false,
+    "reuse_res594_scope": false,
+    "reuse_res594_go_phrase": false,
+    "protected_status_required": "NOT_QUALIFIED"
+  },
+  "gates": [
+    {
+      "order": 1,
+      "name": "proposed scientific protocol",
+      "status": "DRAFTED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 2,
+      "name": "independent scientific review",
+      "status": "REQUIRED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 3,
+      "name": "express owner ratification",
+      "status": "REQUIRED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 4,
+      "name": "separately approved synthetic-only engineering qualification",
+      "status": "REQUIRED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 5,
+      "name": "private non-consuming preflight",
+      "status": "REQUIRED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 6,
+      "name": "new and distinct express owner GO",
+      "status": "REQUIRED",
+      "authorizes_execution": true
+    },
+    {
+      "order": 7,
+      "name": "one controlled real study",
+      "status": "NOT_STARTED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 8,
+      "name": "independent private 72-result verification",
+      "status": "NOT_STARTED",
+      "authorizes_execution": false
+    },
+    {
+      "order": 9,
+      "name": "public-safe reporting",
+      "status": "NOT_STARTED",
+      "authorizes_execution": false
+    }
+  ],
+  "publication": {
+    "paper_b_claim_class": "descriptive",
+    "required_disclosures": [
+      "the original v2 234-fit study is incomplete and the 216-fit LOMO remains deferred",
+      "the four evaluation matches were already used by deterministic baselines",
+      "validation means were observed before the RES593 amendment and used for checkpoint selection",
+      "the RES594 campaign was consumed and terminated without a learned result bundle",
+      "the four matches are the only independent evaluation units; overlapping windows are not independent",
+      "future-ball and future-opponent-plus-ball use realized future observations and are conditional",
+      "the protected population remains NOT_QUALIFIED",
+      "no statistical significance or population generalization is claimed"
+    ],
+    "no_confirmatory_claims": true,
+    "no_generalization_claims": true,
+    "no_deployment_claims": true,
+    "no_v2_completion_claims": true,
+    "no_lomo_completion_claims": true,
+    "no_protected_qualification_claims": true,
+    "rights_cleared_aggregates_only": true,
+    "skillcorner_attribution_required": true
+  },
+  "prohibitions": [
+    "no opening, hashing, parsing or executing the retained RES594 private snapshot",
+    "no reuse of the RES594 consumed scope, authorization record, GO phrase or ledger",
+    "no scoring of training or validation matches",
+    "no new model fits, warm starts, checkpoint reselection or hyperparameter search",
+    "no LOMO fits",
+    "no GPU or paid compute",
+    "no real evaluation input access before the separate owner GO",
+    "no interim learned result access by the scientific analyst",
+    "no post-hoc endpoint, match, cell or contrast changes",
+    "no raw or row-level public release",
+    "no claim of original v2 completion, LOMO completion or protected qualification"
+  ]
+}
