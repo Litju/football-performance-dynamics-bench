@@ -1,0 +1,317 @@
+{
+  "aggregate": {
+    "contrasts": {
+      "C1/absolute_xy": {
+        "equal_match_mean": -0.03481458456073705,
+        "matches": [
+          -0.04737276764188003,
+          -0.02256672129789372,
+          -0.03101304851174369,
+          -0.038305800791430755
+        ]
+      },
+      "C1/origin_relative_displacement": {
+        "equal_match_mean": -0.00508123063807886,
+        "matches": [
+          0.0014387354643017325,
+          -0.006216098029220518,
+          0.0013404899921507507,
+          -0.016888049979547404
+        ]
+      },
+      "C2/absolute_xy": {
+        "equal_match_mean": 0.02758431336326428,
+        "matches": [
+          0.03792238477804766,
+          0.03302497120121295,
+          0.024638269582808903,
+          0.014751627890987606
+        ]
+      },
+      "C2/origin_relative_displacement": {
+        "equal_match_mean": -0.018282040207794475,
+        "matches": [
+          -0.01915246752298949,
+          -0.006850712676712445,
+          -0.009750215633511194,
+          -0.03737476499796477
+        ]
+      }
+    },
+    "equal_match_means": {
+      "future_ball/absolute_xy": {
+        "ade_m": 14.941709795174692,
+        "fde_m": 15.070096643947494,
+        "xy_rmse_m": 11.309582114311134
+      },
+      "future_ball/origin_relative_displacement": {
+        "ade_m": 0.9903236171683383,
+        "fde_m": 1.1558537053250368,
+        "xy_rmse_m": 0.8029560850174758
+      },
+      "future_opponent_plus_ball/absolute_xy": {
+        "ade_m": 14.914125481811427,
+        "fde_m": 15.03295766221774,
+        "xy_rmse_m": 11.28929260218854
+      },
+      "future_opponent_plus_ball/origin_relative_displacement": {
+        "ade_m": 1.0086056573761326,
+        "fde_m": 1.2797455910849487,
+        "xy_rmse_m": 0.8149965528239156
+      },
+      "history_only/absolute_xy": {
+        "ade_m": 14.906895210613953,
+        "fde_m": 14.903069090685289,
+        "xy_rmse_m": 11.283897658369751
+      },
+      "history_only/origin_relative_displacement": {
+        "ade_m": 0.9852423865302593,
+        "fde_m": 1.2735584997987235,
+        "xy_rmse_m": 0.8015331078127026
+      }
+    },
+    "records": 72,
+    "seed_means_within_match": {
+      "future_ball/absolute_xy": [
+        {
+          "ade_m": 15.374918771725254,
+          "fde_m": 15.657611305899417,
+          "xy_rmse_m": 11.52335767555863
+        },
+        {
+          "ade_m": 14.998816793896623,
+          "fde_m": 15.212042004436654,
+          "xy_rmse_m": 11.273225151069553
+        },
+        {
+          "ade_m": 15.409964260937599,
+          "fde_m": 15.301179809937642,
+          "xy_rmse_m": 11.729620752644792
+        },
+        {
+          "ade_m": 13.983139354139288,
+          "fde_m": 14.109553455516265,
+          "xy_rmse_m": 10.712124877971563
+        }
+      ],
+      "future_ball/origin_relative_displacement": [
+        {
+          "ade_m": 1.001392517169148,
+          "fde_m": 1.177700144161556,
+          "xy_rmse_m": 0.8101922408224472
+        },
+        {
+          "ade_m": 0.9989673742051713,
+          "fde_m": 1.1257455159578493,
+          "xy_rmse_m": 0.8095446775059191
+        },
+        {
+          "ade_m": 1.0175735550852643,
+          "fde_m": 1.1721916533515306,
+          "xy_rmse_m": 0.8253653066992048
+        },
+        {
+          "ade_m": 0.9433610222137693,
+          "fde_m": 1.1477775078292116,
+          "xy_rmse_m": 0.7667221150423323
+        }
+      ],
+      "future_opponent_plus_ball/absolute_xy": [
+        {
+          "ade_m": 15.336996386947206,
+          "fde_m": 15.619424465464439,
+          "xy_rmse_m": 11.495240634295854
+        },
+        {
+          "ade_m": 14.96579182269541,
+          "fde_m": 15.20432746571751,
+          "xy_rmse_m": 11.249528827478983
+        },
+        {
+          "ade_m": 15.38532599135479,
+          "fde_m": 15.31654722551855,
+          "xy_rmse_m": 11.712149632006723
+        },
+        {
+          "ade_m": 13.9683877262483,
+          "fde_m": 13.991531492170461,
+          "xy_rmse_m": 10.700251314972602
+        }
+      ],
+      "future_opponent_plus_ball/origin_relative_displacement": [
+        {
+          "ade_m": 1.0205449846921375,
+          "fde_m": 1.2712039309103753,
+          "xy_rmse_m": 0.8255542363398926
+        },
+        {
+          "ade_m": 1.0058180868818838,
+          "fde_m": 1.2678377888298595,
+          "xy_rmse_m": 0.8165234363566091
+        },
+        {
+          "ade_m": 1.0273237707187755,
+          "fde_m": 1.3354245870592958,
+          "xy_rmse_m": 0.8289350790444668
+        },
+        {
+          "ade_m": 0.980735787211734,
+          "fde_m": 1.2445160575402638,
+          "xy_rmse_m": 0.7889734595546937
+        }
+      ],
+      "history_only/absolute_xy": [
+        {
+          "ade_m": 15.327546004083374,
+          "fde_m": 15.525098479985921,
+          "xy_rmse_m": 11.488571695073476
+        },
+        {
+          "ade_m": 14.976250072598729,
+          "fde_m": 15.05098670106542,
+          "xy_rmse_m": 11.25548716000526
+        },
+        {
+          "ade_m": 15.378951212425855,
+          "fde_m": 15.183261921679472,
+          "xy_rmse_m": 11.708159679991288
+        },
+        {
+          "ade_m": 13.944833553347857,
+          "fde_m": 13.85292926001034,
+          "xy_rmse_m": 10.683372098408979
+        }
+      ],
+      "history_only/origin_relative_displacement": [
+        {
+          "ade_m": 1.0028312526334497,
+          "fde_m": 1.2718164626430644,
+          "xy_rmse_m": 0.813755516618962
+        },
+        {
+          "ade_m": 0.9927512761759508,
+          "fde_m": 1.2798602671566466,
+          "xy_rmse_m": 0.8061928570631753
+        },
+        {
+          "ade_m": 1.018914045077415,
+          "fde_m": 1.2987815463459995,
+          "xy_rmse_m": 0.8298895035647437
+        },
+        {
+          "ade_m": 0.9264729722342219,
+          "fde_m": 1.2437757230491837,
+          "xy_rmse_m": 0.7562945540039295
+        }
+      ]
+    }
+  },
+  "base_main": "30d3fc279735bd06aa4265493a9627602e1580fc",
+  "budget": {
+    "cpu_s": 600.0,
+    "disk_bytes": 67108864,
+    "rss_bytes": 2147483648,
+    "wall_s": 900.0
+  },
+  "cell_match_records": 72,
+  "census_large": {
+    "cpu_s": 32.794762976,
+    "directed_scene_slots": 103426,
+    "final_targets": 747783,
+    "forward_calls": 0,
+    "identity_sha256": "e5fa3d3d07edf2e985710375a2617f353ec2f4734624c70cfca48125dde7c019",
+    "mask_sha256": "dcb2c18e5d83dc816163f749470dd74834d26aeb39b4778672c82a96d104d88b",
+    "rss_peak_bytes": 217628672,
+    "scalar_coordinates": 22432054,
+    "scoreable_scenes": 73880,
+    "scoreable_windows": 44328,
+    "scored_points": 11216027,
+    "snapshot_bytes": 0,
+    "traced_peak_bytes": 597239,
+    "wall_s": 54.83431068400387,
+    "windows": 51713
+  },
+  "census_small": {
+    "cpu_s": 0.3968140120000001,
+    "directed_scene_slots": 1034,
+    "final_targets": 7524,
+    "forward_calls": 0,
+    "identity_sha256": "f60b5f18d28e39aa2201221bec7883439e91e58bb09dec2a6b50b9ef17887ce0",
+    "mask_sha256": "f68804b0ef21e1d9e56b8b81a1cc80b7eeec6da566206858adcc5e8f34802fab",
+    "rss_peak_bytes": 217874432,
+    "scalar_coordinates": 225262,
+    "scoreable_scenes": 742,
+    "scoreable_windows": 445,
+    "scored_points": 112631,
+    "snapshot_bytes": 0,
+    "traced_peak_bytes": 597185,
+    "wall_s": 0.6064255780074745,
+    "windows": 517
+  },
+  "cpu_seconds_including_supervisor_verification": 24.176322548,
+  "full_snapshot_bytes": 0,
+  "gates": {
+    "formal_gate_4_complete": false,
+    "gate_5_entered": false,
+    "gate_6_authorized": false,
+    "owner_ratified": false
+  },
+  "independent_max_absolute_metric_error_m": 8.881784197001252e-15,
+  "output_storage_bytes": 80943,
+  "parity_absolute_tolerance_m": 1e-12,
+  "peak_combined_monitored_rss_bytes": 449413120,
+  "provenance": {
+    "code_sha256": {
+      "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+      "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+      "res635_execution.py": "88a1bcfc7a72b84cec59d87c310f8d678c45229468fe4b65a80d03316ef4a8b6",
+      "res635_post_failure_evaluation.py": "c03ce2bd20c2e0ad34bd259c87566ccbd9e656841039cbdf1598bd66dc7adf68",
+      "res635_verification.py": "d0fa7ff1a8a180c43c67f12d2241fed9b48fd761aa1f442622a86d3d1faf168f",
+      "trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+    },
+    "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
+    "runtime": {
+      "device": "cpu",
+      "numpy": "2.2.4",
+      "precision": "float32",
+      "python": "3.12.8",
+      "threads": 1,
+      "torch": "2.6.0+cpu"
+    },
+    "synthetic_only": true,
+    "weights": "random initialization; no optimizer or checkpoint"
+  },
+  "qualification_limits": [
+    "synthetic only",
+    "same owner UID and stable private ledger are trusted",
+    "independent external scientific review remains required",
+    "actual OOM/host reboot and real data not qualified"
+  ],
+  "receipt_sha256_chain": [
+    "81672add2606cc10aa224a4bca1236e965bb9091771d4c84d7e4619f26899a54",
+    "264fd020b0cfa360bba2dc3df35ccdb7a7a75605e498056bea87ac36e9016cd6",
+    "594bb3ac5a6c16bb3fa0f0863510699b95e96c9b9637d0e301f412a0bb07a1e2",
+    "9c08e86f946a05f3185bdb027cd6f365de756a75fb9ee7b7f3df81619ff093c7"
+  ],
+  "scientific_manifest_sha256": "b9727fa64b14b5cf6e92599ec12f61ca1ac0aca03459b5364bea81f894239c58",
+  "status": "SYNTHETIC_PREPARATION_ONLY_NOT_FORMAL_GATE_4",
+  "validation": {
+    "core_isolated_wheel_sdist_smoke": "passed on system Python 3.12.3",
+    "evidence_validation": "passed",
+    "extracted_package_scientific_receipt_sha256": "d78de30d9bd19734041450e2cd4c1ee56f705e2508cc3635fe00d473df20089e",
+    "extracted_synthetic_wheel_sdist_parity": "passed on pinned Python 3.12.8",
+    "naming": "passed",
+    "registry_validation": "passed",
+    "reproducibility": "passed",
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "strict_pyright": "passed",
+    "targeted_synthetic_tests": {
+      "command": "uv run pytest -q tests/unit/test_res643_execution.py tests/unit/test_res643_scorer.py",
+      "passed": 37
+    },
+    "wheel_and_sdist_build": "passed"
+  },
+  "wall_seconds_including_supervisor_verification": 21.378752586024348,
+  "windows_per_artificial_match": 8
+}
