@@ -4,7 +4,7 @@
 **Date:** 2026-11-11
 **Status:** Proposed for independent scientific review. **No execution GO is granted.**
 **Decision token:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket token) / `RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW` (review token)
-**Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`, file SHA-256 `c91e63c03d2bbe42b83b8ef3ef03fdeacc88d7f016f784204240d7e5f56bbb85`
+**Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`, file SHA-256 `e53f83ec7096d00a391ecb5dd82822ff9165b612f9a3f92e7b639944357d77da`
 
 ## Bottom line
 

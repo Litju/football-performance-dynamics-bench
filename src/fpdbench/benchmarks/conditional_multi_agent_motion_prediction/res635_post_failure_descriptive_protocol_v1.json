@@ -332,6 +332,27 @@
       "physical XY FDE in metres",
       "physical XY RMSE in metres"
     ],
+    "metric_contract": {
+      "ade": {
+        "metric_id": "trajectory.ade_m.v1",
+        "definition": "mean Euclidean distance between predicted and true XY over scoreable player-steps",
+        "units": "metres"
+      },
+      "fde": {
+        "metric_id": "trajectory.fde_m.v1",
+        "definition": "Euclidean distance at the final future step over scoreable final targets",
+        "units": "metres"
+      },
+      "xy_rmse": {
+        "metric_id": "trajectory.xy_rmse_m.v1",
+        "definition": "scalar-coordinate RMSE in metres: sqrt(sum(dx^2 + dy^2) / (2 * N_masked_points))",
+        "formula": "sqrt(sum_over_masked_points(dx^2 + dy^2) / (2 * N_masked_points))",
+        "denominator": "2 * N_masked_points",
+        "not_root_mean_squared_euclidean_displacement": true,
+        "frozen_implementation": "src/fpdbench/evaluation/metrics/trajectory.py",
+        "historical_values_unchanged": true
+      }
+    },
     "truth_frame": "absolute source XY in metres",
     "displacement_prediction_reconstruction": "add each player's frozen origin XY before scoring",
     "truth_mask": "the original v2 per-player, per-step finite physical truth mask",

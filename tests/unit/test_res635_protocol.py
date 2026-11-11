@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
+
+from fpdbench.evaluation.metrics.trajectory import (
+    XY_RMSE_METRIC_ID,
+    masked_physical_trajectory_metrics,
+)
 
 REPO = Path(__file__).resolve().parents[2]
 ROOT = REPO / "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction"
@@ -19,7 +25,7 @@ DETERMINISTIC_RESULTS = ROOT / "res337_deterministic_results_v1.md"
 DECISION = REPO / "docs/res635-admissibility-decision.md"
 PROTOCOL_DOC = REPO / "docs/res635-post-failure-descriptive-protocol-v1.md"
 
-PROTOCOL_SHA256 = "c91e63c03d2bbe42b83b8ef3ef03fdeacc88d7f016f784204240d7e5f56bbb85"
+PROTOCOL_SHA256 = "e53f83ec7096d00a391ecb5dd82822ff9165b612f9a3f92e7b639944357d77da"
 HEX64 = set("0123456789abcdef")
 
 
@@ -204,6 +210,27 @@ def test_endpoints_and_aggregation_are_inherited_without_post_failure_changes() 
     assert aggregation["match_to_configuration"] == (
         "equal arithmetic mean of the four match-level seed means"
     )
+
+
+def test_xy_rmse_metric_contract_is_scalar_coordinate_rmse() -> None:
+    protocol = _load(PROTOCOL)
+    contract = protocol["endpoints"]["metric_contract"]["xy_rmse"]
+    assert contract["metric_id"] == XY_RMSE_METRIC_ID == "trajectory.xy_rmse_m.v1"
+    assert contract["denominator"] == "2 * N_masked_points"
+    assert "2 * N_masked_points" in contract["formula"]
+    assert contract["not_root_mean_squared_euclidean_displacement"] is True
+    assert contract["historical_values_unchanged"] is True
+
+    prediction = [[[[3.0, 4.0]], [[0.0, 0.0]], [[3.0, 4.0]]]]
+    truth = [[[None], [[0.0, 0.0]], [[0.0, 0.0]]]]
+    metrics = masked_physical_trajectory_metrics(prediction, truth)
+    assert metrics.scored_points == 2
+    assert metrics.final_targets == 1
+    assert metrics.xy_rmse_m == 2.5
+    assert metrics.ade_m == 2.5
+    assert metrics.fde_m == 5.0
+    root_mean_squared_euclidean = math.sqrt((0.0**2 + 5.0**2) / 2)
+    assert metrics.xy_rmse_m != root_mean_squared_euclidean
 
 
 def test_contrasts_are_the_four_frozen_contrasts_and_paired_within_match() -> None:

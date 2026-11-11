@@ -4,7 +4,7 @@
 **Study ID:** `fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0`
 **Protocol schema:** `fpdbench.res635.post-failure-descriptive-protocol/1.0.0`
 **Machine-readable protocol:** `res635_post_failure_descriptive_protocol_v1.json`
-**Protocol file SHA-256:** `c91e63c03d2bbe42b83b8ef3ef03fdeacc88d7f016f784204240d7e5f56bbb85`
+**Protocol file SHA-256:** `e53f83ec7096d00a391ecb5dd82822ff9165b612f9a3f92e7b639944357d77da`
 **Decision:** `DESIGN_GO_FOR_OWNER_REVIEW` (ticket) / `RES635_READY_FOR_INDEPENDENT_SCIENTIFIC_REVIEW` (review)
 **Execution GO:** **not granted.**
 
@@ -122,11 +122,13 @@ The study performs zero new fits, warm starts, checkpoint reselection, checkpoin
 |---|---|---|---|
 | Physical XY ADE | Mean Euclidean distance between predicted and true XY over scoreable player-steps | metres | Primary |
 | Physical XY FDE | Euclidean distance at the final future step | metres | Secondary |
-| Coordinate XY RMSE | Root mean squared Euclidean XY error over scoreable player-steps | metres | Secondary |
+| Coordinate XY RMSE | Scalar-coordinate RMSE in metres: `sqrt(sum(dx^2 + dy^2) / (2 * N_masked_points))` over scoreable player-steps; metric ID `trajectory.xy_rmse_m.v1` | metres | Secondary |
 
 The truth frame is absolute source XY in metres. Origin-relative displacement predictions are reconstructed by adding each target player's frozen origin XY before scoring. Both representations use the same frozen per-player, per-step physical truth mask. Missing truth is not imputed. Predicted points outside the mask are not scored.
 
 The metric core is the frozen implementation. The new scorer must reuse it or prove numerical parity on synthetic fixtures. No new metric definition, normalization, coordinate frame or eligibility rule is allowed.
+
+The frozen metric `trajectory.xy_rmse_m.v1` is **scalar-coordinate** RMSE, not root mean squared Euclidean displacement: it computes `sqrt(sum(dx^2 + dy^2) / (2 * N_masked_points))`, where `N_masked_points` is the number of scoreable player-steps and the denominator counts the two scalar coordinates per point. The protocol does not change this implementation, its denominator or any historical value. ADE remains the mean Euclidean distance; FDE remains the Euclidean distance at the final future step.
 
 History-only is an ex-ante forecast setting. Future-ball and future-opponent-plus-ball condition on realized future observations. The study measures apparent predictability under added realized context, not deployable forecasting skill.
 
@@ -284,7 +286,7 @@ The scorer implementer and the scorer verifier must be different people or indep
 * the scorer is qualified on synthetic fixtures from the existing synthetic input generator;
 * same-runtime prediction replay is bitwise equal (`rtol=0`, `atol=0`);
 * truth-origin reconstruction uses absolute tolerance `1e-12`;
-* the frozen metric core and the new scorer agree on masks, denominators, scene weighting, window weighting, representation parity and final targets;
+* the frozen metric core and the new scorer agree on masks, denominators, scene weighting, window weighting, representation parity and final targets, including the scalar-coordinate `trajectory.xy_rmse_m.v1` formula and its `2 * N_masked_points` denominator;
 * adversarial cases cover wrong match/role, mask identity mismatch, scoreable count mismatch, representation parity failure, duplicate reads, incomplete 18-cell matrix, missing final target, non-finite prediction/truth, overlapping-window independence misuse, and receipt removal/reorder/edit/truncation;
 * an independent aggregate calculator recomputes the 72 records, the four match-level aggregates and the C1/C2 contrasts from the sealed receipts;
 * the verification report is frozen and hash-bound before the owner GO;
