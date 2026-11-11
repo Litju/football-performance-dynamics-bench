@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpdbench.res635.owner-execution-authorization/1.0.0",
+  "title": "Separate owner execution authorization for the RES635 post-failure descriptive study",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "study_id",
+    "owner_approved",
+    "owner_name",
+    "authorized_at_utc",
+    "authorized_by_owner",
+    "research_only",
+    "protected_status",
+    "one_campaign_only",
+    "retry_after_scientific_failure",
+    "retry_after_unknown_interruption",
+    "res594_scope_reuse",
+    "res594_go_phrase_reuse",
+    "protocol_sha256",
+    "checkpoint_manifest_sha256",
+    "scorer_code_sha256",
+    "research_admission_sha256",
+    "evaluation_match_ids",
+    "new_scope_sha256",
+    "ledger_root_identity_sha256",
+    "independent_verifier_identity",
+    "independent_validation_report_sha256",
+    "resource_limits",
+    "runtime",
+    "interruption_policy",
+    "evaluation_input_identity",
+    "go_phrase_template"
+  ],
+  "properties": {
+    "schema_id": {"const": "fpdbench.res635.owner-execution-authorization"},
+    "schema_version": {"const": "1.0.0"},
+    "study_id": {"const": "fpdbench.public-skillcorner-post-failure-descriptive-heldout/1.0.0"},
+    "owner_approved": {"const": true},
+    "owner_name": {"type": "string", "minLength": 1},
+    "authorized_at_utc": {"type": "string", "format": "date-time"},
+    "authorized_by_owner": {"const": true},
+    "research_only": {"const": true},
+    "protected_status": {"const": "NOT_QUALIFIED"},
+    "one_campaign_only": {"const": true},
+    "retry_after_scientific_failure": {"const": false},
+    "retry_after_unknown_interruption": {"const": false},
+    "res594_scope_reuse": {"const": false},
+    "res594_go_phrase_reuse": {"const": false},
+    "protocol_sha256": {"$ref": "#/$defs/sha256"},
+    "checkpoint_manifest_sha256": {
+      "const": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0"
+    },
+    "scorer_code_sha256": {"$ref": "#/$defs/sha256"},
+    "research_admission_sha256": {
+      "const": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
+    },
+    "evaluation_match_ids": {
+      "const": ["1874553", "1925299", "2006229", "2010085"]
+    },
+    "new_scope_sha256": {"$ref": "#/$defs/sha256"},
+    "ledger_root_identity_sha256": {"$ref": "#/$defs/sha256"},
+    "independent_verifier_identity": {"type": "string", "minLength": 1},
+    "independent_validation_report_sha256": {"$ref": "#/$defs/sha256"},
+    "resource_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_seconds",
+        "wall_seconds",
+        "rss_bytes",
+        "private_working_disk_bytes",
+        "paid_compute_units",
+        "paid_cost_usd",
+        "gpu"
+      ],
+      "properties": {
+        "cpu_seconds": {"const": 14400},
+        "wall_seconds": {"const": 21600},
+        "rss_bytes": {"const": 2147483648},
+        "private_working_disk_bytes": {"const": 2147483648},
+        "paid_compute_units": {"const": 0},
+        "paid_cost_usd": {"const": 0},
+        "gpu": {"const": false}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "numpy", "pytorch", "device", "precision", "threads"],
+      "properties": {
+        "python": {"const": "3.12.8"},
+        "numpy": {"const": "2.2.4"},
+        "pytorch": {"const": "2.6.0+cpu"},
+        "device": {"const": "cpu"},
+        "precision": {"const": "float32"},
+        "threads": {"const": 1}
+      }
+    },
+    "interruption_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "max_continuations",
+        "bitwise_parity_required",
+        "no_human_access_to_interim_results",
+        "no_outcome_dependent_decision",
+        "scientific_or_integrity_failure_terminal",
+        "unknown_interruption_terminal"
+      ],
+      "properties": {
+        "mode": {"const": "FAIL_CLOSED_WITH_NARROW_INFRASTRUCTURE_CONTINUATION"},
+        "max_continuations": {"const": 1},
+        "bitwise_parity_required": {"const": true},
+        "no_human_access_to_interim_results": {"const": true},
+        "no_outcome_dependent_decision": {"const": true},
+        "scientific_or_integrity_failure_terminal": {"const": true},
+        "unknown_interruption_terminal": {"const": true}
+      }
+    },
+    "evaluation_input_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "research_admission_sha256",
+        "source_release_hash",
+        "source_population_hash",
+        "protocol_sha256"
+      ],
+      "properties": {
+        "research_admission_sha256": {
+          "const": "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
+        },
+        "source_release_hash": {
+          "const": "e92c417b7640b27399451134ee3fce4b1961b0c0dfc2e01175a8f3c906a9ae07"
+        },
+        "source_population_hash": {
+          "const": "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
+        },
+        "protocol_sha256": {
+          "const": "3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f"
+        }
+      }
+    },
+    "go_phrase_template": {
+      "const": "RES635-OWNER-GO:<protocol-sha256>:<checkpoint-manifest-sha256>:<research-admission-sha256>:<scorer-code-sha256>"
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
