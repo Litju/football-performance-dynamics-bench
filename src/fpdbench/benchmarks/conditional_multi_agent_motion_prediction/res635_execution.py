@@ -659,8 +659,13 @@ def main() -> int:
             print(json.dumps({"status": manifest["status"], "records": 72}))
             return 0
         record = bound_record(args.ledger_root, args.output, args.count)
+        if record["status"] == "COMPLETED_VERIFIED":
+            # Completion is a verified bundle state, never merely a ledger flag.
+            verify_complete(args.ledger_root, args.output, args.count)
+            print(json.dumps({"status": record["status"]}))
+            return 0
         print(json.dumps({"status": record["status"]}))
-        return 0 if record["status"] == "COMPLETED_VERIFIED" else EXIT_WORKER
+        return EXIT_WORKER
     except (OSError, ValueError, KeyError, TypeError, IndexError) as exc:
         if (
             args.action == "_supervise"

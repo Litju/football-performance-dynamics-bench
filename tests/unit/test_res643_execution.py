@@ -78,6 +78,64 @@ def test_detached_completion_and_replay_refusal(tmp_path):
         e.verify_complete(root, output, 1)
 
 
+
+def _cli_check(action: str, root: Path, output: Path) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            e.MODULE,
+            action,
+            "--ledger-root",
+            str(root),
+            "--output",
+            str(output),
+            "--count",
+            "1",
+        ],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("artifact", "mutation"),
+    [
+        ("match-0.json", "alter"),
+        ("match-0.json", "delete"),
+        ("result.json", "alter"),
+        ("result.json", "delete"),
+    ],
+)
+def test_status_reverifies_completed_bundle(
+    tmp_path: Path, artifact: str, mutation: str
+) -> None:
+    root, output = tmp_path / "ledger", tmp_path / "output"
+    assert run(root, output)["exit_code"] == 0
+
+    for action in ("status", "verify"):
+        result = _cli_check(action, root, output)
+        assert result.returncode == 0, (result.stdout, result.stderr)
+
+    target = output / artifact
+    if mutation == "delete":
+        target.unlink()
+    else:
+        document = e.read(target)
+        if artifact == "result.json":
+            document["hmac_sha256"] = "0" * 64
+        else:
+            document["records"][0]["strata"]["all"]["metrics"]["ade_m"] += 1.0
+        e.atomic(target, document)
+
+    # The original ledger still says success; neither public CLI may trust it.
+    assert e.bound_record(root, output, 1)["status"] == "COMPLETED_VERIFIED"
+    for action in ("status", "verify"):
+        result = _cli_check(action, root, output)
+        assert result.returncode == e.EXIT_INTEGRITY, (result.stdout, result.stderr)
+
+
 def test_controlled_sigterm_boundary_continuation_bitwise(tmp_path):
     root, output = tmp_path / "ledger", tmp_path / "continued"
     status = run(root, output, continuation=True, pause=0, wall_limit=12)
