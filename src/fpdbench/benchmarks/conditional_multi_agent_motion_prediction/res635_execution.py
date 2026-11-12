@@ -24,7 +24,8 @@ from pathlib import Path
 from typing import Any, cast
 
 from . import res635_post_failure_evaluation as s
-from . import res635_verification as v
+from . import res645_evidence as ev
+from . import res645_workloads as wl
 
 MODULE = "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res635_execution"
 BUDGET = {"cpu_s": 600.0, "wall_s": 900.0, "rss_bytes": 2 * 1024**3, "disk_bytes": 64 * 1024**2}
@@ -87,8 +88,8 @@ def private_root(root: Path, output: Path) -> Path:
     return root
 
 
-def ledger_path(root: Path, count: int) -> Path:
-    return root / f"{v.receipts_scope(count)}.json"
+def ledger_path(root: Path, scope: str) -> Path:
+    return root / f"{scope}.json"
 
 
 def signed(body: s.Document, key: str) -> s.Document:
@@ -118,9 +119,16 @@ def telemetry(output: Path, value: s.Document) -> None:
         os.close(fd)
 
 
-def reserve(root: Path, output: Path, count: int, continuation: bool) -> s.Document:
-    if type(count) is not int or not 1 <= count <= 64:
-        raise ValueError("synthetic inference count must be 1..64")
+def reserve(
+    root: Path,
+    output: Path,
+    count: int,
+    continuation: bool,
+    *,
+    workload: wl.Workload | None = None,
+) -> s.Document:
+    workload = workload or wl.SyntheticWorkload()
+    workload.validate_count(count)
     root = private_root(root, output)
     if output.exists() and any(output.iterdir()):
         raise ValueError("output already populated")
@@ -128,11 +136,12 @@ def reserve(root: Path, output: Path, count: int, continuation: bool) -> s.Docum
         output.stat().st_uid != os.geteuid() or stat.S_IMODE(output.stat().st_mode) != 0o700
     ):
         raise PermissionError("output must be owner-private 0700")
-    path = ledger_path(root, count)
+    scope = workload.scope_sha256(count)
+    path = ledger_path(root, scope)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     record: s.Document = {
-        "namespace": "RES643-SYNTHETIC-ONLY-v1",
-        "scope_sha256": v.receipts_scope(count),
+        "namespace": workload.namespace,
+        "scope_sha256": scope,
         "output": str(output.resolve()),
         "count": count,
         "seals": [],
@@ -161,12 +170,15 @@ def reserve(root: Path, output: Path, count: int, continuation: bool) -> s.Docum
 def store_ledger(root: Path, count: int, record: s.Document) -> None:
     body = {k: value for k, value in record.items() if k != "record_sha256"}
     record["record_sha256"] = s.digest(body)
-    atomic(ledger_path(root, count), record)
+    atomic(ledger_path(root, cast(str, record["scope_sha256"])), record)
 
 
-def bound_record(root: Path, output: Path, count: int) -> s.Document:
+def bound_record(
+    root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
+) -> s.Document:
+    workload = workload or wl.SyntheticWorkload()
     private_root(root, output)
-    path = ledger_path(root, count)
+    path = ledger_path(root, workload.scope_sha256(count))
     info = path.stat()
     if info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600:
         raise PermissionError("ledger record must be owner-private 0600")
@@ -175,8 +187,8 @@ def bound_record(root: Path, output: Path, count: int) -> s.Document:
         {k: value for k, value in record.items() if k != "record_sha256"}
     ):
         raise ValueError("ledger record hash differs")
-    if record["output"] != str(output.resolve()) or record["scope_sha256"] != v.receipts_scope(
-        count
+    if record["output"] != str(output.resolve()) or record["scope_sha256"] != (
+        workload.scope_sha256(count)
     ):
         raise ValueError("campaign/ledger identity differs")
     if record["status"] == "RUNNING" and (output / "processes.json").exists():
@@ -212,7 +224,10 @@ def _child_limits(parent_pid: int, cpu: float) -> None:
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
 
-def worker(output: Path, count: int, start: int, pause: int) -> int:
+def worker(
+    output: Path, count: int, start: int, pause: int, workload: wl.Workload | None = None
+) -> int:
+    workload = workload or wl.SyntheticWorkload()
     stop = threading.Event()
     events: list[s.Document] = []
     signals = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
@@ -234,13 +249,14 @@ def worker(output: Path, count: int, start: int, pause: int) -> int:
         if stop.is_set():
             raise InterruptedError("controlled worker termination")
 
-    models = s.models()
+    models = workload.prepare()
+    scope = workload.scope_sha256(count)
     previous = s.digest(read(output / f"match-{start - 1}.json")) if start else "0" * 64
     try:
         for i in range(start, 4):
             check()
-            body = s.score_match(s.MATCHES[i], count, models, check)
-            receipt = {**body, "scope_sha256": v.receipts_scope(count), "previous_sha256": previous}
+            body = workload.score(i, count, models, check)
+            receipt = {**body, "scope_sha256": scope, "previous_sha256": previous}
             atomic(output / f"match-{i}.json", receipt)
             previous = s.digest(receipt)
             # Explicit synthetic fault fixture, outside the scientific scope and measurements.
@@ -283,9 +299,18 @@ def working_disk_bytes(output: Path) -> int:
 
 
 def supervise(
-    root: Path, output: Path, count: int, pause: int = -1, wall_limit: float | None = None
+    root: Path,
+    output: Path,
+    count: int,
+    pause: int = -1,
+    wall_limit: float | None = None,
+    *,
+    workload: wl.Workload | None = None,
+    evidence: ev.CgroupEvidence | None = None,
 ) -> int:
-    record = bound_record(root, output, count)
+    workload = workload or wl.SyntheticWorkload()
+    provider = evidence or ev.CgroupEvidence()
+    record = bound_record(root, output, count, workload=workload)
     if record["status"] not in ("RESERVED", "CONTINUATION_RESERVED"):
         raise ValueError("attempt not reserved")
     token = root / f"{record['scope_sha256']}.attempt-{record['attempt']}"
@@ -301,6 +326,8 @@ def supervise(
     remaining_wall = record["budget"]["wall_s"] - record["wall_used"]
     limit = min(remaining_wall, wall_limit if wall_limit is not None else remaining_wall)
     supervisor_pid = os.getpid()
+    cause_before = provider.snapshot(supervisor_pid)
+    signals_sent = 0
     child = subprocess.Popen(
         [
             sys.executable,
@@ -315,6 +342,7 @@ def supervise(
             str(len(record["seals"])),
             "--pause",
             str(pause),
+            *workload.cli,
         ],
         start_new_session=True,
         preexec_fn=lambda: _child_limits(supervisor_pid, remaining_cpu),
@@ -392,9 +420,11 @@ def supervise(
         )
         if sent_at is None and (wall >= limit or budget_hit):
             reason = "BUDGET" if budget_hit else "SUPERVISOR_TIMEOUT"
+            signals_sent += 1
             os.killpg(child.pid, signal.SIGTERM)
             sent_at = wall
         elif sent_at is not None and wall - sent_at >= 2.5:
+            signals_sent += 1
             os.killpg(child.pid, signal.SIGKILL)
         time.sleep(0.02)
     # wait4 supplies actual CPU accounting and kernel signal status, including sudden death.
@@ -406,7 +436,18 @@ def supervise(
         for i in range(4)
         if (output / f"match-{i}.json").exists()
     ]
+    # A SIGKILL wait status is only an observation. Attributable cause evidence is separate.
+    cause = ev.assess(
+        cause_before,
+        provider.snapshot(supervisor_pid, cause_before.get("cgroup")),
+        wait_returncode=code,
+        supervisor_signals=signals_sent,
+        worker_cpu_s=cpu,
+        cpu_ceiling_s=float(max(1, math.ceil(remaining_cpu))),
+    )
     attestation = {
+        "cause_evidence": cause,
+        "supervisor_signals_sent": signals_sent,
         "scope_sha256": record["scope_sha256"],
         "output": record["output"],
         "protocol_sha256": s.PROTOCOL_SHA256,
@@ -426,12 +467,12 @@ def supervise(
     record["status"] = "FAILED_PERMANENTLY"
     result_code = EXIT_BUDGET if reason == "BUDGET" else EXIT_WORKER
     try:
-        receipts = v.verify_prefix(output, count, seals)
+        receipts = workload.verify_prefix(output, count, seals)
         terminal_path = output / "worker-terminal.json"
         if terminal_path.exists() and read(terminal_path)["status"] != "INTERRUPTED":
             raise ValueError("known scientific or integrity failure overrides signal status")
         if code == 0 and reason == "EXIT" and len(receipts) == 4:
-            aggregate = v.aggregate(receipts)
+            aggregate = workload.aggregate(receipts)
             # Commit only after independent full readback and numerical recomputation.
             manifest = {
                 "scope_sha256": record["scope_sha256"],
@@ -467,7 +508,8 @@ def supervise(
                 record["status"] = "CONTINUATION_READY_SAME_SCOPE"
                 result_code = EXIT_INTERRUPTED
         elif code == -signal.SIGKILL and reason == "EXIT" and 0 < len(seals) < 4:
-            if record["continuation_predeclared"] and record["attempt"] == 0:
+            # Never on the wait status alone: independent kernel cause evidence is mandatory.
+            if cause is not None and record["continuation_predeclared"] and record["attempt"] == 0:
                 record["status"] = "CONTINUATION_READY_SAME_SCOPE"
                 result_code = EXIT_INTERRUPTED
     except (ValueError, KeyError, OSError, TypeError, IndexError) as exc:
@@ -485,8 +527,11 @@ def supervise(
     return result_code
 
 
-def continue_campaign(root: Path, output: Path, count: int) -> None:
-    record = bound_record(root, output, count)
+def continue_campaign(
+    root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
+) -> None:
+    workload = workload or wl.SyntheticWorkload()
+    record = bound_record(root, output, count, workload=workload)
     if record["status"] != "CONTINUATION_READY_SAME_SCOPE":
         raise ValueError("campaign is not continuation ready")
     # Claim the one continuation before verification; a failed check consumes it permanently.
@@ -521,6 +566,10 @@ def continue_campaign(root: Path, output: Path, count: int) -> None:
             ("EXIT", -signal.SIGKILL),
         ):
             raise ValueError("noncontinuable cause")
+        if attestation["reason"] == "EXIT" and not ev.valid_attestation(
+            attestation.get("cause_evidence")
+        ):
+            raise ValueError("SIGKILL without independent infrastructure cause evidence")
         terminal_path = output / "worker-terminal.json"
         if terminal_path.exists() and read(terminal_path)["status"] != "INTERRUPTED":
             raise ValueError("known scientific or integrity failure is permanently terminal")
@@ -530,11 +579,11 @@ def continue_campaign(root: Path, output: Path, count: int) -> None:
             for k, u in (("cpu_s", "cpu_used"), ("wall_s", "wall_used"))
         ):
             raise ValueError("insufficient remaining cumulative budget")
-        receipts = v.verify_prefix(output, count, record["seals"])
-        random_models = s.models()
+        receipts = workload.verify_prefix(output, count, record["seals"])
+        prepared = workload.prepare()
         for i, receipt in enumerate(receipts):
             expected = {
-                **s.score_match(s.MATCHES[i], count, random_models),
+                **workload.score(i, count, prepared, lambda: None),
                 "scope_sha256": record["scope_sha256"],
                 "previous_sha256": receipt["previous_sha256"],
             }
@@ -555,16 +604,19 @@ def continue_campaign(root: Path, output: Path, count: int) -> None:
         raise
 
 
-def verify_complete(root: Path, output: Path, count: int) -> s.Document:
-    record = bound_record(root, output, count)
+def verify_complete(
+    root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
+) -> s.Document:
+    workload = workload or wl.SyntheticWorkload()
+    record = bound_record(root, output, count, workload=workload)
     if record["status"] != "COMPLETED_VERIFIED":
         raise ValueError("campaign not complete")
     manifest = authenticated(output / "result.json", record["key"])
-    receipts = v.verify_prefix(output, count, record["seals"])
+    receipts = workload.verify_prefix(output, count, record["seals"])
     expected = {
         "scope_sha256": record["scope_sha256"],
         "seals": record["seals"],
-        "aggregate": v.aggregate(receipts),
+        "aggregate": workload.aggregate(receipts),
         "status": "COMPLETED_VERIFIED_SYNTHETIC_ONLY",
     }
     if manifest != expected:
@@ -581,14 +633,16 @@ def launch(
     resume: bool = False,
     pause: int = -1,
     wall_limit: float | None = None,
+    workload: wl.Workload | None = None,
 ) -> int:
+    workload = workload or wl.SyntheticWorkload()
     safe_path(output)
     if resume:
-        continue_campaign(root, output, count)
+        continue_campaign(root, output, count, workload=workload)
         (output / "status.json").unlink(missing_ok=True)
         fsync_dir(output)
     else:
-        reserve(root, output, count, continuation)
+        reserve(root, output, count, continuation, workload=workload)
     command = [
         sys.executable,
         "-m",
@@ -602,6 +656,7 @@ def launch(
         str(count),
         "--pause",
         str(pause),
+        *workload.cli,
     ]
     if wall_limit is not None:
         if not math.isfinite(wall_limit) or wall_limit <= 0:
@@ -633,15 +688,28 @@ def main() -> int:
     parser.add_argument("--pause", type=int, default=-1, help="synthetic boundary fault fixture")
     parser.add_argument("--wall-limit", type=float)
     parser.add_argument("--start", type=int, default=0)
+    parser.add_argument(
+        "--fixture-bundle",
+        type=Path,
+        help="invented RES645 source/checkpoint fixture bundle; real inputs are never accepted",
+    )
     args = parser.parse_args()
     try:
         safe_path(args.output)
+        workload = wl.make(args.fixture_bundle)
         if args.action == "_worker":
-            return worker(args.output, args.count, args.start, args.pause)
+            return worker(args.output, args.count, args.start, args.pause, workload)
         if args.ledger_root is None:
             parser.error("--ledger-root is required and must remain stable across outputs")
         if args.action == "_supervise":
-            return supervise(args.ledger_root, args.output, args.count, args.pause, args.wall_limit)
+            return supervise(
+                args.ledger_root,
+                args.output,
+                args.count,
+                args.pause,
+                args.wall_limit,
+                workload=workload,
+            )
         if args.action in ("start", "continue"):
             pid = launch(
                 args.ledger_root,
@@ -651,17 +719,18 @@ def main() -> int:
                 resume=args.action == "continue",
                 pause=args.pause,
                 wall_limit=args.wall_limit,
+                workload=workload,
             )
             print(json.dumps({"supervisor_pid": pid, "synthetic_only": True}))
             return 0
         if args.action == "verify":
-            manifest = verify_complete(args.ledger_root, args.output, args.count)
+            manifest = verify_complete(args.ledger_root, args.output, args.count, workload=workload)
             print(json.dumps({"status": manifest["status"], "records": 72}))
             return 0
-        record = bound_record(args.ledger_root, args.output, args.count)
+        record = bound_record(args.ledger_root, args.output, args.count, workload=workload)
         if record["status"] == "COMPLETED_VERIFIED":
             # Completion is a verified bundle state, never merely a ledger flag.
-            verify_complete(args.ledger_root, args.output, args.count)
+            verify_complete(args.ledger_root, args.output, args.count, workload=workload)
             print(json.dumps({"status": record["status"]}))
             return 0
         print(json.dumps({"status": record["status"]}))
@@ -675,7 +744,9 @@ def main() -> int:
                 or read(args.output / "processes.json")["supervisor_pid"] == os.getpid()
             )
         ):
-            record = bound_record(args.ledger_root, args.output, args.count)
+            record = bound_record(
+                args.ledger_root, args.output, args.count, workload=wl.make(args.fixture_bundle)
+            )
             record["status"] = "FAILED_PERMANENTLY"
             store_ledger(args.ledger_root, args.count, record)
             atomic(
