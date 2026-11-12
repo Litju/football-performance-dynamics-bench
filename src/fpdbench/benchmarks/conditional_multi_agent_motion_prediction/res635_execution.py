@@ -269,6 +269,19 @@ def usage(pid: int) -> tuple[float, int]:
     )
 
 
+def working_disk_bytes(output: Path) -> int:
+    total = 0
+    for path in output.iterdir():
+        try:
+            info = path.stat(follow_symlinks=False)
+        except FileNotFoundError:
+            # Atomic receipt renames can remove a temporary name between listing and stat.
+            continue
+        if stat.S_ISREG(info.st_mode):
+            total += info.st_size
+    return total
+
+
 def supervise(
     root: Path, output: Path, count: int, pause: int = -1, wall_limit: float | None = None
 ) -> int:
@@ -357,7 +370,7 @@ def supervise(
         _, supervisor_rss = usage(os.getpid())
         rss += supervisor_rss
         peak_rss = max(peak_rss, rss)
-        disk = sum(p.stat().st_size for p in output.iterdir() if p.is_file())
+        disk = working_disk_bytes(output)
         if wall - last_telemetry >= 1:
             telemetry(
                 output,
@@ -457,7 +470,8 @@ def supervise(
             if record["continuation_predeclared"] and record["attempt"] == 0:
                 record["status"] = "CONTINUATION_READY_SAME_SCOPE"
                 result_code = EXIT_INTERRUPTED
-    except (ValueError, KeyError, OSError, TypeError, IndexError):
+    except (ValueError, KeyError, OSError, TypeError, IndexError) as exc:
+        print(f"INDEPENDENT_VERIFICATION_FAILED: {exc}", file=sys.stderr, flush=True)
         result_code = EXIT_INTEGRITY
     # Charge supervisor imports/verification and kernel-accounted worker CPU.
     record["cpu_used"] = initial_cpu + cpu + time.process_time()

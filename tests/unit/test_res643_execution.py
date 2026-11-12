@@ -92,7 +92,9 @@ def test_controlled_sigterm_boundary_continuation_bitwise(tmp_path):
     assert status["exit_code"] == 0, (output / "supervisor.log").read_text()
     assert (output / "match-0.json").read_bytes() == first_receipt
     uninterrupted = tmp_path / "uninterrupted"
-    assert run(tmp_path / "second-ledger", uninterrupted)["exit_code"] == 0
+    assert run(tmp_path / "second-ledger", uninterrupted)["exit_code"] == 0, (
+        uninterrupted / "supervisor.log"
+    ).read_text()
     for i in range(4):
         assert (output / f"match-{i}.json").read_bytes() == (
             uninterrupted / f"match-{i}.json"
@@ -329,3 +331,45 @@ def test_scientific_failure_remains_terminal_after_sigkill(tmp_path):
     assert status == {"status": "FAILED_PERMANENTLY", "exit_code": e.EXIT_INTEGRITY}
     with pytest.raises(ValueError):
         e.continue_campaign(root, output, 1)
+
+
+def test_disk_monitor_tolerates_atomic_rename(tmp_path, monkeypatch):
+    temporary = tmp_path / ".receipt.tmp"
+    temporary.write_bytes(b"partial")
+    (tmp_path / "sealed.json").write_bytes(b"sealed")
+    original_stat = Path.stat
+
+    def renamed(path, *args, **kwargs):
+        if path == temporary:
+            path.unlink()
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", renamed)
+    assert e.working_disk_bytes(tmp_path) == len(b"sealed")
+
+
+def test_disk_monitor_preserves_unexpected_io_errors(tmp_path, monkeypatch):
+    (tmp_path / "receipt.json").write_bytes(b"sealed")
+
+    def denied(*args, **kwargs):
+        raise PermissionError("unreadable evidence")
+
+    monkeypatch.setattr(Path, "stat", denied)
+    with pytest.raises(PermissionError):
+        e.working_disk_bytes(tmp_path)
+
+
+def test_disk_monitor_handles_rename_after_metadata_read(tmp_path, monkeypatch):
+    temporary = tmp_path / ".receipt.tmp"
+    temporary.write_bytes(b"partial")
+    (tmp_path / "sealed.json").write_bytes(b"sealed")
+    original_stat = Path.stat
+
+    def renamed(path, *args, **kwargs):
+        info = original_stat(path, *args, **kwargs)
+        if path == temporary:
+            path.unlink()
+        return info
+
+    monkeypatch.setattr(Path, "stat", renamed)
+    assert e.working_disk_bytes(tmp_path) == len(b"partialsealed")
