@@ -78,7 +78,9 @@ def test_detached_completion_and_replay_refusal(tmp_path):
         e.verify_complete(root, output, 1)
 
 
-def _cli_check(action: str, root: Path, output: Path) -> subprocess.CompletedProcess[bytes]:
+def _cli_check(
+    action: str, root: Path, output: Path
+) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         [
             sys.executable,
