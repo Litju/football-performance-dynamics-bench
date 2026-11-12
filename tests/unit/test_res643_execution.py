@@ -161,19 +161,20 @@ def test_controlled_sigterm_boundary_continuation_bitwise(tmp_path):
     assert e.bound_record(root, output, 1)["attempt"] == 1
 
 
-def test_unexpected_sigkill_has_supervisor_evidence(tmp_path):
+def test_observed_sigkill_alone_is_permanent_without_cause_evidence(tmp_path):
+    """RES645: a SIGKILL exit status is an observation, not proof of infrastructure loss."""
     root, output = tmp_path / "ledger", tmp_path / "killed"
     e.launch(root, output, 1, continuation=True, pause=0)
     boundary = wait_file(output / "boundary.json")
     assert e.bound_record(root, output, 1)["status"] == "RUNNING"
     os.kill(boundary["pid"], signal.SIGKILL)
     status = wait_file(output / "status.json")
-    assert status["status"] == "CONTINUATION_READY_SAME_SCOPE"
+    assert status == {"status": "FAILED_PERMANENTLY", "exit_code": e.EXIT_WORKER}
     assert not (output / "worker-terminal.json").exists()
     record = e.bound_record(root, output, 1)
     attestation = e.authenticated(output / "postmortem.json", record["key"])
     assert attestation["wait_returncode"] == -signal.SIGKILL
-    e.continue_campaign(root, output, 1)
+    assert attestation["cause_evidence"] is None  # nothing independent attributes the kill
     with pytest.raises(ValueError):
         e.continue_campaign(root, output, 1)
 
@@ -239,8 +240,17 @@ def interrupted_fixture(tmp_path, prefix):
         "attempt": 0,
         "protocol_sha256": s.PROTOCOL_SHA256,
         "outcome_accessed": False,
-        "reason": "EXIT",
-        "wait_returncode": -signal.SIGKILL,
+        "reason": "SUPERVISOR_TIMEOUT",
+        "wait_returncode": e.EXIT_INTERRUPTED,
+        "cause_evidence": {
+            "kind": "cgroup_oom_kill",
+            "cgroup": "/synthetic",
+            "boot_id": "0" * 36,
+            "oom_kill_before": 0,
+            "oom_kill_after": 1,
+            "supervisor_signals": 0,
+            "worker_cpu_s": 0.5,
+        },
     }
     e.atomic(output / "postmortem.json", e.signed(attestation, record["key"]))
     return root, output, record, attestation
@@ -262,6 +272,10 @@ def interrupted_fixture(tmp_path, prefix):
         "parity",
         "missing_receipt",
         "duplicate",
+        "sigkill_without_evidence",
+        "evidence_counter_unchanged",
+        "evidence_with_supervisor_signal",
+        "evidence_wrong_kind",
     ],
 )
 def test_adversarial_continuations_fail_permanently(tmp_path, prefix, fault):
@@ -272,6 +286,19 @@ def test_adversarial_continuations_fail_permanently(tmp_path, prefix, fault):
         e.atomic(output / "postmortem.json", e.signed(attestation, "00" * 32))
     elif fault in ("oom_without_host_evidence", "host_loss_without_attestation", "scientific"):
         attestation["reason"] = fault
+        e.atomic(output / "postmortem.json", e.signed(attestation, record["key"]))
+    elif fault.startswith(("sigkill_", "evidence_")):
+        attestation["reason"] = "EXIT"
+        attestation["wait_returncode"] = -signal.SIGKILL
+        evidence = attestation["cause_evidence"]
+        if fault == "sigkill_without_evidence":
+            attestation["cause_evidence"] = None
+        elif fault == "evidence_counter_unchanged":
+            evidence["oom_kill_after"] = evidence["oom_kill_before"]
+        elif fault == "evidence_with_supervisor_signal":
+            evidence["supervisor_signals"] = 1
+        else:
+            evidence["kind"] = "worker_claim"
         e.atomic(output / "postmortem.json", e.signed(attestation, record["key"]))
     elif fault == "scientific_terminal":
         e.atomic(output / "worker-terminal.json", {"status": "SCIENTIFIC_OR_INTEGRITY_FAILURE"})
@@ -300,6 +327,14 @@ def test_adversarial_continuations_fail_permanently(tmp_path, prefix, fault):
         e.continue_campaign(root, output, 1)
     assert e.bound_record(root, output, 1)["status"] == "FAILED_PERMANENTLY"
     assert not (output / "result.json").exists()
+
+
+def test_valid_cause_evidence_permits_exactly_one_continuation(tmp_path, prefix):
+    root, output, record, _ = interrupted_fixture(tmp_path, prefix)
+    e.continue_campaign(root, output, 1)
+    assert e.bound_record(root, output, 1)["status"] == "CONTINUATION_RESERVED"
+    with pytest.raises(ValueError):
+        e.continue_campaign(root, output, 1)
 
 
 @pytest.mark.parametrize("fragment", ["res594-scope", "fpdbench-private", "checkpoints", "heldout"])

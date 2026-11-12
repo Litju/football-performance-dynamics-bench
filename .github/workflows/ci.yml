@@ -79,3 +79,5 @@ jobs:
       - run: uv run python tools/wheel_smoke.py dist/*.whl dist/*.tar.gz
       - name: RES643 isolated synthetic package parity
         run: uv run python tools/res643_package_smoke.py dist/*.whl dist/*.tar.gz
+      - name: RES645 isolated source/checkpoint synthetic package parity
+        run: uv run python tools/res645_package_smoke.py dist/*.whl dist/*.tar.gz
