@@ -85,6 +85,22 @@ def clone(bundle: Path, tmp_path: Path) -> Path:
     return target
 
 
+def test_metadata_inventory_never_loads_models_and_rejects_changed_checkpoint(
+    bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = clone(bundle, tmp_path)
+    _, manifest, checkpoints = fx.read_bundle(target)
+    monkeypatch.setattr(torch, "load", lambda *args, **kwargs: pytest.fail("deserialized"))
+    assert ck.verify_inventory(manifest, checkpoints, target / "receipts", "synthetic") == (
+        ck.validate_manifest(manifest, "synthetic")
+    )
+    path = next(checkpoints.glob("*.pt"))
+    with path.open("ab") as stream:
+        stream.write(b"changed")
+    with pytest.raises(ck.CheckpointContractError, match="SHA-256 mismatch"):
+        ck.verify_inventory(manifest, checkpoints, target / "receipts", "synthetic")
+
+
 @functools.cache
 def windows_of(bundle: Path, index: int = 0) -> list[dict[str, Any]]:
     spec = fx.read_bundle(bundle)[0][index]

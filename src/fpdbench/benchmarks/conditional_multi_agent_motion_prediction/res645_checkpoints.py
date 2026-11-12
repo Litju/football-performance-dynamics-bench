@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -224,6 +225,36 @@ def verify_fit_receipt(directory: Path, record: Mapping[str, object], cell: Cell
         receipt.get(key) != value for key, value in expected.items()
     ):
         raise CheckpointContractError("fit receipt differs from the checkpoint manifest")
+
+
+def verify_inventory(
+    manifest: Mapping[str, object], directory: Path, receipts: Path, mode: Mode
+) -> str:
+    """Verify bytes and fit bindings without deserializing checkpoints or loading models."""
+    manifest_sha = validate_manifest(manifest, mode)
+    records = validate_records(manifest)
+    if paths.list_directory(directory, require_private=True) != sorted(
+        f"{r['checkpoint_sha256']}.pt" for r in records.values()
+    ):
+        raise CheckpointContractError("checkpoint directory differs from the manifest files")
+    if paths.list_directory(receipts, require_private=True) != sorted(
+        f"{r['receipt_sha256']}.json" for r in records.values()
+    ):
+        raise CheckpointContractError("receipt directory differs from the manifest receipts")
+    for cell, record in records.items():
+        verify_fit_receipt(receipts, record, cell)
+        fd = paths.open_regular_fd(directory / f"{record['checkpoint_sha256']}.pt")
+        with os.fdopen(fd, "rb") as stream:
+            before = os.fstat(stream.fileno())
+            paths.check_regular(before, max_bytes=MAX_CHECKPOINT_BYTES, require_private=True)
+            digest = hashlib.sha256()
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+            if paths.stat_key(before) != paths.stat_key(os.fstat(stream.fileno())):
+                raise CheckpointContractError("checkpoint changed while hashing")
+        if digest.hexdigest() != record["checkpoint_sha256"]:
+            raise CheckpointContractError("checkpoint SHA-256 mismatch")
+    return manifest_sha
 
 
 def _expected_shapes(regime: lds.InformationRegime) -> dict[str, tuple[int, ...]]:
