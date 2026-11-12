@@ -77,3 +77,5 @@ jobs:
       - run: uv run fpdbench reproducibility check
       - run: uv build
       - run: uv run python tools/wheel_smoke.py dist/*.whl dist/*.tar.gz
+      - name: RES643 isolated synthetic package parity
+        run: uv run python tools/res643_package_smoke.py dist/*.whl dist/*.tar.gz
