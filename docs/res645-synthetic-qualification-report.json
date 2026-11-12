@@ -1,0 +1,5130 @@
+{
+  "bounded_memory": {
+    "large": {
+      "cpu_s": 204.705,
+      "eligible_windows": 70,
+      "fixture_disk_bytes": 6759356,
+      "forward_calls": 1260,
+      "ru_maxrss_bytes": 239427584,
+      "samples": 146,
+      "scoreable_windows": 70,
+      "traced_peak_bytes": 17319801,
+      "tracking_bytes": 513684,
+      "wall_s": 207.656
+    },
+    "rss_growth": 1.005,
+    "small": {
+      "cpu_s": 25.544,
+      "eligible_windows": 6,
+      "fixture_disk_bytes": 4484721,
+      "forward_calls": 108,
+      "ru_maxrss_bytes": 238157824,
+      "samples": 46,
+      "scoreable_windows": 6,
+      "traced_peak_bytes": 16959450,
+      "tracking_bytes": 160628,
+      "wall_s": 28.996
+    },
+    "traced_peak_growth": 1.021,
+    "window_growth": 11.67
+  },
+  "git_head_at_measurement": "ee5846085f5b41fb9690e79f9ec5df509c0dda49",
+  "limitations": [
+    "Invented frames/artificial CPU weights only; no private preflight or held-out inference",
+    "No host OOM/reboot qualification or victim evidence; every SIGKILL is permanent",
+    "Memory results bound the measured synthetic sizes, not private source scale"
+  ],
+  "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
+  "qualification_tool_sha256": "ea1438922fd5c1a9a2a59d2bb5ffdab6ae822b8b49581c38be6f40c9be004410",
+  "real_data_readiness_claimed": false,
+  "runtime": {
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "python_executable_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+  },
+  "schema": "fpdbench.res645.synthetic-qualification-report/1",
+  "supervised_campaign": {
+    "aggregate_sha256": "0b2ccf72a577232db42ecd0c20822f8a33a0213ce697c66b2ce3f8ebfbd4bcbc",
+    "budget": {
+      "cpu_s": 600.0,
+      "disk_bytes": 67108864,
+      "rss_bytes": 2147483648,
+      "wall_s": 900.0
+    },
+    "bundle_tree_sha256": "5a1b0cc7419066372c4dc85c7fdee78696ea25420cc01d735d5afc8f1bd67555",
+    "code_runtime_provenance": {
+      "checkpoint_bindings": [
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            1729
+          ],
+          "checkpoint_sha256": "e30661c693dc447f7018fe07a27a7a0aa8de70ffe965807e21de1669f1748ce4",
+          "configuration_sha256": "3196f721950fdbb3362bc54dee8f4a35a7d4bb5de3e43ae310fdc9f6705233d1",
+          "selected_step": 100,
+          "state_sha256": "70799f4ffa903ebbaed3f26a6ac5dbc354b306f7f2d50d969bbca2467f47b32d"
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            2718
+          ],
+          "checkpoint_sha256": "bdb72f5c2d39dcb603882aec704b473ff442dabb575f8dbd0da8ac0caaaf8899",
+          "configuration_sha256": "4efc475718c0f6a3db0255bde0c680efca3bbcfa8190e89e76efcc1a7fdae3ed",
+          "selected_step": 200,
+          "state_sha256": "96a7870af9230f1d7d4e8a1b60c076c00936c6571bd99f4c3f607bf595521da6"
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            31415
+          ],
+          "checkpoint_sha256": "9990d48ce6f8d1c5c6a0b681da05187d0ce343decffdd6b5cb6e15fed60e2451",
+          "configuration_sha256": "362f74d6ecf53aeee3b6b334896a6c7890e2777560640faddb750dc4d511b935",
+          "selected_step": 300,
+          "state_sha256": "29074b02e23aa7d7f8e433c48dfad3142366725f2f05d2731f236bf6023dd5a5"
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            1729
+          ],
+          "checkpoint_sha256": "131d122f57e1ad5d6730b5d36421a6aa3117308c6235dee5a410b30dc3c005be",
+          "configuration_sha256": "40591679eeea8e5ae5878a8898aa7c259c82832bd28aa6c3ae423f8b0762932e",
+          "selected_step": 400,
+          "state_sha256": "1b12ffa072e3c733b242e3fb98734a651d788f6d6baaeeaf0fc84c238c91ad7b"
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            2718
+          ],
+          "checkpoint_sha256": "e760b493a994003431fc97ec892abb4502cd6af70a9f0c0fc4824811f5dadf4d",
+          "configuration_sha256": "78b7f0e77e382955e1dc05130a6daf245838d3a6ae2242fda40639d895d4d970",
+          "selected_step": 500,
+          "state_sha256": "afb8d1a07eebc6385dd9c933ca7f8cb05054994a6e0458c0957585e12cbe8c05"
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            31415
+          ],
+          "checkpoint_sha256": "474b88396f1c36eb6321c1b57e6dad8451a5a27b37929b92e4aade1238fa0451",
+          "configuration_sha256": "cc2c9e95de2fefdb56aff07273f827a8e27277a094a01f6915ad839fc151aa04",
+          "selected_step": 600,
+          "state_sha256": "67faa13af8aebb8bb9f9990255d0f24f9980793de4343c9ec254348df34291d8"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            1729
+          ],
+          "checkpoint_sha256": "2587fa76d97ad092e7dbc89c0f60914aa6efe5e644e53861c9e15444b9ba441d",
+          "configuration_sha256": "0201f21ff3ffcef3a734f6d95dfc7bc32cba07e545e1b2b5fe16874042bb544a",
+          "selected_step": 700,
+          "state_sha256": "86e769445a5f42f9a3aa181cfc79eeca6e340466f87c7098b8f6fcb642724f5b"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            2718
+          ],
+          "checkpoint_sha256": "bf084f0bbf11eecf42db612f175ac59d1b58a8de4577e26c24e9a9c7c8757f4f",
+          "configuration_sha256": "aeba1649ef36678895e27c37ca2735a4c7b7593c2d359aed9592d1d95d22eb3a",
+          "selected_step": 800,
+          "state_sha256": "d479f18fe94ca8a7b3573284012ae20bf485144005ec75a3667aa464114dc06c"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            31415
+          ],
+          "checkpoint_sha256": "220ca8abf1df694a07e963790b012ee2b13bfdbcbe609b2dc5d84c77ae185847",
+          "configuration_sha256": "9c4148983fb57e4271cb8375a6d22058fa6a38a33d4a5f10ade7adbeac94c160",
+          "selected_step": 900,
+          "state_sha256": "33e6f352f046c5e10e82f54bdae866544777e8ac61f86d1af3905728b5dd99d4"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "checkpoint_sha256": "d0a111f62031aeb2d8b89fcbe37b9ac022ba424ce065007fc8a3c742b8f52cc1",
+          "configuration_sha256": "6cef6511499c4d941e010a2db93618d6d99a185bcbc2e06ea61790a62cc67f00",
+          "selected_step": 1000,
+          "state_sha256": "1c3438e87c0d099c700f5dc4fd81aeb85eca540b792db248bc5631da0fd38660"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "checkpoint_sha256": "d5742c9c7eb850bc904213992d6f475528d78e609cd38ad4ddc72f84d7ba4537",
+          "configuration_sha256": "e02a0fa3d146e862120d62e89a39ed7b8ef6428749ff685651941d6d32ae41b9",
+          "selected_step": 1100,
+          "state_sha256": "543245d60674b285322e2279bd4385c1a9a8d122b21529e51f2de939cb290849"
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "checkpoint_sha256": "4d2ebc25d4e193dfec7bd44140b61b977b67cc791d55630f1ea384ac6cdd548e",
+          "configuration_sha256": "7466ef048caabee23da717ee1338f08bbf0bddd1ad6ac3fd8775a0c35eb7c2d7",
+          "selected_step": 1200,
+          "state_sha256": "82e692f892a453ed9172258731084d6a638e89b222b31cd22b4edc416d15e2ef"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            1729
+          ],
+          "checkpoint_sha256": "4fa7c16a4e612bab3a4546ec25c58448df60d213da54d56fc5c38108a733d099",
+          "configuration_sha256": "80cd6b18adcc3412fb6fbfc61934610597c5833641fa6b5711e3d05a8a4cea70",
+          "selected_step": 1300,
+          "state_sha256": "d353322d43311daef34bbf8fad39edce2b72be9ed588a8a041c27a7c342b1a88"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            2718
+          ],
+          "checkpoint_sha256": "a02ec1f9382752c82e02d94c8cd891335a6ed6389dced4d0968bd79149259123",
+          "configuration_sha256": "e177ec5b11e5fa57b61f8b91e644fb38bdd196fd0edcb351954f4b49a43adc17",
+          "selected_step": 1400,
+          "state_sha256": "044de866de30c3709d8549ddc5e07c988dc0a75f61106423ab5cc09c1590d1ea"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            31415
+          ],
+          "checkpoint_sha256": "310d8157fdf2af195f43c26b4db1d1d992e842a3f9b95747bae0be8abdab8389",
+          "configuration_sha256": "c20cbdd503ba99147499da4b4ee148f8e86592c0a087f63bb25ebdfe369bd4c3",
+          "selected_step": 1500,
+          "state_sha256": "10aa3228b98b91d2322ed183fcacdabbc96d8b5d56bfaade908374a3a7c89c2f"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "checkpoint_sha256": "6d10d68944ead4a43b5507544e5895b1df1211f83d6d1277b2b7cf04b4d2ae1b",
+          "configuration_sha256": "730a95065ab2cdf74dca0dd0c2dfcdc078a1e4ba96a065a51ae508abba6a0df5",
+          "selected_step": 1600,
+          "state_sha256": "beb0f2c01e8524ee6655e1497b127d9a1da80fb2ac6a2bdfbcb98fe50b4d5211"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "checkpoint_sha256": "506b3ba2b7f349e2d2d39618f3909e6a298a7e0eebc73e521e7b50722d80ad9f",
+          "configuration_sha256": "21005e9bd017d2af0c5a8844762cac5e7653544de892e1b581b32b8c26b45e3a",
+          "selected_step": 1700,
+          "state_sha256": "6250292de5faabbfe6e6a949f67911d6e058e4474de7a45b67d1c3c2eb5e2895"
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "checkpoint_sha256": "924a8c1665170b7e51d8b9902b15c0507c36cad0f90daa9b0d6d71c07b355152",
+          "configuration_sha256": "458d0723892c5088d537220bedb14f0e501fd14708871a42b57ad51b50a73758",
+          "selected_step": 1800,
+          "state_sha256": "0c3222564ceb365b1a990aef9e35081754e01088bb21aaeca754e1b3cd4c806c"
+        }
+      ],
+      "checkpoint_manifest_sha256": "092d4f8d488ac73a48733e284783c63e557ba5714697aaa7e2599d0b31a80c0f",
+      "code_sha256": {
+        "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+        "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+        "res635_execution.py": "3d20e51c9d453e06aa10cd54541f11ece7f7c05095dfbbdbe44450fa2a08d85f",
+        "res635_post_failure_evaluation.py": "c03ce2bd20c2e0ad34bd259c87566ccbd9e656841039cbdf1598bd66dc7adf68",
+        "res635_verification.py": "d0fa7ff1a8a180c43c67f12d2241fed9b48fd761aa1f442622a86d3d1faf168f",
+        "res645_checkpoints.py": "84a67fa5dda7baac8f1acfe3a20e57bc1a2a6e5247cceb7b19a9275ba202318d",
+        "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+        "res645_fixtures.py": "efa6ba0098ae43b0efff0652048847df2894946aa2dd7623803f7e1db196c3c3",
+        "res645_independent.py": "c25d7b9f92b5c616a40b204e22a03528522142ff14449508d6db03bbbb1d2113",
+        "res645_paths.py": "36bc4bf0d1dfb07765e65da9df4aaaf104a2150c180be4e2364f3f345b9325b1",
+        "res645_pipeline.py": "77e152cc46467162c589d0c33b9e9a5d06add6726e93daa6e7ddab5330d9a0b7",
+        "res645_source_stream.py": "8567490975a229ec3689a8dcb81d71b189fae42360c5fb7bef3eecc469bac277",
+        "res645_workloads.py": "a2e4b48da02fe7cb3b6c17a64323d7d1875093d489b9b511113953d0d8b53fe7"
+      },
+      "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
+      "runtime": {
+        "device": "cpu",
+        "numpy": "2.2.4",
+        "precision": "float32",
+        "python": "3.12.3",
+        "threads": 1,
+        "torch": "2.6.0+cpu"
+      },
+      "synthetic_only": true,
+      "weights": "artificial CPU checkpoints from a synthetic manifest"
+    },
+    "cumulative_cpu_s": 47.825,
+    "cumulative_wall_s": 35.98,
+    "declared_windows": [
+      6,
+      6,
+      6,
+      6
+    ],
+    "feature_tensors_compared_exactly": 456,
+    "independent_72_cell_records": [
+      [
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.563766644505517,
+                "fde_m": 21.048575623595625,
+                "xy_rmse_m": 15.198321628951925
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.413470495167065,
+                "fde_m": 23.0968315357831,
+                "xy_rmse_m": 16.752344144371172
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.406631849852854,
+                "fde_m": 19.012439019146147,
+                "xy_rmse_m": 14.401052939672027
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.608655531996117,
+                "fde_m": 21.048575623595625,
+                "xy_rmse_m": 15.955705057722346
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.690658955419824,
+                "fde_m": 19.911477406013635,
+                "xy_rmse_m": 15.20063726706874
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.196598499036536,
+                "fde_m": 17.15980960357554,
+                "xy_rmse_m": 12.32615412224124
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.52185958937095,
+                "fde_m": 20.979443729807404,
+                "xy_rmse_m": 15.180269795113347
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.369026173664462,
+                "fde_m": 23.07122213860732,
+                "xy_rmse_m": 16.731323322272615
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.353435916116013,
+                "fde_m": 18.758151560086475,
+                "xy_rmse_m": 14.352757874166263
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.41297779223729,
+                "fde_m": 20.979443729807404,
+                "xy_rmse_m": 15.824269966474048
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.815383591678273,
+                "fde_m": 19.69197362708274,
+                "xy_rmse_m": 15.331607734381427
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.14824004740164,
+                "fde_m": 16.983472788654492,
+                "xy_rmse_m": 12.297600375363109
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.415021176087972,
+                "fde_m": 21.15272901555495,
+                "xy_rmse_m": 15.086073404961041
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.257772893068132,
+                "fde_m": 23.25675671033873,
+                "xy_rmse_m": 16.62448298721452
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.073970678504498,
+                "fde_m": 18.74436862342714,
+                "xy_rmse_m": 14.136434484786522
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.600676324968276,
+                "fde_m": 21.15272901555495,
+                "xy_rmse_m": 15.923764322605626
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.588929694773906,
+                "fde_m": 19.612024532351175,
+                "xy_rmse_m": 15.151752592747442
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.049625466465177,
+                "fde_m": 17.1619214819686,
+                "xy_rmse_m": 12.232428027197882
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.100643212540047,
+                "fde_m": 5.768308111519699,
+                "xy_rmse_m": 4.780335001248704
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.892674152898906,
+                "fde_m": 6.6711235761815,
+                "xy_rmse_m": 6.033985792369104
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.3202329545924805,
+                "fde_m": 3.3963247615347996,
+                "xy_rmse_m": 5.036895595271457
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.132518663678389,
+                "fde_m": 5.768308111519699,
+                "xy_rmse_m": 4.873241630683499
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.858335766169825,
+                "fde_m": 4.455320028847461,
+                "xy_rmse_m": 4.064647963297269
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.1300142387708547,
+                "fde_m": 4.66161111873978,
+                "xy_rmse_m": 3.0068235941380745
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.104914854373603,
+                "fde_m": 5.801737811132174,
+                "xy_rmse_m": 4.783621592996449
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.884438540358079,
+                "fde_m": 6.671849610780587,
+                "xy_rmse_m": 6.036619077900852
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.266546479371233,
+                "fde_m": 3.3191326452730165,
+                "xy_rmse_m": 5.023250180228991
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.172645826051496,
+                "fde_m": 5.801737811132174,
+                "xy_rmse_m": 4.869401884849342
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.8851061557445,
+                "fde_m": 4.720294931057601,
+                "xy_rmse_m": 4.084439120159377
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.1617749314562427,
+                "fde_m": 4.73398370168234,
+                "xy_rmse_m": 3.02909426919131
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.196234833785785,
+                "fde_m": 5.844985556363036,
+                "xy_rmse_m": 4.830541798191046
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.976904545717785,
+                "fde_m": 6.733143892913122,
+                "xy_rmse_m": 6.067917352086185
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.3878278660255954,
+                "fde_m": 3.6269717592152113,
+                "xy_rmse_m": 5.057465699539981
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.354544478344791,
+                "fde_m": 5.844985556363036,
+                "xy_rmse_m": 4.996109090170495
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.8568576109878627,
+                "fde_m": 4.60601244818556,
+                "xy_rmse_m": 4.049558164087599
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.2522305225179444,
+                "fde_m": 4.716770695212914,
+                "xy_rmse_m": 3.0976055468286656
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.492503554822516,
+                "fde_m": 21.020597066652364,
+                "xy_rmse_m": 15.156817967778203
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.334420647388416,
+                "fde_m": 23.07880193441831,
+                "xy_rmse_m": 16.708534920955735
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.227383079364937,
+                "fde_m": 18.820438186697377,
+                "xy_rmse_m": 14.260748055054087
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.639380768586012,
+                "fde_m": 21.020597066652364,
+                "xy_rmse_m": 15.985809395850774
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.627204117052727,
+                "fde_m": 19.853918337010892,
+                "xy_rmse_m": 15.18045754746349
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.131548033894997,
+                "fde_m": 17.09139467931305,
+                "xy_rmse_m": 12.280124417383185
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.443407179335097,
+                "fde_m": 20.86999639272362,
+                "xy_rmse_m": 15.12604584472895
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.289254271418713,
+                "fde_m": 22.949085239810486,
+                "xy_rmse_m": 16.691145348733425
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.27117396871282,
+                "fde_m": 18.781272351416867,
+                "xy_rmse_m": 14.323493340645932
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.45723872300464,
+                "fde_m": 20.86999639272362,
+                "xy_rmse_m": 15.851839936932755
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.617393810886444,
+                "fde_m": 19.674703579358987,
+                "xy_rmse_m": 15.168756889445381
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.08169112113497,
+                "fde_m": 16.894630405042893,
+                "xy_rmse_m": 12.227278950549055
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.467481532446197,
+                "fde_m": 21.26368609061461,
+                "xy_rmse_m": 15.13271017014634
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.299081549827594,
+                "fde_m": 23.389306576127577,
+                "xy_rmse_m": 16.6612949122933
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.219484291680132,
+                "fde_m": 18.86047085459917,
+                "xy_rmse_m": 14.257907333510197
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.457196683430784,
+                "fde_m": 21.26368609061461,
+                "xy_rmse_m": 15.840916970389067
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.743056209814515,
+                "fde_m": 19.904918759842694,
+                "xy_rmse_m": 15.263176358505447
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.13131384477734,
+                "fde_m": 17.19657811695372,
+                "xy_rmse_m": 12.304259139261005
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.152821176199558,
+                "fde_m": 5.917215216581384,
+                "xy_rmse_m": 4.779756219221302
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.940367526936161,
+                "fde_m": 6.746786960815807,
+                "xy_rmse_m": 6.029572110818465
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.456581268968311,
+                "fde_m": 3.5985088677803834,
+                "xy_rmse_m": 5.053546620431342
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.167796699671185,
+                "fde_m": 5.917215216581384,
+                "xy_rmse_m": 4.893332640773377
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.841083719491453,
+                "fde_m": 4.414495043629519,
+                "xy_rmse_m": 4.038481017299463
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.192188155127903,
+                "fde_m": 4.934989279738113,
+                "xy_rmse_m": 3.0312130560915733
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.2003036286156314,
+                "fde_m": 5.960286168753889,
+                "xy_rmse_m": 4.804381099139181
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.979079654947502,
+                "fde_m": 6.877480161885681,
+                "xy_rmse_m": 6.053825825397418
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.478187086341863,
+                "fde_m": 3.1540814440466822,
+                "xy_rmse_m": 5.037062827893913
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.22374387884394,
+                "fde_m": 5.960286168753889,
+                "xy_rmse_m": 4.920942031019297
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.9067982475389953,
+                "fde_m": 4.600001006111871,
+                "xy_rmse_m": 4.094257423009033
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.2637992552701633,
+                "fde_m": 4.842997806186783,
+                "xy_rmse_m": 3.06880646263023
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.139604144589352,
+                "fde_m": 5.899440225909385,
+                "xy_rmse_m": 4.813771808895988
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.923999822716441,
+                "fde_m": 6.681499046924228,
+                "xy_rmse_m": 6.065008282312245
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.3056651559543915,
+                "fde_m": 3.5257879561744843,
+                "xy_rmse_m": 5.04958625566938
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.213020685713423,
+                "fde_m": 5.899440225909385,
+                "xy_rmse_m": 4.934083175271031
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.9114518017448385,
+                "fde_m": 4.606252276900876,
+                "xy_rmse_m": 4.084796016132679
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.1851696736939474,
+                "fde_m": 4.991443131671892,
+                "xy_rmse_m": 3.0542053372871245
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.504217360110037,
+                "fde_m": 20.798378230194945,
+                "xy_rmse_m": 15.15964545986654
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.34135449783064,
+                "fde_m": 22.835606855297968,
+                "xy_rmse_m": 16.71096965415686
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.17975808624739,
+                "fde_m": 18.64881094903299,
+                "xy_rmse_m": 14.214862105133937
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.598542196547665,
+                "fde_m": 20.798378230194945,
+                "xy_rmse_m": 15.954157269357061
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.75271367801606,
+                "fde_m": 20.173990415999853,
+                "xy_rmse_m": 15.265515141895824
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.150356890024884,
+                "fde_m": 16.90510775498626,
+                "xy_rmse_m": 12.280572711708773
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.444036000950288,
+                "fde_m": 20.6393526687505,
+                "xy_rmse_m": 15.100231251468854
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.2817181693415,
+                "fde_m": 22.64491200250669,
+                "xy_rmse_m": 16.642049978089982
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.294909488370894,
+                "fde_m": 18.934483953245078,
+                "xy_rmse_m": 14.309568005301086
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.431260568152272,
+                "fde_m": 20.6393526687505,
+                "xy_rmse_m": 15.810696289614375
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.621236853250856,
+                "fde_m": 19.788071960525237,
+                "xy_rmse_m": 15.147446629471949
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.085117027970927,
+                "fde_m": 16.794595676355723,
+                "xy_rmse_m": 12.238328631688665
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 19.38073874778406,
+                "fde_m": 20.96795944584662,
+                "xy_rmse_m": 15.065760147231472
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 21.218682225398837,
+                "fde_m": 23.02533542722314,
+                "xy_rmse_m": 16.607119534293442
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 17.983604962363614,
+                "fde_m": 18.523839562319566,
+                "xy_rmse_m": 14.054892530747765
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 20.497083740011732,
+                "fde_m": 20.96795944584662,
+                "xy_rmse_m": 15.886315640071535
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 19.681249981678153,
+                "fde_m": 20.198238890596773,
+                "xy_rmse_m": 15.206552290388446
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 16.024209328436935,
+                "fde_m": 17.047279477040927,
+                "xy_rmse_m": 12.207859829405189
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.110210594899101,
+                "fde_m": 5.83640252253858,
+                "xy_rmse_m": 4.79293813324255
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.894215253930258,
+                "fde_m": 6.690239306376444,
+                "xy_rmse_m": 6.038850074148324
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.257647892086416,
+                "fde_m": 3.460400054631718,
+                "xy_rmse_m": 5.020049190215286
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.256950059250283,
+                "fde_m": 5.83640252253858,
+                "xy_rmse_m": 4.939552240584117
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.826510019886614,
+                "fde_m": 4.377434549524381,
+                "xy_rmse_m": 4.025725883752204
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.1567566613943954,
+                "fde_m": 4.778458009546355,
+                "xy_rmse_m": 3.045584617996115
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.173249452593901,
+                "fde_m": 5.953628580642627,
+                "xy_rmse_m": 4.83054975067701
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.950948094277528,
+                "fde_m": 6.849839980505666,
+                "xy_rmse_m": 6.068482482133473
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.3071073864172837,
+                "fde_m": 3.1581575199860286,
+                "xy_rmse_m": 5.0293313046505554
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.334369768814814,
+                "fde_m": 5.953628580642627,
+                "xy_rmse_m": 4.991651887981354
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.8871607271107873,
+                "fde_m": 4.188174544369508,
+                "xy_rmse_m": 4.076737564663308
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.2252955673218735,
+                "fde_m": 4.847592725730455,
+                "xy_rmse_m": 3.0883577177303203
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.129589843065644,
+                "fde_m": 5.615801801818226,
+                "xy_rmse_m": 4.801031499961041
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.916469232289414,
+                "fde_m": 6.43959065528712,
+                "xy_rmse_m": 6.042639380740869
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.2710023520853286,
+                "fde_m": 3.559880165644272,
+                "xy_rmse_m": 5.028413633036718
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.181263816449658,
+                "fde_m": 5.615801801818226,
+                "xy_rmse_m": 4.902627871183657
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.9460631706459974,
+                "fde_m": 4.737881609942226,
+                "xy_rmse_m": 4.121625701089654
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.1809720354110005,
+                "fde_m": 4.679923971047365,
+                "xy_rmse_m": 3.060326212519588
+              },
+              "windows": 3
+            }
+          }
+        }
+      ],
+      [
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.582690586952577,
+                "fde_m": 22.684445299910838,
+                "xy_rmse_m": 16.01785768979097
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.652340673332457,
+                "fde_m": 22.80571139301966,
+                "xy_rmse_m": 15.625339149281233
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.72262793686137,
+                "fde_m": 19.424885127344456,
+                "xy_rmse_m": 14.843329714509236
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.396958421225506,
+                "fde_m": 22.684445299910838,
+                "xy_rmse_m": 17.202766574130784
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.824306548559473,
+                "fde_m": 21.60418316888645,
+                "xy_rmse_m": 15.891273800263152
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.937772191204115,
+                "fde_m": 22.837185712259338,
+                "xy_rmse_m": 17.250248822486746
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.566181276075962,
+                "fde_m": 22.67236059579349,
+                "xy_rmse_m": 15.995632699610555
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.613028931873867,
+                "fde_m": 22.89106916853785,
+                "xy_rmse_m": 15.593839766127592
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.897115462942455,
+                "fde_m": 19.330333312393112,
+                "xy_rmse_m": 14.977292057580938
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.078425045086338,
+                "fde_m": 22.67236059579349,
+                "xy_rmse_m": 16.94218153779516
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.88476139007264,
+                "fde_m": 21.443382271457036,
+                "xy_rmse_m": 15.951174064091058
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.977500814451627,
+                "fde_m": 22.60031149832544,
+                "xy_rmse_m": 17.254662090522068
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.51144205877826,
+                "fde_m": 22.796870808888908,
+                "xy_rmse_m": 15.956501215527043
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.57374272999221,
+                "fde_m": 22.900709214243832,
+                "xy_rmse_m": 15.557640715474397
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.726715517813172,
+                "fde_m": 19.561978231857427,
+                "xy_rmse_m": 14.841711040269914
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.32306529457816,
+                "fde_m": 22.796870808888908,
+                "xy_rmse_m": 17.124336643039044
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.667717938808433,
+                "fde_m": 21.555103535150263,
+                "xy_rmse_m": 15.786075194545665
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.87669272029162,
+                "fde_m": 23.02101449697326,
+                "xy_rmse_m": 17.199840195643354
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.848008684979863,
+                "fde_m": 6.5654231363495255,
+                "xy_rmse_m": 5.495231465974437
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.037890485078199,
+                "fde_m": 6.596860833812195,
+                "xy_rmse_m": 5.66227302522698
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 4.0549050488376865,
+                "fde_m": 4.255380920411947,
+                "xy_rmse_m": 5.510746145725265
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.962178920525687,
+                "fde_m": 6.5654231363495255,
+                "xy_rmse_m": 5.886951496210103
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.949794679413151,
+                "fde_m": 5.934915235337251,
+                "xy_rmse_m": 5.366489862898473
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.462180333591761,
+                "fde_m": 6.541927222446097,
+                "xy_rmse_m": 5.226708336418095
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.673470053719456,
+                "fde_m": 6.195026136239181,
+                "xy_rmse_m": 5.43211045687931
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.842733445764239,
+                "fde_m": 6.165649438503934,
+                "xy_rmse_m": 5.5993308101162915
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.791260855306156,
+                "fde_m": 3.9658742749825397,
+                "xy_rmse_m": 5.456031741996671
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.840298225227194,
+                "fde_m": 6.195026136239181,
+                "xy_rmse_m": 5.795256709512915
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.806595534870447,
+                "fde_m": 5.590630983101186,
+                "xy_rmse_m": 5.2949377735475025
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.320233431799869,
+                "fde_m": 6.3011154574181285,
+                "xy_rmse_m": 5.140702282488879
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.774129736794155,
+                "fde_m": 6.635097188338956,
+                "xy_rmse_m": 5.481608268925014
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.925624673893548,
+                "fde_m": 6.690902205586821,
+                "xy_rmse_m": 5.623930502420316
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.8522267910196013,
+                "fde_m": 4.0046919120231,
+                "xy_rmse_m": 5.477388854171082
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.038723819342407,
+                "fde_m": 6.635097188338956,
+                "xy_rmse_m": 5.926031525205598
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.833130870181952,
+                "fde_m": 5.7574717855330375,
+                "xy_rmse_m": 5.277591781838361
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.475997431223258,
+                "fde_m": 6.561911558100046,
+                "xy_rmse_m": 5.2706228618913356
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.59210104734864,
+                "fde_m": 22.686675954456337,
+                "xy_rmse_m": 16.004992220726315
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.600394377257526,
+                "fde_m": 22.885724005502084,
+                "xy_rmse_m": 15.578113224877647
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.888432368588933,
+                "fde_m": 19.592778951591683,
+                "xy_rmse_m": 14.954460459423755
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.335858190792816,
+                "fde_m": 22.686675954456337,
+                "xy_rmse_m": 17.134810783008195
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.692592158449276,
+                "fde_m": 21.332386674587287,
+                "xy_rmse_m": 15.788629943456682
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.08554390929976,
+                "fde_m": 22.67856593808799,
+                "xy_rmse_m": 17.311957167589217
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.636796765068052,
+                "fde_m": 22.604113925893866,
+                "xy_rmse_m": 16.04904460472222
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.709835855069,
+                "fde_m": 22.797690976861293,
+                "xy_rmse_m": 15.663949469280425
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.997279937388992,
+                "fde_m": 19.46537335249987,
+                "xy_rmse_m": 15.055248455914564
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.29527118090297,
+                "fde_m": 22.604113925893866,
+                "xy_rmse_m": 17.114656395592093
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.75730382067212,
+                "fde_m": 21.020803075658772,
+                "xy_rmse_m": 15.844985850524205
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.981810835380045,
+                "fde_m": 22.597948714568073,
+                "xy_rmse_m": 17.264635581419736
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.52833452725258,
+                "fde_m": 22.832025979058326,
+                "xy_rmse_m": 15.94947917387634
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.590891099527628,
+                "fde_m": 23.095213826186292,
+                "xy_rmse_m": 15.553708068221065
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.915374793161046,
+                "fde_m": 19.5755266249522,
+                "xy_rmse_m": 14.971925714438939
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.043842149292868,
+                "fde_m": 22.832025979058326,
+                "xy_rmse_m": 16.916978393716068
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.776162666120864,
+                "fde_m": 21.459899337520266,
+                "xy_rmse_m": 15.840417227990793
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.896037894660925,
+                "fde_m": 22.68694587224228,
+                "xy_rmse_m": 17.186335455268818
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.77474154931466,
+                "fde_m": 6.282826743057567,
+                "xy_rmse_m": 5.487170844416796
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.925972815652476,
+                "fde_m": 6.298624877288417,
+                "xy_rmse_m": 5.623163468887234
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.921820226828388,
+                "fde_m": 4.005034870618027,
+                "xy_rmse_m": 5.476749578252932
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.109946775399652,
+                "fde_m": 6.282826743057567,
+                "xy_rmse_m": 5.9311097392453656
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.69446836062694,
+                "fde_m": 5.289462105409018,
+                "xy_rmse_m": 5.263140512874615
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.471225254837382,
+                "fde_m": 6.278419085860495,
+                "xy_rmse_m": 5.28288107835998
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.882349372174249,
+                "fde_m": 6.427278254852877,
+                "xy_rmse_m": 5.504259853584927
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.028998070953189,
+                "fde_m": 6.438010306749658,
+                "xy_rmse_m": 5.655062283026023
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 4.233186867272598,
+                "fde_m": 3.9867044267949283,
+                "xy_rmse_m": 5.559984854527454
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.910982187359179,
+                "fde_m": 6.427278254852877,
+                "xy_rmse_m": 5.84855958077035
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.896982940664389,
+                "fde_m": 6.036435975991515,
+                "xy_rmse_m": 5.374948591833262
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.5854783503528305,
+                "fde_m": 6.41507102717464,
+                "xy_rmse_m": 5.264915115823057
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.77171976086257,
+                "fde_m": 6.3987412502458225,
+                "xy_rmse_m": 5.492557606615897
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.947648277366137,
+                "fde_m": 6.441175418219539,
+                "xy_rmse_m": 5.662572575191959
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.870008716465943,
+                "fde_m": 4.090112599566933,
+                "xy_rmse_m": 5.46499397272434
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.177525650832609,
+                "fde_m": 6.3987412502458225,
+                "xy_rmse_m": 6.013441461641292
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.671516932998267,
+                "fde_m": 5.646030394453754,
+                "xy_rmse_m": 5.221105619985765
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.405823043872513,
+                "fde_m": 6.333652561609184,
+                "xy_rmse_m": 5.196257467923254
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.626580403610866,
+                "fde_m": 22.836204757759067,
+                "xy_rmse_m": 16.05048945510262
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.680533012714395,
+                "fde_m": 23.11701791787642,
+                "xy_rmse_m": 15.647565500210327
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.801612247669713,
+                "fde_m": 19.162452339461527,
+                "xy_rmse_m": 14.90446421481324
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.267318919655708,
+                "fde_m": 22.836204757759067,
+                "xy_rmse_m": 17.09731320164423
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.974477587133677,
+                "fde_m": 21.998909205211095,
+                "xy_rmse_m": 16.020467576319902
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.01286810653143,
+                "fde_m": 22.617121407563374,
+                "xy_rmse_m": 17.305472036370062
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.540227966308795,
+                "fde_m": 22.44003799642302,
+                "xy_rmse_m": 15.980170288925285
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.602942049553114,
+                "fde_m": 22.49718238100856,
+                "xy_rmse_m": 15.58189698202156
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.89872595065922,
+                "fde_m": 19.51528690687861,
+                "xy_rmse_m": 14.985526064317385
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.22078784598338,
+                "fde_m": 22.44003799642302,
+                "xy_rmse_m": 17.05954576669412
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.668976988816684,
+                "fde_m": 21.546039109951355,
+                "xy_rmse_m": 15.782375274927269
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.911624218860833,
+                "fde_m": 22.707056265339343,
+                "xy_rmse_m": 17.229311058920757
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 20.518823449688103,
+                "fde_m": 22.55960447661774,
+                "xy_rmse_m": 15.954748449481153
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.58404259306958,
+                "fde_m": 22.659202073697628,
+                "xy_rmse_m": 15.56744049644202
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 18.587445569293617,
+                "fde_m": 19.182352545808182,
+                "xy_rmse_m": 14.72757390832877
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.226541273339834,
+                "fde_m": 22.55960447661774,
+                "xy_rmse_m": 17.054086334782465
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 20.921138988701212,
+                "fde_m": 21.80451488321908,
+                "xy_rmse_m": 15.957377013365731
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.86927351883106,
+                "fde_m": 22.78507393945645,
+                "xy_rmse_m": 17.163619043707993
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.781475740750948,
+                "fde_m": 6.048584959610078,
+                "xy_rmse_m": 5.465439582660788
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.963249695888471,
+                "fde_m": 6.082778798482054,
+                "xy_rmse_m": 5.620352150660515
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 4.013018157886519,
+                "fde_m": 3.8730333503519225,
+                "xy_rmse_m": 5.494989473921875
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.941038197187107,
+                "fde_m": 6.048584959610078,
+                "xy_rmse_m": 5.847195020731199
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.811918927812397,
+                "fde_m": 5.378861665103991,
+                "xy_rmse_m": 5.280503015955877
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.397028700013596,
+                "fde_m": 5.988629036350878,
+                "xy_rmse_m": 5.201625075015307
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.839315459265769,
+                "fde_m": 6.282868434433714,
+                "xy_rmse_m": 5.498632136544824
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.979381257825663,
+                "fde_m": 6.219864224306623,
+                "xy_rmse_m": 5.635667418315305
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 4.011200475569017,
+                "fde_m": 4.109229258645215,
+                "xy_rmse_m": 5.497072160478118
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.997888349896016,
+                "fde_m": 6.282868434433714,
+                "xy_rmse_m": 5.897908737614531
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.906284298847581,
+                "fde_m": 5.746442343736001,
+                "xy_rmse_m": 5.330100209653857
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.559111342651314,
+                "fde_m": 6.4788818366170915,
+                "xy_rmse_m": 5.281522965412009
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.821370711155236,
+                "fde_m": 6.633959704290827,
+                "xy_rmse_m": 5.508954011292457
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 4.984615297618967,
+                "fde_m": 6.595864304071834,
+                "xy_rmse_m": 5.638885495072173
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.8728215970270505,
+                "fde_m": 4.025906467556994,
+                "xy_rmse_m": 5.464213480668892
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.183010757839409,
+                "fde_m": 6.633959704290827,
+                "xy_rmse_m": 5.9847361417239675
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.822165401853696,
+                "fde_m": 5.425733369552765,
+                "xy_rmse_m": 5.29805100037186
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 4.488665596857703,
+                "fde_m": 6.762433689717445,
+                "xy_rmse_m": 5.32868322109569
+              },
+              "windows": 3
+            }
+          }
+        }
+      ],
+      [
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.332184331713012,
+                "fde_m": 25.023856128487424,
+                "xy_rmse_m": 18.118476023107405
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.67531533156949,
+                "fde_m": 26.53670606536039,
+                "xy_rmse_m": 19.146113844013374
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.75389111996515,
+                "fde_m": 22.824696808486248,
+                "xy_rmse_m": 16.942150475507184
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.814184912188605,
+                "fde_m": 25.023856128487424,
+                "xy_rmse_m": 19.240090284579214
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.49693649025691,
+                "fde_m": 23.911016397546586,
+                "xy_rmse_m": 18.14724316537331
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.104149603527016,
+                "fde_m": 22.04593343722839,
+                "xy_rmse_m": 16.390391085238136
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.292794560103157,
+                "fde_m": 24.991787276904645,
+                "xy_rmse_m": 18.09275324241644
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.707305588784592,
+                "fde_m": 26.43570709583395,
+                "xy_rmse_m": 19.175717424440425
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.886527202419746,
+                "fde_m": 22.638786652433456,
+                "xy_rmse_m": 17.06012503670728
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.601379619286092,
+                "fde_m": 24.991787276904645,
+                "xy_rmse_m": 19.07292257091903
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.450425339376306,
+                "fde_m": 23.82747445651671,
+                "xy_rmse_m": 18.12874053868018
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.920642704614906,
+                "fde_m": 22.1588383052528,
+                "xy_rmse_m": 16.252015592475342
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.25905034349968,
+                "fde_m": 25.253866790999624,
+                "xy_rmse_m": 18.06474288479518
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.616313545935668,
+                "fde_m": 26.772299702011583,
+                "xy_rmse_m": 19.11028159903516
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.615432323484878,
+                "fde_m": 22.75207870053876,
+                "xy_rmse_m": 16.85543526703862
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.913293752931313,
+                "fde_m": 25.253866790999624,
+                "xy_rmse_m": 19.27270083637735
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.319707747942445,
+                "fde_m": 23.88863035384486,
+                "xy_rmse_m": 18.033726343302444
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.003646704089793,
+                "fde_m": 22.288914845752952,
+                "xy_rmse_m": 16.30077122873165
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.340403139957722,
+                "fde_m": 6.599330118334624,
+                "xy_rmse_m": 4.32306712130648
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.093993286056436,
+                "fde_m": 7.464196382845302,
+                "xy_rmse_m": 5.313655168910681
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.1201544417940887,
+                "fde_m": 3.1508720359326943,
+                "xy_rmse_m": 3.996784127724959
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.899241093524,
+                "fde_m": 6.599330118334624,
+                "xy_rmse_m": 4.966777185957802
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.049948250138217,
+                "fde_m": 4.5712305377915206,
+                "xy_rmse_m": 3.7671282049990054
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.0068725413004223,
+                "fde_m": 5.138768759545463,
+                "xy_rmse_m": 2.6126959017862625
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.288532078300291,
+                "fde_m": 6.447257459829806,
+                "xy_rmse_m": 4.3017681861903965
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.079116741541207,
+                "fde_m": 7.320334280957379,
+                "xy_rmse_m": 5.3169399599773115
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.9914947437039405,
+                "fde_m": 3.2705880748871365,
+                "xy_rmse_m": 3.9444082306336945
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.876250919210889,
+                "fde_m": 6.447257459829806,
+                "xy_rmse_m": 4.933818787002626
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.048735280236184,
+                "fde_m": 4.5655403269198365,
+                "xy_rmse_m": 3.7896309849775913
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.8871126881377407,
+                "fde_m": 4.964859525178589,
+                "xy_rmse_m": 2.553327436691658
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.375842536029373,
+                "fde_m": 6.71069523339587,
+                "xy_rmse_m": 4.381685175738494
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.1606425781725696,
+                "fde_m": 7.667042148835257,
+                "xy_rmse_m": 5.3911964139909925
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.06365736448713,
+                "fde_m": 3.224509651701173,
+                "xy_rmse_m": 3.9670046353714583
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.074140513744017,
+                "fde_m": 6.71069523339587,
+                "xy_rmse_m": 5.123343865511809
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.042348288760115,
+                "fde_m": 5.012485067370052,
+                "xy_rmse_m": 3.7898587854635704
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.989133735326591,
+                "fde_m": 5.042725524636958,
+                "xy_rmse_m": 2.6472143214332626
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.298317225717373,
+                "fde_m": 25.022309951229627,
+                "xy_rmse_m": 18.089683838448455
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.734284099171195,
+                "fde_m": 26.542343238199177,
+                "xy_rmse_m": 19.182842965605694
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.737811824651484,
+                "fde_m": 22.673091971100305,
+                "xy_rmse_m": 16.950127373576617
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.828207800970972,
+                "fde_m": 25.022309951229627,
+                "xy_rmse_m": 19.224598089333693
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.39492140785352,
+                "fde_m": 23.46740867326329,
+                "xy_rmse_m": 18.06742289053376
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.882181453750537,
+                "fde_m": 22.06197450158328,
+                "xy_rmse_m": 16.22900177642579
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.40094238789041,
+                "fde_m": 24.88903138602762,
+                "xy_rmse_m": 18.173546655424442
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.773691577689064,
+                "fde_m": 26.39977150931931,
+                "xy_rmse_m": 19.222988620403346
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.97048133398378,
+                "fde_m": 23.040304077333463,
+                "xy_rmse_m": 17.136179205260927
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.770046377176367,
+                "fde_m": 24.88903138602762,
+                "xy_rmse_m": 19.198444748641357
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.520151518085168,
+                "fde_m": 23.5097207534377,
+                "xy_rmse_m": 18.16453533793842
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.107602034625955,
+                "fde_m": 21.929382613510963,
+                "xy_rmse_m": 16.396641705516785
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.26384990041214,
+                "fde_m": 25.073214442905577,
+                "xy_rmse_m": 18.05063590283532
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.621766968883975,
+                "fde_m": 26.431229146691578,
+                "xy_rmse_m": 19.095795107398647
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.7867853758671,
+                "fde_m": 22.797114320754517,
+                "xy_rmse_m": 16.978549211037855
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.591053602548982,
+                "fde_m": 25.073214442905577,
+                "xy_rmse_m": 19.03188262643934
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.47530809949239,
+                "fde_m": 23.921368215168076,
+                "xy_rmse_m": 18.1235485783846
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.010689932977876,
+                "fde_m": 22.385721423820474,
+                "xy_rmse_m": 16.2896591131427
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.39187978870337,
+                "fde_m": 6.412667363776664,
+                "xy_rmse_m": 4.357414885250231
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.150413146541434,
+                "fde_m": 7.228330305252141,
+                "xy_rmse_m": 5.34564522530043
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.237891635610236,
+                "fde_m": 3.3885137655722346,
+                "xy_rmse_m": 4.04079869220305
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.8930245179975005,
+                "fde_m": 6.412667363776664,
+                "xy_rmse_m": 4.971902436605247
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.0880233518831215,
+                "fde_m": 4.545568537235115,
+                "xy_rmse_m": 3.829573984692212
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.0523058318956178,
+                "fde_m": 5.053053825885523,
+                "xy_rmse_m": 2.67722555963946
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.54765756778752,
+                "fde_m": 6.613309411284625,
+                "xy_rmse_m": 4.431975080914577
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.311110375009872,
+                "fde_m": 7.459276114919965,
+                "xy_rmse_m": 5.428393759619919
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.4320853274592253,
+                "fde_m": 3.0897903755865532,
+                "xy_rmse_m": 4.095308330056878
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.964393658527403,
+                "fde_m": 6.613309411284625,
+                "xy_rmse_m": 5.024248532264251
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.290372611223293,
+                "fde_m": 5.039664568096681,
+                "xy_rmse_m": 3.987684016411494
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.2014899497154317,
+                "fde_m": 5.166404630623493,
+                "xy_rmse_m": 2.736350417196501
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.30131027319134,
+                "fde_m": 6.579912418436893,
+                "xy_rmse_m": 4.3098281737007
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.0854959759062055,
+                "fde_m": 7.524663992916615,
+                "xy_rmse_m": 5.315565853072521
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.0038270459797585,
+                "fde_m": 3.1050963396612192,
+                "xy_rmse_m": 3.9424115347313453
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.918780766950504,
+                "fde_m": 6.579912418436893,
+                "xy_rmse_m": 4.947135600620786
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.031233918513121,
+                "fde_m": 5.183270338583163,
+                "xy_rmse_m": 3.801766257974606
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.9016959544261844,
+                "fde_m": 4.924313498568089,
+                "xy_rmse_m": 2.566380950466552
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.358725394683347,
+                "fde_m": 24.915354414306933,
+                "xy_rmse_m": 18.1499958905718
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.70322010334434,
+                "fde_m": 26.247415816189577,
+                "xy_rmse_m": 19.17365565902006
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.69796443531345,
+                "fde_m": 22.497327436581145,
+                "xy_rmse_m": 16.923159462607405
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.805906836846685,
+                "fde_m": 24.915354414306933,
+                "xy_rmse_m": 19.21798638994191
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.640627842124914,
+                "fde_m": 24.356003876740328,
+                "xy_rmse_m": 18.281677264770323
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.120975490324764,
+                "fde_m": 22.320680244616284,
+                "xy_rmse_m": 16.4247872706518
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.27253606637312,
+                "fde_m": 24.70659371927967,
+                "xy_rmse_m": 18.065789219887005
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.6012325959744,
+                "fde_m": 26.312462539258167,
+                "xy_rmse_m": 19.082264520698324
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.87502033019791,
+                "fde_m": 22.819244825248788,
+                "xy_rmse_m": 17.048634798748093
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.691279700167556,
+                "fde_m": 24.70659371927967,
+                "xy_rmse_m": 19.128224764887893
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.31255574177513,
+                "fde_m": 23.548004315574058,
+                "xy_rmse_m": 18.00121588770151
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 21.076147622329596,
+                "fde_m": 21.559787629395036,
+                "xy_rmse_m": 16.359886367573633
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 23.274114728381623,
+                "fde_m": 25.114578817725942,
+                "xy_rmse_m": 18.072259683335066
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 24.642803998513,
+                "fde_m": 26.66455813010128,
+                "xy_rmse_m": 19.124896085707977
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.515483435621235,
+                "fde_m": 22.368241305734685,
+                "xy_rmse_m": 16.760151925420757
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 24.72274432756134,
+                "fde_m": 25.114578817725942,
+                "xy_rmse_m": 19.163394499940626
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 23.656384196937523,
+                "fde_m": 24.18638940698881,
+                "xy_rmse_m": 18.260684359947298
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 20.9977503261899,
+                "fde_m": 22.088494244737365,
+                "xy_rmse_m": 16.292517065411865
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.3448085847938716,
+                "fde_m": 6.27594567170091,
+                "xy_rmse_m": 4.314324068025722
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.107723738442113,
+                "fde_m": 7.132596077951277,
+                "xy_rmse_m": 5.318166929858183
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.1666273377360317,
+                "fde_m": 3.2160403457322944,
+                "xy_rmse_m": 3.993014956682998
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.872693347742557,
+                "fde_m": 6.27594567170091,
+                "xy_rmse_m": 4.957403640476717
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.040707892213433,
+                "fde_m": 4.567176822587505,
+                "xy_rmse_m": 3.761722062278315
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.9901669110364124,
+                "fde_m": 4.781528507535729,
+                "xy_rmse_m": 2.587229284538805
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.416902540697563,
+                "fde_m": 6.617715041782829,
+                "xy_rmse_m": 4.369288493739446
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.180632691641907,
+                "fde_m": 7.4844068220851065,
+                "xy_rmse_m": 5.374232688688992
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.212988322048816,
+                "fde_m": 3.3178955957751164,
+                "xy_rmse_m": 3.9966468730289217
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 6.00379719886659,
+                "fde_m": 6.617715041782829,
+                "xy_rmse_m": 5.057075191827669
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.083896651760833,
+                "fde_m": 4.582885795407278,
+                "xy_rmse_m": 3.815929050165007
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.0780473927528766,
+                "fde_m": 5.147199579002723,
+                "xy_rmse_m": 2.652038415665436
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 4.354757948194849,
+                "fde_m": 6.4624898838248575,
+                "xy_rmse_m": 4.3668182649345075
+              },
+              "windows": 6
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 5.107655887410471,
+                "fde_m": 7.290553594318219,
+                "xy_rmse_m": 5.354104226480756
+              },
+              "windows": 6
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 3.0781008816893003,
+                "fde_m": 3.2502705398741725,
+                "xy_rmse_m": 3.9636485015894594
+              },
+              "windows": 6
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.896012187187207,
+                "fde_m": 6.4624898838248575,
+                "xy_rmse_m": 4.998115118626877
+              },
+              "windows": 6
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 4.139793982253719,
+                "fde_m": 4.627796304440662,
+                "xy_rmse_m": 3.8898093828423463
+              },
+              "windows": 6
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 3.0447851197157276,
+                "fde_m": 5.1028908430062705,
+                "xy_rmse_m": 2.7022514374516953
+              },
+              "windows": 3
+            }
+          }
+        }
+      ],
+      [
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.75421660864855,
+                "fde_m": 22.471447585060265,
+                "xy_rmse_m": 16.98787569176219
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.927005240138808,
+                "fde_m": 20.816950087967015,
+                "xy_rmse_m": 15.924225965471544
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.907441152415288,
+                "fde_m": 21.67105508549691,
+                "xy_rmse_m": 16.284979261450534
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.41890828197507,
+                "fde_m": 22.471447585060265,
+                "xy_rmse_m": 17.569230081907914
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 22.0190701236882,
+                "fde_m": 22.147237031031914,
+                "xy_rmse_m": 17.149713859775577
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.962660064898404,
+                "fde_m": 25.137856908794742,
+                "xy_rmse_m": 18.89053495172747
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.70277277296359,
+                "fde_m": 22.36659087627553,
+                "xy_rmse_m": 16.9349387249854
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.88924228617673,
+                "fde_m": 20.49373105013658,
+                "xy_rmse_m": 15.885536794382315
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.971066869640225,
+                "fde_m": 21.367156304031106,
+                "xy_rmse_m": 16.345391368734433
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.16116708914371,
+                "fde_m": 22.36659087627553,
+                "xy_rmse_m": 17.352161519928615
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 22.022506217540514,
+                "fde_m": 22.019928135006886,
+                "xy_rmse_m": 17.1302465697135
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.878590165610053,
+                "fde_m": 25.41469387606669,
+                "xy_rmse_m": 18.80508138118856
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.57105449263903,
+                "fde_m": 22.60221113432083,
+                "xy_rmse_m": 16.84168815285893
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.763424808786116,
+                "fde_m": 20.89842556810881,
+                "xy_rmse_m": 15.794349652239376
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.660360455676702,
+                "fde_m": 21.51304325168591,
+                "xy_rmse_m": 16.10929706190485
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.235508091445837,
+                "fde_m": 22.60221113432083,
+                "xy_rmse_m": 17.40648336758875
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 21.903192258280484,
+                "fde_m": 22.2304127022678,
+                "xy_rmse_m": 17.05152183166993
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.740195131183835,
+                "fde_m": 25.344406180423352,
+                "xy_rmse_m": 18.708977369722195
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.3346060080100033,
+                "fde_m": 5.598569871400004,
+                "xy_rmse_m": 3.506077315473123
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.589168679717136,
+                "fde_m": 5.901196446546857,
+                "xy_rmse_m": 3.9877467049923316
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.101362753581561,
+                "fde_m": 2.652431270852289,
+                "xy_rmse_m": 2.7002145069634738
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.800522777429774,
+                "fde_m": 5.598569871400004,
+                "xy_rmse_m": 4.275377488332289
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.515631620909206,
+                "fde_m": 4.374798380982493,
+                "xy_rmse_m": 3.569524965291297
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.793534740143539,
+                "fde_m": 5.03788497725665,
+                "xy_rmse_m": 2.413540180453522
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.2718178527466906,
+                "fde_m": 5.5544691491914495,
+                "xy_rmse_m": 3.4988091746927865
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.5187675642130687,
+                "fde_m": 5.9045028500877255,
+                "xy_rmse_m": 3.996050306299762
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 1.9534372116875232,
+                "fde_m": 2.434120725081005,
+                "xy_rmse_m": 2.6529775044409027
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.78887235606336,
+                "fde_m": 5.5544691491914495,
+                "xy_rmse_m": 4.267573367241116
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.4878178976338274,
+                "fde_m": 4.16700667205056,
+                "xy_rmse_m": 3.5976038139635693
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.743639396617004,
+                "fde_m": 4.9046713101850985,
+                "xy_rmse_m": 2.3603510758379302
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "history_only",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.401311763027654,
+                "fde_m": 5.345818845606183,
+                "xy_rmse_m": 3.545741950072594
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.675538278175055,
+                "fde_m": 5.533134992996091,
+                "xy_rmse_m": 4.048424071760781
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.156080613155554,
+                "fde_m": 2.5670386651307604,
+                "xy_rmse_m": 2.725107473419842
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.782035550733972,
+                "fde_m": 5.345818845606183,
+                "xy_rmse_m": 4.306698555887005
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.6483866667280465,
+                "fde_m": 4.101281318242113,
+                "xy_rmse_m": 3.6555243188412865
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.82690121295852,
+                "fde_m": 4.958002596068343,
+                "xy_rmse_m": 2.411937110433943
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.76325532389319,
+                "fde_m": 22.18696520555823,
+                "xy_rmse_m": 16.985310780966653
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.06513252228684,
+                "fde_m": 20.179597358385074,
+                "xy_rmse_m": 16.018565412056205
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.09909226712361,
+                "fde_m": 21.666548894346487,
+                "xy_rmse_m": 16.440755002651848
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.23210925446573,
+                "fde_m": 22.18696520555823,
+                "xy_rmse_m": 17.409712738497632
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 21.995727184609148,
+                "fde_m": 21.86302452059683,
+                "xy_rmse_m": 17.121013804103473
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.753012678211956,
+                "fde_m": 25.45047161670801,
+                "xy_rmse_m": 18.724412427226245
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.779240721636,
+                "fde_m": 22.23574098257992,
+                "xy_rmse_m": 17.00857401713487
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.00627145113817,
+                "fde_m": 20.59287681401496,
+                "xy_rmse_m": 15.982756625446317
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.086040024933478,
+                "fde_m": 21.367067382621137,
+                "xy_rmse_m": 16.445206806217886
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.279569717946124,
+                "fde_m": 22.23574098257992,
+                "xy_rmse_m": 17.459320379356466
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 22.019645198015287,
+                "fde_m": 21.973114531149015,
+                "xy_rmse_m": 17.142465085262693
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.899169676953164,
+                "fde_m": 24.88817444739745,
+                "xy_rmse_m": 18.847069485819244
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.535232966427433,
+                "fde_m": 22.358778990060667,
+                "xy_rmse_m": 16.80517166492327
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.719110252211106,
+                "fde_m": 20.347592847402115,
+                "xy_rmse_m": 15.749577968690659
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.8854006492395,
+                "fde_m": 21.311985470230706,
+                "xy_rmse_m": 16.279956047055855
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 21.96753917499585,
+                "fde_m": 22.358778990060667,
+                "xy_rmse_m": 17.18064393077296
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 21.79633503917014,
+                "fde_m": 21.830899666242715,
+                "xy_rmse_m": 16.97395197451898
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.715363867531977,
+                "fde_m": 25.647432828432198,
+                "xy_rmse_m": 18.682481984903948
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.4349246774215465,
+                "fde_m": 5.563767996017885,
+                "xy_rmse_m": 3.582667834424197
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.68655754619609,
+                "fde_m": 5.619557397227055,
+                "xy_rmse_m": 4.0812854660927265
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.1408640117458098,
+                "fde_m": 2.6171853474685673,
+                "xy_rmse_m": 2.7543412123856266
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 5.027391407067221,
+                "fde_m": 5.563767996017885,
+                "xy_rmse_m": 4.418605332073321
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.545431990439563,
+                "fde_m": 3.953985853334787,
+                "xy_rmse_m": 3.6012811075086244
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.904544632196204,
+                "fde_m": 5.422286934639582,
+                "xy_rmse_m": 2.458402604301733
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.4125474875132418,
+                "fde_m": 5.300688654893513,
+                "xy_rmse_m": 3.554418183724463
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.6609179818440425,
+                "fde_m": 5.414155850053733,
+                "xy_rmse_m": 4.042687707636232
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.322120122338174,
+                "fde_m": 2.3845898215012262,
+                "xy_rmse_m": 2.832181271296783
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.725367610837472,
+                "fde_m": 5.300688654893513,
+                "xy_rmse_m": 4.283498134685452
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.569296046016387,
+                "fde_m": 4.360925524379713,
+                "xy_rmse_m": 3.6367629431839568
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.8792255927110038,
+                "fde_m": 5.028013811417356,
+                "xy_rmse_m": 2.43314340655792
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.2214939592252465,
+                "fde_m": 5.2855552510143955,
+                "xy_rmse_m": 3.458818643833655
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.442566760672043,
+                "fde_m": 5.490817333836452,
+                "xy_rmse_m": 3.93883768219914
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 1.9325442402580513,
+                "fde_m": 2.454273306534695,
+                "xy_rmse_m": 2.6161360640814335
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.755306755276642,
+                "fde_m": 5.2855552510143955,
+                "xy_rmse_m": 4.241452764129446
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.389509670426895,
+                "fde_m": 4.08933770204438,
+                "xy_rmse_m": 3.5279933939615247
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.72897060408735,
+                "fde_m": 4.860370316524587,
+                "xy_rmse_m": 2.366308898647246
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.828755142722212,
+                "fde_m": 22.29036896833227,
+                "xy_rmse_m": 17.050615932709228
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 20.065667716679325,
+                "fde_m": 20.293963771477294,
+                "xy_rmse_m": 16.027407900322338
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.923817066492536,
+                "fde_m": 21.18725565068385,
+                "xy_rmse_m": 16.31991343275343
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.34022263180096,
+                "fde_m": 22.29036896833227,
+                "xy_rmse_m": 17.481880417939358
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 22.306567477853125,
+                "fde_m": 22.97944879816787,
+                "xy_rmse_m": 17.390273737965515
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.927839612354006,
+                "fde_m": 25.57156267927247,
+                "xy_rmse_m": 18.883221019969383
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.710958482234958,
+                "fde_m": 21.94557232331694,
+                "xy_rmse_m": 16.948675549783726
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.94973394802301,
+                "fde_m": 20.37811966567503,
+                "xy_rmse_m": 15.930059816338675
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 21.06810971660486,
+                "fde_m": 21.547014338666028,
+                "xy_rmse_m": 16.420455880323495
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.112079755653173,
+                "fde_m": 21.94557232331694,
+                "xy_rmse_m": 17.3319161518938
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 21.975057774400277,
+                "fde_m": 21.797317464324447,
+                "xy_rmse_m": 17.101662337471232
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.818204303384714,
+                "fde_m": 24.481092319301453,
+                "xy_rmse_m": 18.782886391535357
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "absolute_xy",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 21.593909841184267,
+                "fde_m": 22.335167047203317,
+                "xy_rmse_m": 16.861346669308524
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 19.806210930865493,
+                "fde_m": 20.756425922458877,
+                "xy_rmse_m": 15.826994928808546
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 20.598006679838413,
+                "fde_m": 20.996125069280197,
+                "xy_rmse_m": 16.047250088506658
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 22.200589569611473,
+                "fde_m": 22.335167047203317,
+                "xy_rmse_m": 17.387869209600105
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 22.059658720607683,
+                "fde_m": 22.21654196919693,
+                "xy_rmse_m": 17.178187696976053
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 24.72787446328276,
+                "fde_m": 24.872900994735314,
+                "xy_rmse_m": 18.703520222048837
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            1729
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.2423538490934405,
+                "fde_m": 5.210643003312503,
+                "xy_rmse_m": 3.458651035504366
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.467843961223008,
+                "fde_m": 5.408163190554354,
+                "xy_rmse_m": 3.943497678341791
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.014529210843376,
+                "fde_m": 2.3707141177365227,
+                "xy_rmse_m": 2.6507837716701084
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.6940121729914095,
+                "fde_m": 5.210643003312503,
+                "xy_rmse_m": 4.221721511359041
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.412314738638627,
+                "fde_m": 4.012361690180993,
+                "xy_rmse_m": 3.5167958116795477
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.7513913741943576,
+                "fde_m": 4.805611147809359,
+                "xy_rmse_m": 2.3457904719687757
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            2718
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.4053447435125177,
+                "fde_m": 5.38830618003017,
+                "xy_rmse_m": 3.5546384268631948
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.6529954357238275,
+                "fde_m": 5.647049000743648,
+                "xy_rmse_m": 4.053605743339906
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.2132404551014657,
+                "fde_m": 2.458619649996886,
+                "xy_rmse_m": 2.7493539005633987
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.780716117707793,
+                "fde_m": 5.38830618003017,
+                "xy_rmse_m": 4.325053719031687
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.6120159578374103,
+                "fde_m": 4.290862863746349,
+                "xy_rmse_m": 3.6450864926716315
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.876923725590857,
+                "fde_m": 4.880694656927972,
+                "xy_rmse_m": 2.4391294916509856
+              },
+              "windows": 3
+            }
+          }
+        },
+        {
+          "cell": [
+            "future_opponent_plus_ball",
+            "origin_relative_displacement",
+            31415
+          ],
+          "strata": {
+            "all": {
+              "metrics": {
+                "ade_m": 3.3869811846599136,
+                "fde_m": 5.638639305778274,
+                "xy_rmse_m": 3.562958815201244
+              },
+              "windows": 5
+            },
+            "detected_only": {
+              "metrics": {
+                "ade_m": 3.5967620721079783,
+                "fde_m": 6.0921092183297105,
+                "xy_rmse_m": 4.033893942025212
+              },
+              "windows": 5
+            },
+            "early": {
+              "metrics": {
+                "ade_m": 2.083494099136203,
+                "fde_m": 2.719691266232845,
+                "xy_rmse_m": 2.712117516269794
+              },
+              "windows": 5
+            },
+            "late": {
+              "metrics": {
+                "ade_m": 4.9484855999771415,
+                "fde_m": 5.638639305778274,
+                "xy_rmse_m": 4.36402990676125
+              },
+              "windows": 5
+            },
+            "middle": {
+              "metrics": {
+                "ade_m": 3.5331132739939406,
+                "fde_m": 4.07092256313249,
+                "xy_rmse_m": 3.625000190594627
+              },
+              "windows": 4
+            },
+            "unclassified": {
+              "metrics": null,
+              "windows": 0
+            },
+            "with_provider_extrapolation": {
+              "metrics": {
+                "ade_m": 2.923044898730359,
+                "fde_m": 4.801696822201387,
+                "xy_rmse_m": 2.4794955988891947
+              },
+              "windows": 3
+            }
+          }
+        }
+      ]
+    ],
+    "independent_contrasts": {
+      "C1/absolute_xy": {
+        "equal_match_mean": -0.010702390909278492,
+        "matches": [
+          0.032418381120209006,
+          -0.03230613928748838,
+          -0.026360092901356325,
+          -0.01656171256847827
+        ]
+      },
+      "C1/origin_relative_displacement": {
+        "equal_match_mean": -0.043453219277803656,
+        "matches": [
+          -0.030312016235035877,
+          -0.04440073561933566,
+          -0.07868995846494808,
+          -0.020410166791895
+        ]
+      },
+      "C2/absolute_xy": {
+        "equal_match_mean": 0.012319962351495128,
+        "matches": [
+          0.024800052586474663,
+          0.023866840020502877,
+          0.019244441527277445,
+          -0.018631484728274472
+        ]
+      },
+      "C2/origin_relative_displacement": {
+        "equal_match_mean": 0.01874939440962775,
+        "matches": [
+          0.026559686281965256,
+          -0.0044504096068243015,
+          0.04145951866531572,
+          0.01142878229805433
+        ]
+      }
+    },
+    "independent_equal_match_means": [
+      [
+        [
+          21.256086203444855,
+          22.837015405466627,
+          16.539594262823368
+        ],
+        [
+          4.1424928961887195,
+          6.088893218141709,
+          4.530049792307403
+        ]
+      ],
+      [
+        [
+          21.266788594354132,
+          22.753594697313396,
+          16.544334403475947
+        ],
+        [
+          4.185946115466524,
+          6.053474079568741,
+          4.548085019476827
+        ]
+      ],
+      [
+        [
+          21.254468632002638,
+          22.62909773881308,
+          16.538310666472608
+        ],
+        [
+          4.1671967210568965,
+          5.997082090813634,
+          4.543685351553929
+        ]
+      ]
+    ],
+    "independent_vs_scorer_max_abs_diff_m": 1.0658141036401503e-14,
+    "output_bytes": 106244,
+    "peak_monitored_rss_bytes": 448532480,
+    "receipt_sha256": [
+      "ff88eba3c904f35b914f289deb19612b0c104c423d77ba69984622e233e824f9",
+      "1f89a74f57d15f61131e7742d0fc67939607875077697eb4d0d9fe30f3ddb50b",
+      "ea9136544b6842f3e426546a6b470363b830b7344bef4a973ba5bfe573941abe",
+      "d60b84ee266f8a17968974ea0217b8ce2384d7095af38346e259199acf2afa43"
+    ],
+    "records": 72,
+    "scope_sha256": "ee884ac939b964f96a06b205831897ae6f1f525ddb4c583ad0b84aeddd3e3244",
+    "source_identities": [
+      {
+        "final_targets": 127,
+        "mask_sha256": "a126b263c45e1284118549e446acc63fb26c4ac3ee5d5f3488b00794aea3ead3",
+        "scalar_coordinates": 3754,
+        "scoreable_scene_quality": {
+          "detected_only": 9,
+          "unclassified": 0,
+          "with_provider_extrapolation": 3
+        },
+        "scoreable_scenes": 12,
+        "scoreable_windows": 6,
+        "scored_points": 1877,
+        "truth_sha256": "e85ed03faad92d56d98d5d8addc22566b433e124d15253c7289663f0656bce4f",
+        "window_ids_sha256": "ab1587784abdc467fc63789543e7b6121379ec5158ea5f9a86bf7a9d1ae8f0b0",
+        "windows": 6
+      },
+      {
+        "final_targets": 116,
+        "mask_sha256": "e4e913d2dd2af7d1eef8e64a9c423c529411ab6e7ef0b9964e7aec3737cc9eb7",
+        "scalar_coordinates": 3356,
+        "scoreable_scene_quality": {
+          "detected_only": 8,
+          "unclassified": 0,
+          "with_provider_extrapolation": 3
+        },
+        "scoreable_scenes": 11,
+        "scoreable_windows": 6,
+        "scored_points": 1678,
+        "truth_sha256": "29a904852f729d81ecb134d2af9b54b1477866a3b7c79ab28ad33e45ce4fdbcc",
+        "window_ids_sha256": "48d4488b012095cb3ce656e9b8874e2a38537031c16f036b382178f3a48a8c5e",
+        "windows": 6
+      },
+      {
+        "final_targets": 127,
+        "mask_sha256": "7645eedf7fcca684044fd693677a1b8182dfbf13fb4f46e230c958e378c0ebe8",
+        "scalar_coordinates": 3756,
+        "scoreable_scene_quality": {
+          "detected_only": 9,
+          "unclassified": 0,
+          "with_provider_extrapolation": 3
+        },
+        "scoreable_scenes": 12,
+        "scoreable_windows": 6,
+        "scored_points": 1878,
+        "truth_sha256": "fce8ec7c1533244d499b1f7bb5ee5ff95eef7ff8eb28522dc2b66f26141e64c8",
+        "window_ids_sha256": "fb785a55dcb021923db5e58e1d8c06cbca2bd3a03fe38d74ace2b1c4952a2844",
+        "windows": 6
+      },
+      {
+        "final_targets": 101,
+        "mask_sha256": "41bffd242d8c370b9fa605acb6439b4274a81a7e46de47e101046e9906954825",
+        "scalar_coordinates": 2878,
+        "scoreable_scene_quality": {
+          "detected_only": 7,
+          "unclassified": 0,
+          "with_provider_extrapolation": 3
+        },
+        "scoreable_scenes": 10,
+        "scoreable_windows": 5,
+        "scored_points": 1439,
+        "truth_sha256": "b9b91798ffec58bac0e7e33513bbca5d432b55073c951b8851024b2e3b7cb27f",
+        "window_ids_sha256": "d5824320cd980e30475a4a8407752f4b6041fd1ad4469cf4ffa09a610b844330",
+        "windows": 6
+      }
+    ]
+  },
+  "synthetic_only": true,
+  "test_evidence": {
+    "cases": [
+      {
+        "name": "tests.unit.test_res645_execution.test_production_path_campaign_completes_and_verifies",
+        "seconds": 80.87,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_completed_bundle_tamper_and_scope_reuse_are_refused",
+        "seconds": 1.492,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_cli_exposes_no_real_source_or_checkpoint_inputs",
+        "seconds": 17.181,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_sigkill_status_alone_never_yields_evidence",
+        "seconds": 0.006,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_recorded_evidence_is_revalidated",
+        "seconds": 0.001,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_kernel_cgroup_reader_is_truthful_or_unavailable",
+        "seconds": 0.005,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_sigkill_without_counter_increase_is_permanent",
+        "seconds": 7.039,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_shared_cgroup_oom_and_unrelated_worker_kill_is_permanent",
+        "seconds": 6.405,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_sender_verified_continuation_is_bitwise_identical_on_the_production_path",
+        "seconds": 59.187,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_scientific_failure_is_terminal_even_with_oom_evidence",
+        "seconds": 6.102,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res645_execution.test_consumed_res594_scope_and_real_ledger_aliases_stay_refused",
+        "seconds": 0.003,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_detached_completion_and_replay_refusal",
+        "seconds": 9.694,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_status_reverifies_completed_bundle[match-0.json-alter]",
+        "seconds": 22.36,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_status_reverifies_completed_bundle[match-0.json-delete]",
+        "seconds": 20.226,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_status_reverifies_completed_bundle[result.json-alter]",
+        "seconds": 22.987,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_status_reverifies_completed_bundle[result.json-delete]",
+        "seconds": 20.528,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_controlled_sigterm_boundary_continuation_bitwise",
+        "seconds": 32.762,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_observed_sigkill_alone_is_permanent_without_cause_evidence",
+        "seconds": 5.8,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_unknown_sigterm_is_permanent",
+        "seconds": 7.055,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_supervisor_loss_kills_worker_and_refuses_continuation",
+        "seconds": 4.896,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[missing]",
+        "seconds": 0.285,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[forged]",
+        "seconds": 0.045,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[oom_without_host_evidence]",
+        "seconds": 0.033,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[host_loss_without_attestation]",
+        "seconds": 0.035,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[peeked]",
+        "seconds": 0.028,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[scientific]",
+        "seconds": 0.034,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[scientific_terminal]",
+        "seconds": 0.043,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[cpu]",
+        "seconds": 0.043,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[wall]",
+        "seconds": 0.032,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[receipt]",
+        "seconds": 0.076,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[parity]",
+        "seconds": 0.166,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[missing_receipt]",
+        "seconds": 0.039,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[duplicate]",
+        "seconds": 0.035,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[sigkill_without_evidence]",
+        "seconds": 0.032,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[evidence_counter_unchanged]",
+        "seconds": 0.039,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[evidence_with_supervisor_signal]",
+        "seconds": 0.041,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_adversarial_continuations_fail_permanently[evidence_wrong_kind]",
+        "seconds": 0.035,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_valid_cause_evidence_permits_exactly_one_continuation",
+        "seconds": 0.421,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_forbidden_paths_and_ledger_aliases[res594-scope]",
+        "seconds": 0.009,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_forbidden_paths_and_ledger_aliases[fpdbench-private]",
+        "seconds": 0.003,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_forbidden_paths_and_ledger_aliases[checkpoints]",
+        "seconds": 0.003,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_forbidden_paths_and_ledger_aliases[heldout]",
+        "seconds": 0.004,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_resource_ceiling_is_terminal[wall_s-0.001]",
+        "seconds": 4.57,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_resource_ceiling_is_terminal[cpu_s-0.001]",
+        "seconds": 5.646,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_resource_ceiling_is_terminal[rss_bytes-1]",
+        "seconds": 5.694,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_resource_ceiling_is_terminal[disk_bytes-1]",
+        "seconds": 5.986,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_cli_has_no_real_authority_or_input_options[--authorization-RES594-GO]",
+        "seconds": 0.01,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_cli_has_no_real_authority_or_input_options[--scope-d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0]",
+        "seconds": 0.014,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_cli_has_no_real_authority_or_input_options[--checkpoint-private.pt]",
+        "seconds": 0.005,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_cli_has_no_real_authority_or_input_options[--source-snapshot.jsonl]",
+        "seconds": 0.003,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_new_modules_do_not_import_or_execute_historical_scorer",
+        "seconds": 0.04,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_scientific_failure_remains_terminal_after_sigkill",
+        "seconds": 4.303,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_disk_monitor_tolerates_atomic_rename",
+        "seconds": 0.002,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_disk_monitor_preserves_unexpected_io_errors",
+        "seconds": 0.002,
+        "status": "passed"
+      },
+      {
+        "name": "tests.unit.test_res643_execution.test_disk_monitor_handles_rename_after_metadata_read",
+        "seconds": 0.002,
+        "status": "passed"
+      }
+    ],
+    "junit_sha256": "7ddbb5ee5da83681e3b887047967ff9e6dcc4235e95c3b06e24166a0ac2d31d7"
+  }
+}
