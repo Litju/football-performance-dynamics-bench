@@ -107,9 +107,7 @@ def cli(action: str, root: Path, output: Path) -> subprocess.CompletedProcess[by
         ("result.json", "delete"),
     ],
 )
-def test_status_reverifies_completed_bundle(
-    tmp_path: Path, artifact: str, mutation: str
-) -> None:
+def test_status_reverifies_completed_bundle(tmp_path: Path, artifact: str, mutation: str) -> None:
     root, output = tmp_path / "ledger", tmp_path / "output"
     assert run(root, output)["exit_code"] == 0
 

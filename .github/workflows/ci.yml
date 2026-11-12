@@ -33,7 +33,6 @@ jobs:
             --manifest "$RUNNER_TEMP/runtime-preflight.json" \
             --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
-      - run: uv run ruff format --diff tests/unit/test_res643_execution.py
       - run: uv run ruff format --check .
       - run: uv run pyright
       - name: Focused producer runtime diagnostic
@@ -67,7 +66,6 @@ jobs:
             --manifest "$RUNNER_TEMP/runtime-preflight.json" \
             --package-root "$GITHUB_WORKSPACE/src/fpdbench"
       - run: uv run ruff check .
-      - run: uv run ruff format --diff tests/unit/test_res643_execution.py
       - run: uv run ruff format --check .
       - run: uv run pyright
       - name: Focused producer runtime diagnostic
