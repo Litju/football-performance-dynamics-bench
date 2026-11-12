@@ -78,9 +78,7 @@ def test_detached_completion_and_replay_refusal(tmp_path):
         e.verify_complete(root, output, 1)
 
 
-def _cli_check(
-    action: str, root: Path, output: Path
-) -> subprocess.CompletedProcess[bytes]:
+def cli(action: str, root: Path, output: Path) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         [
             sys.executable,
@@ -116,7 +114,7 @@ def test_status_reverifies_completed_bundle(
     assert run(root, output)["exit_code"] == 0
 
     for action in ("status", "verify"):
-        result = _cli_check(action, root, output)
+        result = cli(action, root, output)
         assert result.returncode == 0, (result.stdout, result.stderr)
 
     target = output / artifact
@@ -133,7 +131,7 @@ def test_status_reverifies_completed_bundle(
     # The original ledger still says success; neither public CLI may trust it.
     assert e.bound_record(root, output, 1)["status"] == "COMPLETED_VERIFIED"
     for action in ("status", "verify"):
-        result = _cli_check(action, root, output)
+        result = cli(action, root, output)
         assert result.returncode == e.EXIT_INTEGRITY, (result.stdout, result.stderr)
 
 
