@@ -110,6 +110,7 @@ def test_source_stream_accepts_separate_synthetic_population_lock(tmp_path: Path
     expected = list(original.windows())
     lock = tmp_path / "population.jsonl"
     (directory / "locked.jsonl").rename(lock)
+    shutil.copyfile(directory / "fixture.json", tmp_path / "fixture.json")
     separate = src.SourceMatch(
         src.SourceMatchSpec(spec.label, spec.match_id, directory, locked_path=lock), "synthetic"
     )
@@ -118,6 +119,11 @@ def test_source_stream_accepts_separate_synthetic_population_lock(tmp_path: Path
     assert (
         separate.source_document()["locked_sha256"] == original.source_document()["locked_sha256"]
     )
+    (tmp_path / "fixture.json").unlink()
+    with pytest.raises(PermissionError):
+        src.SourceMatch(
+            src.SourceMatchSpec(spec.label, spec.match_id, directory, locked_path=lock), "synthetic"
+        )
 
 
 @functools.cache

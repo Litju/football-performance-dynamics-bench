@@ -80,6 +80,10 @@ def authorize(spec: SourceMatchSpec, mode: Mode) -> None:
     marker = json.loads(raw)
     if marker != {"synthetic_source_fixture": SOURCE_MARKER, "match_id": spec.match_id}:
         raise PermissionError("source directory is not an invented RES645 fixture")
+    if spec.locked_path is not None:
+        raw, _ = paths.read_regular_file(spec.locked_path.parent / "fixture.json", max_bytes=4096)
+        if json.loads(raw) != marker:
+            raise PermissionError("separate lock directory is not the same synthetic fixture")
 
 
 def _unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
