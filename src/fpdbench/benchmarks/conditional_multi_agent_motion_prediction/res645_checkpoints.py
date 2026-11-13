@@ -18,7 +18,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+if TYPE_CHECKING:
+    from .res646_authorization import Campaign
 
 import torch
 from torch import Tensor
@@ -205,10 +208,15 @@ RECEIPT_COPIED_FIELDS = (
 )
 
 
-def verify_fit_receipt(directory: Path, record: Mapping[str, object], cell: Cell) -> None:
+def verify_fit_receipt(
+    directory: Path, record: Mapping[str, object], cell: Cell, *, campaign: Campaign | None = None
+) -> None:
     """The owner-private completed-fit receipt must hash to, and agree with, its manifest record."""
     data, identity = paths.read_regular_file(
-        directory / f"{record['receipt_sha256']}.json", max_bytes=1 << 20, require_private=True
+        directory / f"{record['receipt_sha256']}.json",
+        max_bytes=1 << 20,
+        require_private=True,
+        campaign=campaign,
     )
     if identity.sha256 != record["receipt_sha256"]:
         raise CheckpointContractError("completed-fit receipt SHA-256 mismatch")
@@ -263,18 +271,26 @@ def _expected_shapes(regime: lds.InformationRegime) -> dict[str, tuple[int, ...]
     }
 
 
-def load_checkpoint(path: Path, record: Mapping[str, object], cell: Cell) -> tuple[Any, str]:
+def load_checkpoint(
+    path: Path, record: Mapping[str, object], cell: Cell, *, campaign: Campaign | None = None
+) -> tuple[Any, str]:
     """Hash and deserialize the *same* bytes; tensors-only unpickling; exact cell binding."""
     frozen_hashes = {
         cast(dict[str, str], item)["checkpoint_sha256"]
         for item in cast(list[object], frozen_manifest()["checkpoints"])
     }
     if record.get("checkpoint_sha256") in frozen_hashes:
-        raise CheckpointContractError("frozen inference requires authenticated owner authorization")
+        if campaign is None:
+            raise CheckpointContractError(
+                "frozen inference requires authenticated owner authorization"
+            )
+        campaign.allow_models(frozen_manifest(), path.parent, campaign.receipts)
+        if record != validate_records(frozen_manifest())[cell]:
+            raise CheckpointContractError("checkpoint record differs from frozen manifest")
     data, identity = paths.read_regular_file(
-        path, max_bytes=MAX_CHECKPOINT_BYTES, require_private=True
+        path, max_bytes=MAX_CHECKPOINT_BYTES, require_private=True, campaign=campaign
     )
-    if identity.sha256 in frozen_hashes:
+    if identity.sha256 in frozen_hashes and campaign is None:
         raise CheckpointContractError("frozen inference requires authenticated owner authorization")
     if identity.sha256 != record["checkpoint_sha256"]:
         raise CheckpointContractError("checkpoint SHA-256 mismatch")
@@ -310,23 +326,34 @@ def load_checkpoint(path: Path, record: Mapping[str, object], cell: Cell) -> tup
 
 
 def load_models(
-    manifest: Mapping[str, object], directory: Path, mode: Mode, receipts: Path
+    manifest: Mapping[str, object],
+    directory: Path,
+    mode: Mode,
+    receipts: Path,
+    *,
+    campaign: Campaign | None = None,
 ) -> FrozenModelSet:
     """Load exactly the 18 listed checkpoints as frozen float32 CPU models, read-only."""
     manifest_sha = validate_manifest(manifest, mode)
     if mode == "frozen":
-        raise CheckpointContractError("frozen inference requires authenticated owner authorization")
+        if campaign is None:
+            raise CheckpointContractError(
+                "frozen inference requires authenticated owner authorization"
+            )
+        campaign.allow_models(manifest, directory, receipts)
+    else:
+        campaign = None
     lds.configure_deterministic_cpu()
     by_cell = validate_records(manifest)
     try:
-        present = paths.list_directory(directory, require_private=True)
+        present = paths.list_directory(directory, require_private=True, campaign=campaign)
     except PermissionError as exc:
         raise CheckpointContractError(str(exc)) from exc
     wanted = sorted(f"{r['checkpoint_sha256']}.pt" for r in by_cell.values())
     if present != wanted:
         raise CheckpointContractError("checkpoint directory differs from the manifest files")
     try:
-        listed = paths.list_directory(receipts, require_private=True)
+        listed = paths.list_directory(receipts, require_private=True, campaign=campaign)
     except PermissionError as exc:
         raise CheckpointContractError(str(exc)) from exc
     if listed != sorted(f"{r['receipt_sha256']}.json" for r in by_cell.values()):
@@ -336,9 +363,9 @@ def load_models(
     for cell in EXPECTED_CELLS:
         record = by_cell[cell]
         try:
-            verify_fit_receipt(receipts, record, cell)
+            verify_fit_receipt(receipts, record, cell, campaign=campaign)
             state, digest = load_checkpoint(
-                directory / f"{record['checkpoint_sha256']}.pt", record, cell
+                directory / f"{record['checkpoint_sha256']}.pt", record, cell, campaign=campaign
             )
         except (PermissionError, OSError, ValueError) as exc:
             if isinstance(exc, CheckpointContractError):

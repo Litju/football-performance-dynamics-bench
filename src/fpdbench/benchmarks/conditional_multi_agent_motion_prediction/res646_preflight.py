@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
 import re
+import shlex
 from pathlib import Path
 from typing import Any, cast
 
@@ -133,3 +135,73 @@ def proposed_scope(identities: dict[str, str]) -> str:
     if digest == CONSUMED_SCOPE:
         raise ValueError("historical scope is permanently forbidden")
     return digest
+
+
+def private_preflight(owner_config: Path, evidence: Path) -> dict[str, Any]:
+    """Reconcile existing owner-local evidence without source/model opens or reservation.
+
+    Old textual readback evidence is retained as evidence, not promoted to a new attestation.
+    Missing local bindings and target quotas remain blockers regardless of old hash checks.
+    """
+    raw, _ = paths.read_regular_file(owner_config, max_bytes=65536, require_private=True)
+    prior, prior_identity = paths.read_regular_file(
+        evidence,
+        max_bytes=1 << 20,
+        require_private=True,
+    )
+    names = {
+        "SOURCE_INVENTORY",
+        "CHECKPOINT_DIRECTORY",
+        "FIT_RECEIPTS_DIRECTORY",
+        "RESEARCH_ADMISSION",
+        "LEDGER_ROOT",
+        "OUTPUT_DIRECTORY",
+        "GATE5_READ_SCOPE",
+    }
+    values: dict[str, str] = {}
+    for line in raw.decode().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, separator, value = line.partition("=")
+        if not separator or key not in names or key in values:
+            raise ValueError("invalid or duplicate owner-local configuration field")
+        parsed = shlex.split(value, comments=True)
+        if len(parsed) > 1:
+            raise ValueError("owner-local values must be single literal paths or scope IDs")
+        values[key] = parsed[0] if parsed else ""
+    missing = sorted(name for name in names if not values.get(name))
+    return {
+        "schema": "fpdbench.res646.nonconsuming-preflight/1",
+        "status": "MISSING_OWNER_LOCAL_CONFIG" if missing else "INDEPENDENT_PREFLIGHT_REQUIRED",
+        "missing_fields": missing,
+        "prior_evidence_sha256": prior_identity.sha256,
+        "prior_evidence_bytes": len(prior),
+        "prior_evidence_policy": "preserved; no repeated source or checkpoint byte readback",
+        "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
+        "manifest_sha256": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
+        "admission_sha256": ADMISSION_SHA256,
+        "source_rows_opened": False,
+        "models_loaded": False,
+        "scope_consumed": False,
+        "target_resource_qualification": "not established by prior host free-space observations",
+        "separate_owner_go": "not requested or provisioned",
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="RES646 metadata-only, non-consuming preflight")
+    parser.add_argument("--owner-config", type=Path, required=True)
+    parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--report", type=Path, required=True)
+    args = parser.parse_args()
+    result = private_preflight(args.owner_config, args.evidence)
+    from .res635_execution import atomic
+
+    atomic(args.report, result)
+    print(json.dumps({"status": result["status"], "missing_fields": result["missing_fields"]}))
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

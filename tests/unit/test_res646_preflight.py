@@ -123,3 +123,22 @@ def test_private_admission_reader_rejects_aliases_and_historical_paths(tmp_path:
         preflight._read_admission(alias / path.name)
     with pytest.raises(PermissionError):
         preflight._read_admission(tmp_path / "res594" / path.name)
+
+
+def test_private_preflight_reuses_evidence_and_treats_empty_paths_as_missing(
+    tmp_path: Path,
+) -> None:
+    config = tmp_path / "res646.env"
+    config.write_text("SOURCE_INVENTORY=\nLEDGER_ROOT=''\nOUTPUT_DIRECTORY=\"\"\n")
+    config.chmod(0o600)
+    evidence = tmp_path / "existing-evidence.txt"
+    evidence.write_text("Existing verified 18+18 checkpoint and receipt hashes; 81 source hashes.")
+    evidence.chmod(0o600)
+    report = preflight.private_preflight(config, evidence)
+    assert report["status"] == "MISSING_OWNER_LOCAL_CONFIG"
+    assert len(report["missing_fields"]) == 7
+    assert report["prior_evidence_sha256"] == hashlib.sha256(evidence.read_bytes()).hexdigest()
+    assert report["source_rows_opened"] is False
+    assert report["models_loaded"] is False
+    assert report["scope_consumed"] is False
+    assert set(tmp_path.iterdir()) == {config, evidence}

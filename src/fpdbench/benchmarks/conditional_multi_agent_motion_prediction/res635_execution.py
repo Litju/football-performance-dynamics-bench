@@ -26,11 +26,28 @@ from typing import Any, cast
 from . import res635_post_failure_evaluation as s
 from . import res645_evidence as ev
 from . import res645_workloads as wl
+from . import res646_authorization as authorization
 
 MODULE = "fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res635_execution"
 BUDGET = {"cpu_s": 600.0, "wall_s": 900.0, "rss_bytes": 2 * 1024**3, "disk_bytes": 64 * 1024**2}
+REAL_BUDGET = {
+    "cpu_s": 14400.0,
+    "wall_s": 21600.0,
+    "rss_bytes": 2 * 1024**3,
+    "disk_bytes": 2 * 1024**3,
+}
 EXIT_INTEGRITY, EXIT_BUDGET, EXIT_INTERRUPTED, EXIT_WORKER = 7, 5, 143, 6
 FORBIDDEN = ("res594", "fpdbench-private", "owner-go", "heldout", "checkpoint")
+
+
+def process_wall_age() -> float:
+    ticks = int(Path("/proc/self/stat").read_text().rsplit(")", 1)[1].split()[19])
+    return max(0.0, time.monotonic() - ticks / os.sysconf("SC_CLK_TCK"))
+
+
+def process_tree_cpu() -> float:
+    children = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return time.process_time() + children.ru_utime + children.ru_stime
 
 
 def safe_path(path: Path) -> Path:
@@ -129,6 +146,10 @@ def reserve(
 ) -> s.Document:
     workload = workload or wl.SyntheticWorkload()
     workload.validate_count(count)
+    if isinstance(workload, wl.RealWorkload):
+        workload.campaign.verify()
+        if (root, output) != (workload.campaign.root, workload.campaign.output):
+            raise PermissionError("ledger or output differs from signed campaign")
     root = private_root(root, output)
     if output.exists() and any(output.iterdir()):
         raise ValueError("output already populated")
@@ -150,9 +171,18 @@ def reserve(
         "key": os.urandom(32).hex(),
         "cpu_used": 0.0,
         "wall_used": 0.0,
-        "budget": BUDGET,
+        "budget": REAL_BUDGET if isinstance(workload, wl.RealWorkload) else BUDGET,
         "status": "RESERVED",
     }
+    if isinstance(workload, wl.RealWorkload):
+        raw, _ = wl.paths.read_regular_file(
+            workload.campaign.path.with_suffix(".approval.json"),
+            max_bytes=131072,
+            require_private=True,
+        )
+        record["authorization_sha256"] = hashlib.sha256(raw).hexdigest()
+        record["cpu_used"] = process_tree_cpu()
+        record["wall_used"] = process_wall_age()
     record["record_sha256"] = s.digest(record)
     with os.fdopen(fd, "wb") as stream:
         stream.write(s.canonical(record))
@@ -177,6 +207,10 @@ def bound_record(
     root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
 ) -> s.Document:
     workload = workload or wl.SyntheticWorkload()
+    if isinstance(workload, wl.RealWorkload):
+        workload.campaign.verify()
+        if (root, output) != (workload.campaign.root, workload.campaign.output):
+            raise PermissionError("ledger or output differs from signed campaign")
     private_root(root, output)
     path = ledger_path(root, workload.scope_sha256(count))
     info = path.stat()
@@ -191,6 +225,8 @@ def bound_record(
         workload.scope_sha256(count)
     ):
         raise ValueError("campaign/ledger identity differs")
+    if isinstance(workload, wl.RealWorkload) and record != workload.campaign.record():
+        raise ValueError("campaign authorization binding differs")
     if record["status"] == "RUNNING" and (output / "processes.json").exists():
         processes = read(output / "processes.json")
         if processes["attempt"] != record["attempt"]:
@@ -225,9 +261,35 @@ def _child_limits(parent_pid: int, cpu: float) -> None:
 
 
 def worker(
-    output: Path, count: int, start: int, pause: int, workload: wl.Workload | None = None
+    output: Path,
+    count: int,
+    start: int,
+    pause: int,
+    workload: wl.Workload | None = None,
+    *,
+    ledger_root: Path | None = None,
 ) -> int:
     workload = workload or wl.SyntheticWorkload()
+    if isinstance(workload, wl.RealWorkload):
+        campaign = workload.campaign
+        if (ledger_root, output) != (campaign.root, campaign.output):
+            raise PermissionError("worker must use the signed ledger and output")
+        record = bound_record(campaign.root, output, count, workload=workload)
+        if (
+            record["status"] != "RUNNING"
+            or start != len(record["seals"])
+            or (os.getppid() != record.get("supervisor_pid"))
+        ):
+            raise PermissionError("direct or unreserved worker invocation refused")
+        claim = campaign.root / f"{campaign.scope}.worker-{record['attempt']}"
+        fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(
+                s.canonical({"pid": os.getpid(), "parent": os.getppid(), "scope": campaign.scope})
+            )
+            stream.flush()
+            os.fsync(stream.fileno())
+        fsync_dir(campaign.root)
     stop = threading.Event()
     events: list[s.Document] = []
     signals = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
@@ -280,7 +342,7 @@ def worker(
 def usage(pid: int) -> tuple[float, int]:
     fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
     return (
-        (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK"),
+        sum(int(fields[i]) for i in (11, 12, 13, 14)) / os.sysconf("SC_CLK_TCK"),
         int(fields[21]) * os.sysconf("SC_PAGE_SIZE"),
     )
 
@@ -319,8 +381,9 @@ def supervise(
     os.close(fd)
     fsync_dir(root)
     record["status"] = "RUNNING"
+    record["supervisor_pid"] = os.getpid()
     store_ledger(root, count, record)
-    start = time.monotonic()
+    start = time.monotonic() - (process_wall_age() if isinstance(workload, wl.RealWorkload) else 0)
     initial_cpu, initial_wall = record["cpu_used"], record["wall_used"]
     remaining_cpu = record["budget"]["cpu_s"] - record["cpu_used"]
     remaining_wall = record["budget"]["wall_s"] - record["wall_used"]
@@ -334,6 +397,8 @@ def supervise(
             "-m",
             MODULE,
             "_worker",
+            "--ledger-root",
+            str(root),
             "--output",
             str(output),
             "--count",
@@ -375,7 +440,9 @@ def supervise(
             os._exit(EXIT_BUDGET)
 
     # Covers hung feature construction and independent verification, beyond the polling loop.
-    watchdog = threading.Timer(max(0.01, remaining_wall) + 2.5, hard_budget_stop)
+    watchdog = threading.Timer(
+        max(0.01, remaining_wall - (time.monotonic() - start)) + 2.5, hard_budget_stop
+    )
     watchdog.daemon = True
     watchdog.start()
     reason = "EXIT"
@@ -413,7 +480,7 @@ def supervise(
             )
             last_telemetry = wall
         budget_hit = (
-            cpu >= remaining_cpu
+            cpu + process_tree_cpu() >= remaining_cpu
             or rss > record["budget"]["rss_bytes"]
             or disk > record["budget"]["disk_bytes"]
             or wall >= remaining_wall
@@ -465,6 +532,8 @@ def supervise(
     }
     record["seals"] = seals
     record["status"] = "FAILED_PERMANENTLY"
+    if isinstance(workload, wl.RealWorkload):
+        store_ledger(root, count, record)
     result_code = EXIT_BUDGET if reason == "BUDGET" else EXIT_WORKER
     try:
         receipts = workload.verify_prefix(output, count, seals)
@@ -478,9 +547,9 @@ def supervise(
                 "scope_sha256": record["scope_sha256"],
                 "seals": seals,
                 "aggregate": aggregate,
-                "status": "COMPLETED_VERIFIED_SYNTHETIC_ONLY",
+                "status": completion_status(workload),
             }
-            verify_cpu = time.process_time() + cpu
+            verify_cpu = process_tree_cpu()
             if (
                 initial_cpu + verify_cpu >= record["budget"]["cpu_s"]
                 or initial_wall + time.monotonic() - start >= record["budget"]["wall_s"]
@@ -516,8 +585,30 @@ def supervise(
         print(f"INDEPENDENT_VERIFICATION_FAILED: {exc}", file=sys.stderr, flush=True)
         result_code = EXIT_INTEGRITY
     # Charge supervisor imports/verification and kernel-accounted worker CPU.
-    record["cpu_used"] = initial_cpu + cpu + time.process_time()
+    record["cpu_used"] = initial_cpu + process_tree_cpu()
     record["wall_used"] = initial_wall + time.monotonic() - start
+    attestation.update(cpu_used=record["cpu_used"], wall_used=record["wall_used"])
+    atomic(output / f"postmortem-{record['attempt']}.json", signed(attestation, record["key"]))
+    atomic(output / "postmortem.json", signed(attestation, record["key"]))
+    store_ledger(root, count, record)
+    atomic(output / "status.json", {"status": record["status"], "exit_code": result_code})
+    # Include final manifest readback, postmortems, fsyncs and ledger/status sealing.
+    record["cpu_used"] = initial_cpu + process_tree_cpu()
+    record["wall_used"] = initial_wall + time.monotonic() - start
+    record["peak_rss_bytes"] = max(
+        peak_rss, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+    )
+    record["disk_bytes"] = working_disk_bytes(output)
+    if (
+        record["cpu_used"] >= record["budget"]["cpu_s"]
+        or record["wall_used"] >= record["budget"]["wall_s"]
+        or record["peak_rss_bytes"] > record["budget"]["rss_bytes"]
+        or record["disk_bytes"] > record["budget"]["disk_bytes"]
+    ):
+        record["status"] = "FAILED_PERMANENTLY"
+        result_code = EXIT_BUDGET
+        (output / "result.json").unlink(missing_ok=True)
+    # Attestation and ledger must agree on cumulative charges for a continuation.
     attestation.update(cpu_used=record["cpu_used"], wall_used=record["wall_used"])
     atomic(output / f"postmortem-{record['attempt']}.json", signed(attestation, record["key"]))
     atomic(output / "postmortem.json", signed(attestation, record["key"]))
@@ -543,7 +634,10 @@ def continue_campaign(
     os.fsync(fd)
     os.close(fd)
     fsync_dir(root)
-    replay_start, replay_cpu = time.monotonic(), time.process_time()
+    replay_start, replay_cpu = time.monotonic(), process_tree_cpu()
+    if isinstance(workload, wl.RealWorkload):
+        replay_start -= process_wall_age()
+        replay_cpu = 0.0
     try:
         attestation = authenticated(output / "postmortem.json", record["key"])
         if (
@@ -580,16 +674,17 @@ def continue_campaign(
         ):
             raise ValueError("insufficient remaining cumulative budget")
         receipts = workload.verify_prefix(output, count, record["seals"])
-        prepared = workload.prepare()
-        for i, receipt in enumerate(receipts):
-            expected = {
-                **workload.score(i, count, prepared, lambda: None),
-                "scope_sha256": record["scope_sha256"],
-                "previous_sha256": receipt["previous_sha256"],
-            }
-            if s.canonical(expected) != s.canonical(receipt):
-                raise ValueError("sealed receipt bitwise parity failed")
-        record["cpu_used"] += time.process_time() - replay_cpu
+        if not isinstance(workload, wl.RealWorkload):
+            prepared = workload.prepare()
+            for i, receipt in enumerate(receipts):
+                expected = {
+                    **workload.score(i, count, prepared, lambda: None),
+                    "scope_sha256": record["scope_sha256"],
+                    "previous_sha256": receipt["previous_sha256"],
+                }
+                if s.canonical(expected) != s.canonical(receipt):
+                    raise ValueError("sealed receipt bitwise parity failed")
+        record["cpu_used"] += process_tree_cpu() - replay_cpu
         record["wall_used"] += time.monotonic() - replay_start
         if any(
             record["budget"][k] - record[u] < 30 * (4 - len(receipts))
@@ -602,6 +697,14 @@ def continue_campaign(
         record["status"] = "FAILED_PERMANENTLY"
         store_ledger(root, count, record)
         raise
+
+
+def completion_status(workload: wl.Workload) -> str:
+    return (
+        "COMPLETED_VERIFIED_REAL_RESEARCH_ONLY"
+        if (workload.namespace == authorization.REAL)
+        else "COMPLETED_VERIFIED_SYNTHETIC_ONLY"
+    )
 
 
 def verify_complete(
@@ -617,7 +720,7 @@ def verify_complete(
         "scope_sha256": record["scope_sha256"],
         "seals": record["seals"],
         "aggregate": workload.aggregate(receipts),
-        "status": "COMPLETED_VERIFIED_SYNTHETIC_ONLY",
+        "status": completion_status(workload),
     }
     if manifest != expected:
         raise ValueError("final bundle differs")
@@ -693,12 +796,24 @@ def main() -> int:
         type=Path,
         help="invented RES645 source/checkpoint fixture bundle; real inputs are never accepted",
     )
+    parser.add_argument(
+        "--campaign-config",
+        type=Path,
+        help="owner-private signed campaign configuration; requires separate GO",
+    )
     args = parser.parse_args()
     try:
         safe_path(args.output)
-        workload = wl.make(args.fixture_bundle)
+        workload = wl.make(args.fixture_bundle, args.campaign_config)
         if args.action == "_worker":
-            return worker(args.output, args.count, args.start, args.pause, workload)
+            return worker(
+                args.output,
+                args.count,
+                args.start,
+                args.pause,
+                workload,
+                ledger_root=args.ledger_root,
+            )
         if args.ledger_root is None:
             parser.error("--ledger-root is required and must remain stable across outputs")
         if args.action == "_supervise":
@@ -721,7 +836,14 @@ def main() -> int:
                 wall_limit=args.wall_limit,
                 workload=workload,
             )
-            print(json.dumps({"supervisor_pid": pid, "synthetic_only": True}))
+            print(
+                json.dumps(
+                    {
+                        "supervisor_pid": pid,
+                        "synthetic_only": workload.namespace != authorization.REAL,
+                    }
+                )
+            )
             return 0
         if args.action == "verify":
             manifest = verify_complete(args.ledger_root, args.output, args.count, workload=workload)
@@ -745,7 +867,10 @@ def main() -> int:
             )
         ):
             record = bound_record(
-                args.ledger_root, args.output, args.count, workload=wl.make(args.fixture_bundle)
+                args.ledger_root,
+                args.output,
+                args.count,
+                workload=wl.make(args.fixture_bundle, args.campaign_config),
             )
             record["status"] = "FAILED_PERMANENTLY"
             store_ledger(args.ledger_root, args.count, record)

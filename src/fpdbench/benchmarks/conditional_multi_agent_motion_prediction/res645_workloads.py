@@ -24,6 +24,7 @@ from . import res645_independent as ind
 from . import res645_paths as paths
 from . import res645_pipeline as pipe
 from . import res645_source_stream as src
+from . import res646_authorization as authorization
 
 type Document = dict[str, Any]
 FIXTURE_NAMESPACE = "RES645-SYNTHETIC-FIXTURE-v1"
@@ -191,5 +192,158 @@ class FixtureWorkload:
         return v.aggregate(receipts)
 
 
-def make(bundle: Path | None) -> Workload:
+class RealWorkload:
+    """The existing streaming scorer, with signed scope and independently audited predictions.
+
+    A synthetic Campaign uses invented source identities and fake weights but the identical
+    authorization, reservation, worker, receipt, continuation and verification code paths.
+    """
+
+    def __init__(self, config: Path) -> None:
+        self.campaign = authorization.Campaign(config)
+        self.namespace = self.campaign.namespace
+        self.cli = ["--campaign-config", str(config)]
+        self.windows = sum(self.campaign.declared)
+
+    def validate_count(self, count: int) -> None:
+        if type(count) is not int or count != self.windows:
+            raise ValueError("count must equal signed campaign window inventory")
+
+    def scope_sha256(self, count: int) -> str:
+        self.validate_count(count)
+        self.campaign.verify()
+        return self.campaign.scope
+
+    def prepare(self) -> ck.FrozenModelSet:
+        campaign = self.campaign
+        campaign.require_worker()
+        return ck.load_models(
+            campaign.manifest,
+            campaign.checkpoints,
+            "frozen" if self.namespace == authorization.REAL else "synthetic",
+            campaign.receipts,
+            campaign=campaign,
+        )
+
+    def score(
+        self, i: int, count: int, prepared: ck.FrozenModelSet, check: Callable[[], None]
+    ) -> Document:
+        self.validate_count(count)
+        campaign = self.campaign
+        campaign.require_worker()
+        spec = campaign.specs[i]
+        match = src.SourceMatch(
+            spec,
+            "frozen" if self.namespace == authorization.REAL else "synthetic",
+            campaign,
+        )
+        match.prepare(check)
+        body = pipe.score_stream(
+            spec.label,
+            spec.match_id,
+            match.windows(check),
+            prepared,
+            campaign.declared[i],
+            check,
+            source_audit=ind.SourcePredictionAudit(
+                spec.directory,
+                spec.label,
+                spec.locked_path,
+                campaign if self.namespace == authorization.REAL else None,
+            ),
+        )
+        source = match.source_document()
+        if campaign.inventory is not None and any(
+            source[k] != value for k, value in campaign.inventory[i].items()
+        ):
+            raise ValueError("source bytes differ from signed inventory")
+        body["provenance"] = pipe.provenance(
+            prepared.bindings,
+            prepared.manifest_sha256,
+            real=self.namespace == authorization.REAL,
+        )
+        # Real-format receipts always bind the four frozen study cells; synthetic source IDs
+        # remain explicit in provenance and never acquire permission to open real data.
+        return {**body, "match": v.EVALUATION_MATCHES[i], "source": source}
+
+    def verify_prefix(self, directory: Path, count: int, seals: list[str]) -> list[Document]:
+        self.validate_count(count)
+        campaign = self.campaign
+        ledger = campaign.record()
+        if directory != campaign.output or seals != ledger["seals"]:
+            raise PermissionError("receipt seals must come from the signed campaign ledger")
+        if (
+            not 0 <= len(seals) <= 4
+            or sorted(p.name for p in directory.glob("match-*.json"))
+            != [f"match-{i}.json" for i in range(len(seals))]
+            or list(directory.glob(".*.tmp"))
+        ):
+            raise ValueError("incomplete or partial receipt prefix")
+        receipts: list[Document] = []
+        previous = "0" * 64
+        expected_records = ck.validate_records(campaign.manifest)
+        for i, seal in enumerate(seals):
+            raw, _ = paths.read_regular_file(
+                directory / f"match-{i}.json",
+                max_bytes=2_000_000,
+                require_private=True,
+            )
+            receipt = json.loads(raw)
+            if (
+                s.digest(receipt) != seal
+                or receipt["previous_sha256"] != previous
+                or (receipt["scope_sha256"], receipt["match"])
+                != (campaign.scope, v.EVALUATION_MATCHES[i])
+            ):
+                raise ValueError("receipt seal, scope or match differs")
+            audit = receipt["independent_audit"]
+            v.assert_equivalent(receipt["records"], audit["records"])
+            if receipt["independent_records_sha256"] != s.digest(audit["records"]):
+                raise ValueError("independent metric audit identity differs")
+            if any(receipt["identity"][k] != value for k, value in audit["identity"].items()):
+                raise ValueError("independent denominator or source identity differs")
+            if receipt["identity"]["windows"] != campaign.declared[i]:
+                raise ValueError("receipt window count differs from signed inventory")
+            bindings = receipt["provenance"]["checkpoint_bindings"]
+            if [b["cell"] for b in bindings] != [list(c) for c in s.CELLS]:
+                raise ValueError("checkpoint binding inventory differs")
+            for binding, cell in zip(bindings, s.CELLS, strict=True):
+                record = expected_records[cell]
+                if any(
+                    binding[k] != record[k]
+                    for k in (
+                        "checkpoint_sha256",
+                        "configuration_sha256",
+                        "selected_step",
+                    )
+                ):
+                    raise ValueError("checkpoint provenance differs from signed manifest")
+            expected = pipe.provenance(
+                [],
+                ck.validate_manifest(
+                    campaign.manifest,
+                    "frozen" if self.namespace == authorization.REAL else "synthetic",
+                ),
+                real=self.namespace == authorization.REAL,
+            )
+            expected["checkpoint_bindings"] = bindings
+            if receipt["provenance"] != expected:
+                raise ValueError("scorer, verifier or runtime provenance differs")
+            if campaign.inventory is not None and any(
+                receipt["source"][k] != value for k, value in campaign.inventory[i].items()
+            ):
+                raise ValueError("source provenance differs from signed inventory")
+            previous = seal
+            receipts.append(receipt)
+        return receipts
+
+    def aggregate(self, receipts: list[Document]) -> Document:
+        return v.aggregate(receipts, matches=v.EVALUATION_MATCHES)
+
+
+def make(bundle: Path | None, config: Path | None = None) -> Workload:
+    if config is not None:
+        if bundle is not None:
+            raise ValueError("campaign and fixture modes are mutually exclusive")
+        return RealWorkload(config)
     return SyntheticWorkload() if bundle is None else FixtureWorkload(bundle)
