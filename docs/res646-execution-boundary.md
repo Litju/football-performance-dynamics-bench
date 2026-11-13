@@ -1,4 +1,4 @@
-# RES-646 execution boundary
+# RES646 execution boundary
 
 The existing RES635 supervisor now runs `RealWorkload` through the existing source-stream,
 checkpoint, scoring and verification interfaces. Production remains dormant without a separately

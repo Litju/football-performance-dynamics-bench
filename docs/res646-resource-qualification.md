@@ -1,4 +1,4 @@
-# RES-646 synthetic resource qualification
+# RES646 synthetic resource qualification
 
 Public-safe. Every input is invented (artificial fixtures, artificial DeepSets checkpoints,
 ephemeral test signing keys). No real source, checkpoint, owner key or authorization was used.
