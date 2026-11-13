@@ -212,10 +212,12 @@ def score_stream(
     for w in windows:
         check()
         identity.observe(w)
+        truth = {scene["scene_id"]: lds.validate_truth_scene(scene) for scene in w["scenes"]}
         sums, scenes = np.zeros_like(totals), np.zeros_like(denominators)
         for cell, scene, prediction in predictions(w, frozen):
+            absolute, _, mask = truth[scene["scene_id"]]
             for j, stratum in enumerate(s.STRATA):
-                measured = s.scene_metrics(prediction, scene, stratum)
+                measured = s.validated_scene_metrics(prediction, scene, stratum, absolute, mask)
                 if measured is not None:
                     sums[cell, j] += [measured[m] for m in s.METRICS]
                     scenes[cell, j] += 1

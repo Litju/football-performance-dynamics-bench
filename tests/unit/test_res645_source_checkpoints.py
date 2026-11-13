@@ -1042,6 +1042,21 @@ def test_fit_receipt_binding(bundle: Path, tmp_path: Path) -> None:
 
 
 # ----------------------------------------------------------------------- end-to-end parity
+def test_cached_truth_matches_per_call_validation_bitwise(
+    bundle: Path, frozen: ck.FrozenModelSet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    window = windows_of(bundle, 0)[0]
+    expected = pipe.score_stream("synthetic-match-0", "1886347", [window], frozen, 1)
+    calculate = s.validated_scene_metrics
+
+    def original(prediction: Any, scene: dict[str, Any], stratum: str, *_: Any) -> Any:
+        truth, _, mask = lds.validate_truth_scene(scene)
+        return calculate(prediction, scene, stratum, truth, mask)
+
+    monkeypatch.setattr(s, "validated_scene_metrics", original)
+    assert pipe.score_stream("synthetic-match-0", "1886347", [window], frozen, 1) == expected
+
+
 def test_complete_72_record_pipeline_and_independent_verification(
     workload: wl.FixtureWorkload, receipts: list[dict[str, Any]]
 ) -> None:
