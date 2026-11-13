@@ -315,3 +315,20 @@ def test_independent_features_and_one_prediction_pass(bundle: Path) -> None:
     assert receipt["independent_audit"]["records"] == receipt["records"] or (
         s.digest(receipt["independent_audit"]["records"]) == receipt["independent_records_sha256"]
     )
+
+
+@pytest.mark.parametrize("samples", [60, 240])
+def test_long_fixture_preserves_frozen_panels_and_clock(tmp_path: Path, samples: int) -> None:
+    for index in range(4):
+        directory = tmp_path / f"match-{index}"
+        fx.build_match(directory, index, samples)
+        spec = wl.src.SourceMatchSpec(
+            f"synthetic-match-{index}", fx.FIXTURE_MATCH_IDS[index], directory
+        )
+        source = wl.src.SourceMatch(spec, "synthetic")
+        source.prepare()
+        count = 0
+        for window in source.windows():
+            count += 1
+            assert all(len(scene["player_ids"]) == 11 for scene in window["scenes"])
+        assert count == samples - 40
