@@ -30,6 +30,79 @@ type Document = dict[str, Any]
 MAX = 8 * 1024**3
 
 
+class PredictionAudit:
+    """Recalculate match metrics as predictions pass, without calling any model."""
+
+    def __init__(self) -> None:
+        self.sums = [[[0.0] * 3 for _ in s.STRATA] for _ in s.CELLS]
+        self.counts = [[0] * len(s.STRATA) for _ in s.CELLS]
+        self.values: dict[tuple[int, int], list[list[float]]] = {}
+        self.truth: dict[str, tuple[Any, Any]] = {}
+
+    def begin(self, scenes: list[Document]) -> None:
+        self.values = {}
+        self.truth = {}
+        for scene in scenes:
+            panel = scene["absolute_xy"]
+            mask = np.asarray([[point is not None for point in row] for row in panel]).T
+            truth = np.asarray(
+                [[point if point is not None else [0.0, 0.0] for point in row] for row in panel],
+                dtype=np.float64,
+            ).transpose(1, 0, 2)
+            if mask.tolist() != np.asarray(scene["truth_mask"]).T.tolist():
+                raise ValueError("independent truth mask differs")
+            self.truth[scene["scene_id"]] = truth, mask
+
+    def observe(self, cell: int, scene: Document, prediction: Any) -> None:
+        if not scene["scoreable"]:
+            return
+        truth, full_mask = self.truth[scene["scene_id"]]
+        for j, stratum in enumerate(s.STRATA):
+            if j >= 4 and scene["quality"] != stratum:
+                continue
+            start, end = {"early": (0, 5), "middle": (5, 10), "late": (10, 15)}.get(
+                stratum, (0, 15)
+            )
+            mask = full_mask[:, start:end]
+            if not mask[:, -1].any():
+                continue
+            squared = np.square(prediction[:, start:end] - truth[:, start:end]).sum(axis=-1)
+            distances = np.sqrt(squared)
+            self.values.setdefault((cell, j), []).append(
+                [
+                    float(distances[mask].mean()),
+                    float(distances[:, -1][mask[:, -1]].mean()),
+                    float(np.sqrt(squared[mask].sum() / (2 * mask.sum()))),
+                ]
+            )
+
+    def end(self) -> None:
+        for (cell, j), rows in self.values.items():
+            for k in range(3):
+                self.sums[cell][j][k] += sum(row[k] for row in rows) / len(rows)
+            self.counts[cell][j] += 1
+
+    def records(self) -> list[Document]:
+        return [
+            {
+                "cell": list(cell),
+                "strata": {
+                    name: {
+                        "windows": self.counts[i][j],
+                        "metrics": {
+                            metric: self.sums[i][j][k] / self.counts[i][j]
+                            for k, metric in enumerate(s.METRICS)
+                        }
+                        if self.counts[i][j]
+                        else None,
+                    }
+                    for j, name in enumerate(s.STRATA)
+                },
+            }
+            for i, cell in enumerate(s.CELLS)
+        ]
+
+
 def _digest(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 

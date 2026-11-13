@@ -1062,6 +1062,39 @@ def test_fit_receipt_binding(bundle: Path, tmp_path: Path) -> None:
 
 
 # ----------------------------------------------------------------------- end-to-end parity
+def test_independent_metric_audit_never_repeats_inference(
+    bundle: Path, frozen: ck.FrozenModelSet
+) -> None:
+    calls: list[int] = []
+    hooks = [
+        model.register_forward_hook(lambda *_: calls.append(1)) for model in frozen.models.values()
+    ]
+    try:
+        result = pipe.score_stream(
+            "synthetic-match-0", "1886347", windows_of(bundle, 0)[:1], frozen, 1
+        )
+    finally:
+        for hook in hooks:
+            hook.remove()
+    assert len(calls) == 18
+    assert len(result["independent_records_sha256"]) == 64
+
+
+def test_single_pass_independent_metric_mismatch_fails(
+    bundle: Path, frozen: ck.FrozenModelSet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = ind.PredictionAudit.records
+
+    def forged(audit: ind.PredictionAudit) -> list[dict[str, Any]]:
+        records = original(audit)
+        records[0]["strata"]["all"]["metrics"]["ade_m"] += 1.0
+        return records
+
+    monkeypatch.setattr(ind.PredictionAudit, "records", forged)
+    with pytest.raises(ValueError, match="independent metric parity"):
+        pipe.score_stream("synthetic-match-0", "1886347", windows_of(bundle, 0)[:1], frozen, 1)
+
+
 def test_cached_truth_matches_per_call_validation_bitwise(
     bundle: Path, frozen: ck.FrozenModelSet, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -22,6 +22,8 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.evaluation_po
 
 from . import learned_deepsets as lds
 from . import res635_post_failure_evaluation as s
+from . import res635_verification as verification
+from . import res645_independent as independent
 from .information import validate_information_boundary
 from .res645_checkpoints import Binding, FrozenModelSet
 
@@ -37,6 +39,8 @@ CODE_FILES = (
     "res645_paths.py",
     "res645_fixtures.py",
     "res645_workloads.py",
+    "res646_authorization.py",
+    "res646_preflight.py",
     "learned_deepsets.py",
     "information.py",
     "res635_post_failure_evaluation.py",
@@ -207,14 +211,17 @@ def score_stream(
     check: Callable[[], None] = lambda: None,
 ) -> Document:
     identity = SourceIdentity(label, match_id)
+    audit = independent.PredictionAudit()
     totals = np.zeros((18, len(s.STRATA), 3), dtype=np.float64)
     denominators = np.zeros((18, len(s.STRATA)), dtype=np.int64)
     for w in windows:
         check()
         identity.observe(w)
+        audit.begin(w["scenes"])
         truth = {scene["scene_id"]: lds.validate_truth_scene(scene) for scene in w["scenes"]}
         sums, scenes = np.zeros_like(totals), np.zeros_like(denominators)
         for cell, scene, prediction in predictions(w, frozen):
+            audit.observe(cell, scene, prediction)
             absolute, _, mask = truth[scene["scene_id"]]
             for j, stratum in enumerate(s.STRATA):
                 measured = s.validated_scene_metrics(prediction, scene, stratum, absolute, mask)
@@ -224,6 +231,7 @@ def score_stream(
         present = scenes > 0
         totals[present] += sums[present] / scenes[present, None]
         denominators += present
+        audit.end()
     frozen.assert_unchanged()
     if identity.count != expected_windows or not denominators[:, 0].all():
         raise ValueError("incomplete or unscoreable match")
@@ -241,9 +249,12 @@ def score_stream(
             for j, name in enumerate(s.STRATA)
         }
         records.append({"cell": list(cell), "strata": strata})
+    independent_records = audit.records()
+    verification.assert_equivalent(records, independent_records)
     return {
         "match": label,
         "identity": identity.result(),
         "records": records,
+        "independent_records_sha256": s.digest(independent_records),
         "provenance": provenance(frozen.bindings, frozen.manifest_sha256),
     }
