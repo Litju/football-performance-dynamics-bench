@@ -53,3 +53,17 @@ reserving a scope. Missing config and target resource attestations remain explic
 An old text report is never promoted into a newly signed success. The existing owner-local
 configuration currently leaves all seven fields empty. Production key provisioning is separately
 deferred until independent review; it is not needed to qualify synthetic execution.
+
+## Approval expiry and archival verification
+
+Every fresh reservation, supervisor attempt, continuation, and worker entry requires an unexpired
+signed approval. Each reservation and continuation records its authorization time in the
+independently MAC-authenticated ledger. A running worker checks expiry at every scoring check;
+expiry raises an integrity failure before another scoring operation and is permanently terminal.
+It neither adds a grace period nor extends continuation rights or cumulative limits.
+
+Historical verification authenticates the original signature and checks those ledger times fall
+inside the signed validity interval, in chronological order and no later than the verification
+clock. It also checks the existing seals, accounting, frozen identities and scientific audit.
+The current clock may be later than approval expiry. Constructing or inspecting a historical
+Campaign grants no permission to reserve, resume, open scoring inputs, or perform inference.

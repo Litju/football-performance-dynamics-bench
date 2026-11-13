@@ -148,21 +148,32 @@ def ledger_mac(record: dict[str, Any], key: bytes) -> str:
     return hmac.new(key, canonical_bytes(body), hashlib.sha256).hexdigest()
 
 
-def verify_real(payload: bytes, signature: bytes, expected_identities: dict[str, str]) -> None:
+def verify_real(
+    payload: bytes,
+    signature: bytes,
+    expected_identities: dict[str, str],
+    *,
+    at: datetime | None = None,
+) -> None:
     """Verify using only the root-owned protected trust location; missing trust fails closed."""
     try:
         with protected._trusted_directory() as directory:
             signers = protected._trusted_file(directory, TRUST_FILE, limit=4096)
-        _verify(payload, signature, signers, REAL, expected_identities, datetime.now(UTC))
+        _verify(payload, signature, signers, REAL, expected_identities, at or datetime.now(UTC))
     except OSError:
         raise ValueError("owner trust bundle unavailable") from None
 
 
 def verify_synthetic(
-    payload: bytes, signature: bytes, expected_identities: dict[str, str], signers: bytes
+    payload: bytes,
+    signature: bytes,
+    expected_identities: dict[str, str],
+    signers: bytes,
+    *,
+    at: datetime | None = None,
 ) -> None:
     """Fixture-only verification; its namespace can never authenticate a real campaign."""
-    _verify(payload, signature, signers, SYNTHETIC, expected_identities, datetime.now(UTC))
+    _verify(payload, signature, signers, SYNTHETIC, expected_identities, at or datetime.now(UTC))
 
 
 class CampaignPlan:
@@ -333,7 +344,12 @@ class Campaign(CampaignPlan):
             ):
                 raise ValueError("real execution runtime differs from frozen runtime")
 
-    def verify(self) -> None:
+    def verify(self, *, execution: bool = False, at: datetime | None = None) -> None:
+        """Authenticate evidence, or demand a fresh approval for execution.
+
+        Historical checks use an authenticated ledger time in record(); signature-only
+        inspection at the signed approval time grants no worker or reservation permission.
+        """
         from . import res635_post_failure_evaluation as s
         from . import res645_paths as paths
         from . import res645_pipeline as pipeline
@@ -357,15 +373,25 @@ class Campaign(CampaignPlan):
             max_bytes=16384,
             require_private=True,
         )
+        body = cast(dict[str, Any], parse_json(payload))
+        when = (
+            datetime.now(UTC)
+            if execution
+            else (at or _utc(body["authorization"]["authorized_at_utc"]))
+        )
+        if when > datetime.now(UTC):
+            raise ValueError("authorization attestation is in the future")
         if self.namespace == REAL:
-            verify_real(payload, signature, self.identities)
+            verify_real(payload, signature, self.identities, at=when)
         else:
             signers, _ = paths.read_regular_file(
                 self.path.with_suffix(".synthetic-signers"),
                 max_bytes=4096,
                 require_private=True,
             )
-            verify_synthetic(payload, signature, self.identities, signers)
+            verify_synthetic(payload, signature, self.identities, signers, at=when)
+        self.expires_at = _utc(body["expires_at_utc"])
+        self.authorized_at = _utc(body["authorization"]["authorized_at_utc"])
 
     def record(self) -> dict[str, Any]:
         from . import res635_execution as execution
@@ -409,11 +435,34 @@ class Campaign(CampaignPlan):
             )
         ):
             raise ValueError("ledger count or budget exceeds signed authorization")
+        times_raw: object = record.get("attempt_authorized_at_utc")
+        if not isinstance(times_raw, list):
+            raise PermissionError("missing authenticated authorization times")
+        times = cast(list[object], times_raw)
+        if (
+            len(times) != record["attempt"] + 1
+            or len(times) not in (1, 2)
+            or record.get("reserved_at_utc") != times[0]
+        ):
+            raise PermissionError("missing authenticated authorization times")
+        previous = self.authorized_at
+        for value in times:
+            stamp = _utc(value)
+            if not previous <= stamp < self.expires_at or stamp > datetime.now(UTC):
+                raise PermissionError("invalid authenticated authorization time")
+            previous = stamp
+        self.verify(at=_utc(times[0]))
         return record
+
+    def require_current_time(self) -> None:
+        """Expiry stops a running attempt at its next scoring check; never extends permission."""
+        if not self.authorized_at <= datetime.now(UTC) < self.expires_at:
+            raise PermissionError("authorization is not currently valid")
 
     def require_worker(self) -> None:
         from . import res635_execution as execution
 
+        self.verify(execution=True)
         record = self.record()
         claim = execution.read(self.root / f"{self.scope}.worker-{record['attempt']}")
         if (

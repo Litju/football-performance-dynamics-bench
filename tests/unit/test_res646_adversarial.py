@@ -221,8 +221,16 @@ def test_expired_approval_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyP
             return real_datetime.now(tz) + timedelta(hours=7)
 
     monkeypatch.setattr(a, "datetime", Later)
+    workload = wl.RealWorkload(config)
     with pytest.raises(ValueError, match="not currently valid"):
-        wl.RealWorkload(config)
+        e.reserve(
+            workload.campaign.root,
+            workload.campaign.output,
+            workload.windows,
+            True,
+            workload=workload,
+        )
+    assert not list(workload.campaign.root.iterdir())
 
 
 def test_synthetic_approval_cannot_authorize_production(pristine: wl.RealWorkload) -> None:

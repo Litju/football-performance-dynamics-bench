@@ -20,6 +20,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -147,7 +148,7 @@ def reserve(
     workload = wl.require_workload(workload or wl.SyntheticWorkload())
     workload.validate_count(count)
     if isinstance(workload, wl.RealWorkload):
-        workload.campaign.verify()
+        workload.campaign.verify(execution=True)
         if (root, output) != (workload.campaign.root, workload.campaign.output):
             raise PermissionError("ledger or output differs from signed campaign")
     root = private_root(root, output)
@@ -180,6 +181,10 @@ def reserve(
             max_bytes=131072,
             require_private=True,
         )
+        stamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        workload.campaign.require_current_time()
+        record["reserved_at_utc"] = stamp
+        record["attempt_authorized_at_utc"] = [stamp]
         record["authorization_sha256"] = hashlib.sha256(raw).hexdigest()
         record["cpu_used"] = process_tree_cpu()
         record["wall_used"] = process_wall_age()
@@ -323,6 +328,8 @@ def worker(
     threading.Thread(target=watch, daemon=True).start()
 
     def check() -> None:
+        if isinstance(workload, wl.RealWorkload):
+            workload.campaign.require_current_time()
         if stop.is_set():
             raise InterruptedError("controlled worker termination")
 
@@ -386,6 +393,8 @@ def supervise(
     evidence: ev.CgroupEvidence | None = None,
 ) -> int:
     workload = wl.require_workload(workload or wl.SyntheticWorkload())
+    if isinstance(workload, wl.RealWorkload):
+        workload.campaign.verify(execution=True)
     provider = evidence or ev.CgroupEvidence()
     record = bound_record(root, output, count, workload=workload)
     if record["status"] not in ("RESERVED", "CONTINUATION_RESERVED"):
@@ -637,6 +646,8 @@ def continue_campaign(
     root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
 ) -> None:
     workload = wl.require_workload(workload or wl.SyntheticWorkload())
+    if isinstance(workload, wl.RealWorkload):
+        workload.campaign.verify(execution=True)
     record = bound_record(root, output, count, workload=workload)
     if record["status"] != "CONTINUATION_READY_SAME_SCOPE":
         raise ValueError("campaign is not continuation ready")
@@ -706,6 +717,11 @@ def continue_campaign(
             for k, u in (("cpu_s", "cpu_used"), ("wall_s", "wall_used"))
         ):
             raise ValueError("insufficient remaining budget after parity verification")
+        if isinstance(workload, wl.RealWorkload):
+            workload.campaign.verify(execution=True)
+            record["attempt_authorized_at_utc"].append(
+                datetime.now(UTC).isoformat().replace("+00:00", "Z")
+            )
         record.update(attempt=1, status="CONTINUATION_RESERVED")
         store_ledger(root, count, record)
     except Exception:
