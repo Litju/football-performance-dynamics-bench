@@ -137,6 +137,22 @@ def proposed_scope(identities: dict[str, str]) -> str:
     return digest
 
 
+TRUST_DIRECTORY = Path("/etc/fpdbench/protected-executor")
+TRUST_FILES = ("res646-owner-signers", "res646-ledger-key")
+
+
+def production_trust_status() -> dict[str, Any]:
+    """Existence-only probe of the protected trust files; never reads key material."""
+    present = {name: (TRUST_DIRECTORY / name).is_file() for name in TRUST_FILES}
+    return {
+        "status": "PROVISIONED_UNVERIFIED"
+        if all(present.values())
+        else "PRODUCTION_TRUST_KEY_NOT_YET_PROVISIONED",
+        "files_present": present,
+        "policy": "real execution fails closed until both are provisioned and verified (Gate 6)",
+    }
+
+
 def private_preflight(owner_config: Path, evidence: Path) -> dict[str, Any]:
     """Reconcile existing owner-local evidence without source/model opens or reservation.
 
@@ -181,6 +197,7 @@ def private_preflight(owner_config: Path, evidence: Path) -> dict[str, Any]:
         "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
         "manifest_sha256": "770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0",
         "admission_sha256": ADMISSION_SHA256,
+        "production_trust": production_trust_status(),
         "source_rows_opened": False,
         "models_loaded": False,
         "scope_consumed": False,

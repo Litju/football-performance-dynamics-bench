@@ -138,6 +138,10 @@ def test_private_preflight_reuses_evidence_and_treats_empty_paths_as_missing(
     assert report["status"] == "MISSING_OWNER_LOCAL_CONFIG"
     assert len(report["missing_fields"]) == 7
     assert report["prior_evidence_sha256"] == hashlib.sha256(evidence.read_bytes()).hexdigest()
+    assert report["production_trust"]["status"] in (
+        "PRODUCTION_TRUST_KEY_NOT_YET_PROVISIONED",
+        "PROVISIONED_UNVERIFIED",
+    )
     assert report["source_rows_opened"] is False
     assert report["models_loaded"] is False
     assert report["scope_consumed"] is False
