@@ -80,11 +80,18 @@ def test_invented_marker_cannot_admit_evaluation_or_aliased_tracking(
         target = tmp_path / "invented-tracking"
         tracking.rename(target)
         tracking.symlink_to(target) if alias == "symlink" else os.link(target, tracking)
+    opened = Mock(wraps=ind.paths.open_regular_fd)
+    monkeypatch.setattr(ind.paths, "open_regular_fd", opened)
     loaded = Mock(side_effect=AssertionError("tensor deserialized"))
     monkeypatch.setattr(ind.torch, "load", loaded)
     with pytest.raises((PermissionError, OSError)):
         list(ind.raw_windows(spec.directory, spec.label))
     loaded.assert_not_called()
+    if alias == "identity":
+        assert not any(
+            call.args[0].name in {"tracking.jsonl", "locked.jsonl"}
+            for call in opened.call_args_list
+        )
 
 
 @pytest.mark.parametrize("failure", ["namespace", "worker", "unreserved"])
@@ -104,3 +111,41 @@ def test_real_source_requires_reserved_worker(
     with pytest.raises(PermissionError):
         list(ind.raw_windows(tmp_path, "1874553", mode="frozen", campaign=campaign))
     opened.assert_not_called()
+
+
+@pytest.mark.parametrize("api", ["raw", "models", "input"])
+def test_synthetic_namespace_cannot_admit_frozen_inputs_even_with_worker_capability(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    api: str,
+) -> None:
+    campaign = object.__new__(a.Campaign)
+    campaign.namespace = a.SYNTHETIC
+    campaign.specs = [source.SourceMatchSpec("1874553", "1874553", tmp_path)]
+    campaign.manifest = ck.frozen_manifest()
+    campaign.checkpoints = tmp_path / "checkpoints"
+    campaign.receipts = tmp_path / "receipts"
+    # Isolate the namespace check after the same worker-capability check has succeeded.
+    monkeypatch.setattr(a.Campaign, "require_worker", Mock())
+    opened = Mock(side_effect=AssertionError("protected input opened"))
+    loaded = Mock(side_effect=AssertionError("tensor deserialized"))
+    forward = Mock(side_effect=AssertionError("model forwarded"))
+    monkeypatch.setattr(ind.paths, "read_regular_file", opened)
+    monkeypatch.setattr(ind.torch, "load", loaded)
+    monkeypatch.setattr(ind.lds.PerTargetContextDeepSetsMLP, "forward", forward)
+    with pytest.raises(PermissionError, match="signed real campaign|real inputs"):
+        if api == "raw":
+            list(ind.raw_windows(tmp_path, "1874553", mode="frozen", campaign=campaign))
+        elif api == "models":
+            ind.load_models(
+                campaign.manifest,
+                campaign.checkpoints,
+                campaign.receipts,
+                mode="frozen",
+                campaign=campaign,
+            )
+        else:
+            campaign.allow_input(tmp_path / "tracking.jsonl")
+    opened.assert_not_called()
+    loaded.assert_not_called()
+    forward.assert_not_called()
