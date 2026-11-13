@@ -977,13 +977,33 @@ def test_frozen_contract_never_opens_private_checkpoints(tmp_path: Path, bundle:
     synthetic = json.loads((bundle / "manifest.json").read_bytes())
     with pytest.raises(ck.CheckpointContractError, match="not the pinned frozen"):
         ck.validate_manifest(synthetic, "frozen")
-    # Pointing the frozen mode at an empty (or synthetic) directory fails before any file read.
+    # The frozen loader refuses access before opening checkpoints or receipts.
     empty = tmp_path / "empty"
     empty.mkdir(mode=0o700)
-    with pytest.raises(ck.CheckpointContractError, match="differs from the manifest files"):
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
         ck.load_models(frozen_manifest, empty, "frozen", empty)
     with pytest.raises(ck.CheckpointContractError, match="not the pinned frozen"):
         ck.load_models(synthetic, bundle / "checkpoints", "frozen", bundle / "receipts")
+
+
+def test_direct_frozen_checkpoint_load_refused_before_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    records = ck.validate_records(ck.frozen_manifest())
+    cell, record = next(iter(records.items()))
+    monkeypatch.setattr(ck.paths, "read_regular_file", lambda *a, **k: pytest.fail("opened"))
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
+        ck.load_checkpoint(Path("/invented/missing"), record, cell)
+
+
+def test_mislabeled_frozen_checkpoint_is_not_deserialized(monkeypatch: pytest.MonkeyPatch) -> None:
+    records = ck.validate_records(ck.frozen_manifest())
+    cell, record = next(iter(records.items()))
+    identity = paths.FileIdentity(1, 1, 0, 0, 0, str(record["checkpoint_sha256"]))
+    monkeypatch.setattr(ck.paths, "read_regular_file", lambda *a, **k: (b"", identity))
+    monkeypatch.setattr(torch, "load", lambda *a, **k: pytest.fail("deserialized"))
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
+        ck.load_checkpoint(
+            Path("/invented/missing"), {**record, "checkpoint_sha256": "0" * 64}, cell
+        )
 
 
 def test_mutated_model_is_detected(frozen: ck.FrozenModelSet) -> None:

@@ -2,9 +2,9 @@
 """Strictly read-only frozen-checkpoint contract for the 18 DeepSets configurations.
 
 ``mode="synthetic"`` qualifies the contract on artificial CPU checkpoints and a synthetic
-manifest. ``mode="frozen"`` (not exercised here; the private files are never opened by this
-issue) additionally demands the pinned RES593 manifest identity. A synthetic manifest can never
-validate as the frozen one, nor the reverse.
+manifest. ``mode="frozen"`` inventory checks demand the pinned RES593 manifest identity;
+deserialization remains disabled until authenticated owner authorization is integrated. A
+synthetic manifest can never validate as the frozen one, nor the reverse.
 """
 
 from __future__ import annotations
@@ -265,9 +265,17 @@ def _expected_shapes(regime: lds.InformationRegime) -> dict[str, tuple[int, ...]
 
 def load_checkpoint(path: Path, record: Mapping[str, object], cell: Cell) -> tuple[Any, str]:
     """Hash and deserialize the *same* bytes; tensors-only unpickling; exact cell binding."""
+    frozen_hashes = {
+        cast(dict[str, str], item)["checkpoint_sha256"]
+        for item in cast(list[object], frozen_manifest()["checkpoints"])
+    }
+    if record.get("checkpoint_sha256") in frozen_hashes:
+        raise CheckpointContractError("frozen inference requires authenticated owner authorization")
     data, identity = paths.read_regular_file(
         path, max_bytes=MAX_CHECKPOINT_BYTES, require_private=True
     )
+    if identity.sha256 in frozen_hashes:
+        raise CheckpointContractError("frozen inference requires authenticated owner authorization")
     if identity.sha256 != record["checkpoint_sha256"]:
         raise CheckpointContractError("checkpoint SHA-256 mismatch")
     try:
@@ -305,8 +313,10 @@ def load_models(
     manifest: Mapping[str, object], directory: Path, mode: Mode, receipts: Path
 ) -> FrozenModelSet:
     """Load exactly the 18 listed checkpoints as frozen float32 CPU models, read-only."""
-    lds.configure_deterministic_cpu()
     manifest_sha = validate_manifest(manifest, mode)
+    if mode == "frozen":
+        raise CheckpointContractError("frozen inference requires authenticated owner authorization")
+    lds.configure_deterministic_cpu()
     by_cell = validate_records(manifest)
     try:
         present = paths.list_directory(directory, require_private=True)
