@@ -89,9 +89,29 @@ def assert_equivalent(actual: Any, expected: Any) -> None:
         raise ValueError("identity, denominator, or provenance differs")
 
 
-def aggregate(receipts: list[scorer.Document]) -> scorer.Document:
-    if [r["match"] for r in receipts] != list(scorer.MATCHES):
-        raise ValueError("exactly four ordered artificial matches required")
+EVALUATION_MATCHES = ("1874553", "1925299", "2006229", "2010085")
+
+
+def _valid_metrics(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    metrics = cast(dict[str, object], value)
+    for name in scorer.METRICS:
+        number = metrics.get(name)
+        if type(number) not in (int, float) or not math.isfinite(cast(float, number)):
+            return False
+        if cast(float, number) < 0:
+            return False
+    return True
+
+
+def aggregate(
+    receipts: list[scorer.Document], *, matches: tuple[str, ...] = scorer.MATCHES
+) -> scorer.Document:
+    if matches not in (scorer.MATCHES, EVALUATION_MATCHES):
+        raise ValueError("unrecognized match inventory")
+    if [r["match"] for r in receipts] != list(matches):
+        raise ValueError("exactly four ordered matches required")
     seed_means: dict[str, list[dict[str, float]]] = {}
     for regime in lds.INFORMATION_REGIMES:
         for representation in lds.TARGET_REPRESENTATIONS:
@@ -106,6 +126,8 @@ def aggregate(receipts: list[scorer.Document]) -> scorer.Document:
                     for r in records
                     if r["cell"][:2] == [regime, representation]
                 ]
+                if any(not _valid_metrics(row) for row in selected):
+                    raise ValueError("invalid aggregate metric")
                 seed_means[key].append({m: sum(r[m] for r in selected) / 3 for m in scorer.METRICS})
     means = {
         key: {m: sum(v[m] for v in matches) / 4 for m in scorer.METRICS}
