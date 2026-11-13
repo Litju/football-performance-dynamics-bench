@@ -106,6 +106,9 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
                 {"path": str(path), "sha256": record[key], "identity": p._file_identity(path)}
             )
     provenance = pipeline.provenance([], "")
+    provenance["runtime"].update(python="3.12.8", numpy="2.2.4", torch="2.6.0+cpu")
+    # Invented qualification models the frozen runtime even when CI uses a newer patch version.
+    monkeypatch.setattr(pipeline, "provenance", lambda *_: copy.deepcopy(provenance))
     resource_report = tmp_path / "synthetic-resource-report.json"
     report_bytes = write(
         resource_report,
