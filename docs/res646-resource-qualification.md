@@ -4,7 +4,10 @@ Every input is invented: artificial sources and DeepSets checkpoints, ephemeral 
 keys, and a synthetic-only ledger. No real source/tensor bytes, production key, GO, or execution
 scope were used. Exact source hashes, runtime, four receipt seals and aggregate identity are in
 `docs/res646-synthetic-resource-report.json`. The final-code run used source commit
-`c2d267cc84f9257b8407b7c52347a8f641aae407` and the qualification-tool hash recorded in that report.
+`6c303e8877b927b36f0216c9ee4c5d863c816a26` and the qualification-tool hash recorded in that report.
+The launcher began while that exact preflight change was pending commit, so `source_commit`
+records its parent `55bee37`; every measured execution-code hash was separately verified against
+`verified_execution_source_commit` (`6c303e8`).
 Later documentation/tool commits preserve these exact execution-path hashes.
 
 Runtime: Python 3.12.8, NumPy 2.2.4, PyTorch 2.6.0+cpu, CPU only, one thread, no paid compute.
@@ -21,12 +24,13 @@ records, the frozen ADE/FDE/scalar-coordinate XY RMSE, and four C1/C2 contrasts.
 | historical | 80 | 21.1 | 22.4 | 435 MiB | 174 KB |
 | historical | 800 | 90.2 | 93.0 | 436 MiB | 183 KB |
 | historical | 4,000 | 437.4 | 449.7 | 437 MiB | 226 KB |
-| final implementation | 800 | 178.060 | 181.681 | 436.4 MiB | 191,361 bytes |
+| intermediate remediation | 800 | 178.060 | 181.681 | 436.4 MiB | 191,361 bytes |
+| final implementation | 800 | 127.223 | 125.364 | 436.8 MiB | 187,233 bytes |
 
 The historical measurements predate the final supervisor status-ordering repair and these P1
 repairs. They are preserved with their original code/runtime metadata under `prior_qualification`;
-they do not qualify the current implementation. The final observation is slower than the old
-800-window result. This run alone does not identify the cause or separate fixed setup overhead
+they do not qualify the current implementation. The intermediate and final observations are slower than the old
+800-window result. Their identical aggregate hash confirms unchanged synthetic scientific results. This run alone does not identify the cause or separate fixed setup overhead
 from marginal per-window cost. No causal performance improvement or regression is asserted.
 
 ## Linear estimates and sensitivity scenarios
@@ -37,13 +41,13 @@ cost; real-source density and decode cost can also increase it. Neither effect w
 
 | quantity | frozen ceiling | linear estimate | 2x sensitivity scenario |
 |---|---:|---:|---:|
-| cumulative CPU | 14,400 s | 11,510 s (80%) | 23,020 s (160%) |
-| cumulative wall | 21,600 s | 11,744 s (54%) | 23,488 s (109%) |
-| combined RSS | 2 GiB | observed 436.4 MiB | real-data scaling unverified |
-| transient disk | 2 GiB | observed 191,361 bytes | real-data scaling unverified |
+| cumulative CPU | 14,400 s | 8,224 s (57%) | 16,448 s (114%) |
+| cumulative wall | 21,600 s | 8,104 s (38%) | 16,207 s (75%) |
+| combined RSS | 2 GiB | observed 436.8 MiB | real-data scaling unverified |
+| transient disk | 2 GiB | observed 187,233 bytes | real-data scaling unverified |
 
 The doubled cost is a sensitivity scenario, **not a proven worst-case upper bound**. It exceeds
-both cumulative CPU and wall ceilings on this observation. The linear estimate fits, but that
+the cumulative CPU ceiling on the final observation; its wall estimate fits. The linear estimate fits, but that
 does not establish real-scale qualification. The preflight records this uncertainty and fails
 closed when the required resource evidence/scenario does not qualify. No frozen budget changed.
 
