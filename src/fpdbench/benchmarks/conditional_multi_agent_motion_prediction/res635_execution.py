@@ -606,7 +606,7 @@ def supervise(
     atomic(output / f"postmortem-{record['attempt']}.json", signed(attestation, record["key"]))
     atomic(output / "postmortem.json", signed(attestation, record["key"]))
     store_ledger(root, count, record)
-    atomic(output / "status.json", {"status": record["status"], "exit_code": result_code})
+    # status.json is the completion signal: it is published only after the final charges below.
     # Include final manifest readback, postmortems, fsyncs and ledger/status sealing.
     record["cpu_used"] = initial_cpu + process_tree_cpu()
     record["wall_used"] = initial_wall + time.monotonic() - start
