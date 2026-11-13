@@ -7,6 +7,7 @@ Shares only synthetic input/model prediction and public frozen measurement contr
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -154,6 +155,33 @@ def aggregate(
         "equal_match_means": means,
         "contrasts": contrasts,
     }
+
+
+def verify_real_receipts(
+    receipts: list[scorer.Document], scope_sha256: str, seals: list[str]
+) -> scorer.Document:
+    """Verify a four-match chain against independently supplied seals; never run inference."""
+    from .res646_preflight import CONSUMED_SCOPE
+
+    if (
+        re.fullmatch(r"[0-9a-f]{64}", scope_sha256) is None
+        or scope_sha256 == CONSUMED_SCOPE
+        or len(receipts) != 4
+        or len(seals) != 4
+        or any(re.fullmatch(r"[0-9a-f]{64}", seal) is None for seal in seals)
+    ):
+        raise ValueError("invalid scope or incomplete receipt seals")
+    previous = "0" * 64
+    for match, receipt, seal in zip(EVALUATION_MATCHES, receipts, seals, strict=True):
+        if (
+            receipt.get("match") != match
+            or receipt.get("scope_sha256") != scope_sha256
+            or receipt.get("previous_sha256") != previous
+            or scorer.digest(receipt) != seal
+        ):
+            raise ValueError("receipt identity or seal differs")
+        previous = seal
+    return aggregate(receipts, matches=EVALUATION_MATCHES)
 
 
 def verify_prefix(

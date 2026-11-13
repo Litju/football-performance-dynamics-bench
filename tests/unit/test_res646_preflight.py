@@ -1,6 +1,7 @@
 """Gate 5 tests use invented metadata only."""
 
 import hashlib
+from pathlib import Path
 
 import pytest
 
@@ -68,6 +69,19 @@ def test_real_match_aggregation_requires_complete_records_without_inference() ->
     result = verification.aggregate(receipts, matches=verification.EVALUATION_MATCHES)
     assert result["records"] == 72
     assert all(values["ade_m"] == 2.5 for values in result["equal_match_means"].values())
+    seals: list[str] = []
+    scope = "e" * 64
+    for receipt in receipts:
+        receipt["scope_sha256"] = scope
+        receipt["previous_sha256"] = seals[-1] if seals else "0" * 64
+        seals.append(scorer.digest(receipt))
+    assert verification.verify_real_receipts(receipts, scope, seals) == result
+    with pytest.raises(ValueError, match="receipt identity"):
+        verification.verify_real_receipts(receipts, scope, list(reversed(seals)))
+    with pytest.raises(ValueError, match="incomplete"):
+        verification.verify_real_receipts(receipts[:-1], scope, seals[:-1])
+    with pytest.raises(ValueError, match="invalid scope"):
+        verification.verify_real_receipts(receipts, preflight.CONSUMED_SCOPE, seals)
     receipts[0]["records"][0]["strata"]["all"]["metrics"]["ade_m"] = float("nan")
     with pytest.raises(ValueError, match="invalid aggregate metric"):
         verification.aggregate(receipts, matches=verification.EVALUATION_MATCHES)
@@ -94,3 +108,18 @@ def test_proposed_scope_is_deterministic_and_never_accepts_consumed_scope() -> N
     bindings["output_sha256"] = preflight.CONSUMED_SCOPE
     with pytest.raises(ValueError, match="forbidden"):
         preflight.proposed_scope(bindings)
+
+
+def test_private_admission_reader_rejects_aliases_and_historical_paths(tmp_path: Path) -> None:
+    directory = tmp_path / "fpdbench-private" / "research"
+    directory.mkdir(parents=True, mode=0o700)
+    path = directory / "research-admission.json"
+    path.write_bytes(b"{}")
+    path.chmod(0o600)
+    assert preflight._read_admission(path) == b"{}"
+    alias = tmp_path / "alias"
+    alias.symlink_to(directory, target_is_directory=True)
+    with pytest.raises(OSError):
+        preflight._read_admission(alias / path.name)
+    with pytest.raises(PermissionError):
+        preflight._read_admission(tmp_path / "res594" / path.name)

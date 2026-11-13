@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, cast
@@ -61,8 +62,40 @@ def _validate_admission(document: object, expected_sha256: str) -> dict[str, int
 
 def verify_admission(path: Path) -> dict[str, int]:
     """Verify the pinned admission and declared evaluation counts without reading truth."""
-    raw, _ = paths.read_regular_file(path, max_bytes=16 * 1024 * 1024, require_private=True)
+    raw = _read_admission(path)
     return _validate_admission(source.parse_json(raw), ADMISSION_SHA256)
+
+
+def _read_admission(path: Path) -> bytes:
+    if (
+        not path.is_absolute()
+        or ".." in path.parts
+        or path.name != "research-admission.json"
+        or any(part in str(path).lower() for part in ("res594", "heldout", "held-out"))
+    ):
+        raise PermissionError("unsafe research admission path")
+    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        for part in path.parts[1:-1]:
+            child = os.open(
+                part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fd
+            )
+            os.close(fd)
+            fd = child
+        parent = os.fstat(fd)
+        if parent.st_uid != os.geteuid() or parent.st_mode & 0o077:
+            raise PermissionError("research admission directory must be owner-private")
+        child = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+    finally:
+        os.close(fd)
+    with os.fdopen(child, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        paths.check_regular(before, max_bytes=16 * 1024 * 1024, require_private=True)
+        data = stream.read(16 * 1024 * 1024 + 1)
+        after = os.fstat(stream.fileno())
+    if len(data) != before.st_size or paths.stat_key(before) != paths.stat_key(after):
+        raise ValueError("research admission changed while reading")
+    return data
 
 
 def proposed_scope(identities: dict[str, str]) -> str:
