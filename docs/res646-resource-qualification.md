@@ -1,43 +1,56 @@
 # RES646 synthetic resource qualification
 
-Public-safe. Every input is invented (artificial fixtures, artificial DeepSets checkpoints,
-ephemeral test signing keys). No real source, checkpoint, owner key or authorization was used.
-Raw numbers: `docs/res646-synthetic-resource-report.json`, produced by
-`tools/res646_qualification.py` at commit `adabd73` (execution-path files are unchanged since).
+Every input is invented: artificial sources and DeepSets checkpoints, ephemeral synthetic signing
+keys, and a synthetic-only ledger. No real source/tensor bytes, production key, GO, or execution
+scope were used. Exact source hashes, runtime, four receipt seals and aggregate identity are in
+`docs/res646-synthetic-resource-report.json`. The final-code run used source commit
+`c2d267cc84f9257b8407b7c52347a8f641aae407` and the qualification-tool hash recorded in that report.
+Later documentation/tool commits preserve these exact execution-path hashes.
 
-Runtime: Python 3.12.8, NumPy 2.2.4, PyTorch 2.6.0+cpu, CPU only, one thread, zero paid compute.
-Each point is a complete signed campaign through the detached supervisor: launcher, setup, model
-load, source identity pass, decoding, inference, independent feature/truth/metric audit, receipt
-sealing, ledger operations, final verification. Fixture generation is outside the campaign.
+Runtime: Python 3.12.8, NumPy 2.2.4, PyTorch 2.6.0+cpu, CPU only, one thread, no paid compute.
+The complete signed campaign ran through the existing detached supervisor, including launcher,
+setup, source identity/decoding, model loading, one prediction pass, independent audit, receipt
+sealing, ledger operations, aggregation, final verification and post-accounting completion signal.
+Fixture generation is excluded. Final verification used four receipts, 18 cells each, 72 total
+records, the frozen ADE/FDE/scalar-coordinate XY RMSE, and four C1/C2 contrasts.
 
-| samples/match | eligible windows | records | CPU s | wall s | peak combined RSS | transient disk |
-|---:|---:|---:|---:|---:|---:|---:|
-| 60 | 80 | 72 | 21.1 | 22.4 | 435 MiB | 174 KB |
-| 240 | 800 | 72 | 90.2 | 93.0 | 436 MiB | 183 KB |
-| 1040 | 4,000 | 72 | 437.4 | 449.7 | 437 MiB | 226 KB |
+## Direct observations
 
-Marginal cost between 800 and 4,000 windows is 0.108 CPU s/window (fixed cost ≈ 3.7 s); wall/CPU
-is 1.03. RSS and transient disk are flat (they depend on receipts, not window count).
+| code generation | eligible windows | CPU s | wall s | peak combined RSS | transient disk |
+|---|---:|---:|---:|---:|---:|
+| historical | 80 | 21.1 | 22.4 | 435 MiB | 174 KB |
+| historical | 800 | 90.2 | 93.0 | 436 MiB | 183 KB |
+| historical | 4,000 | 437.4 | 449.7 | 437 MiB | 226 KB |
+| final implementation | 800 | 178.060 | 181.681 | 436.4 MiB | 191,361 bytes |
 
-## Extrapolation to the frozen study (51,713 windows, ~930,834 forward calls)
+The historical measurements predate the final supervisor status-ordering repair and these P1
+repairs. They are preserved with their original code/runtime metadata under `prior_qualification`;
+they do not qualify the current implementation. The final observation is slower than the old
+800-window result. This run alone does not identify the cause or separate fixed setup overhead
+from marginal per-window cost. No causal performance improvement or regression is asserted.
 
-| limit | frozen ceiling | point estimate | conservative bound | verdict |
-|---|---:|---:|---:|---|
-| cumulative CPU | 14,400 s | ≈ 5.6k s (39%) | ≈ 12k s (83%) | within, margin unproven on real bytes |
-| cumulative wall | 21,600 s | ≈ 5.8k s (27%) | ≈ 12.4k s (57%) | within |
-| combined RSS | 2 GiB | ≈ 0.44 GiB | same | within |
-| transient disk | 2 GiB | < 1 MB | same | within |
+## Linear estimates and sensitivity scenarios
 
-The point estimate is a linear scaling of the 4,000-window run. The conservative bound exists
-because the fixture has ~2.1 source frames per window while a real match at 10 Hz has roughly
-4–5; source decoding costs ≈ 0.029 CPU s/window here (≈ 26% of the total, measured separately),
-so the bound doubles *all* per-window cost. Real tracking-file density and player counts were
-not measured, and cannot be before the separate owner GO.
+For the admitted 51,713 windows (~930,834 forward calls), zero-intercept scaling of the final
+800-window observation gives the following. Scaling fixed overhead with every window can overstate
+cost; real-source density and decode cost can also increase it. Neither effect was measured.
 
-## Assessment
+| quantity | frozen ceiling | linear estimate | 2x sensitivity scenario |
+|---|---:|---:|---:|
+| cumulative CPU | 14,400 s | 11,510 s (80%) | 23,020 s (160%) |
+| cumulative wall | 21,600 s | 11,744 s (54%) | 23,488 s (109%) |
+| combined RSS | 2 GiB | observed 436.4 MiB | real-data scaling unverified |
+| transient disk | 2 GiB | observed 191,361 bytes | real-data scaling unverified |
 
-Feasible within the frozen limits on all measured evidence. **Not demonstrated on real bytes.**
-The remaining uncertainty is real-source decode cost; the worst case considered still fits
-CPU with ~17% margin. Resource exhaustion is a permanent terminal failure of the one-shot scope,
-so the first real run carries that risk by design. No budget, model, device or compute purchase
-was changed. No resource blocker is raised.
+The doubled cost is a sensitivity scenario, **not a proven worst-case upper bound**. It exceeds
+both cumulative CPU and wall ceilings on this observation. The linear estimate fits, but that
+does not establish real-scale qualification. The preflight records this uncertainty and fails
+closed when the required resource evidence/scenario does not qualify. No frozen budget changed.
+
+## Remaining qualification
+
+The final synthetic campaign passed scientifically and structurally. Real-source performance,
+actual applicable quotas, and unchanged-byte evidence for the recovered private readback remain
+unqualified. Current cgroup limits and filesystem capacity were observed in the owner-private
+report; host free space alone does not establish a quota. A resource limit remains a permanent
+terminal failure of the one-shot scope. No real execution is authorized by these measurements.

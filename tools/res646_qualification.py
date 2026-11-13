@@ -8,11 +8,13 @@ is used. Input fixture generation is outside the campaign; the launcher exits af
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import tempfile
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,10 +81,23 @@ def measure(samples: int) -> dict[str, object]:
         )
         ledger = campaign.record()
         assert manifest["aggregate"]["records"] == 72
+        assert len(manifest["aggregate"]["contrasts"]) == 4
+        assert len(ledger["seals"]) == 4
+        receipts = [execution.read(campaign.output / f"match-{i}.json") for i in range(4)]
+        assert all(len(receipt["records"]) == 18 for receipt in receipts)
+        assert all(receipt["independent_audit"]["records"] for receipt in receipts)
+        assert ledger["status"] == "COMPLETED_VERIFIED"
+        assert execution.read(campaign.output / "status.json")["exit_code"] == 0
         return {
             "samples_per_match": samples,
             "windows": workload.windows,
             "records": 72,
+            "sealed_receipts": 4,
+            "cells_per_match": [len(receipt["records"]) for receipt in receipts],
+            "c1_c2_contrasts": 4,
+            "receipt_seals": ledger["seals"],
+            "aggregate_sha256": workloads.s.digest(manifest["aggregate"]),
+            "completed_at_utc": datetime.now(UTC).isoformat(),
             "cpu_s": ledger["cpu_used"],
             "wall_s": ledger["wall_used"],
             "combined_peak_rss_bytes": ledger["peak_rss_bytes"],
@@ -117,7 +132,14 @@ def main() -> None:
         "schema": "fpdbench.res646.synthetic-resource-qualification/1",
         "synthetic_only": True,
         "full_scale_real_readiness": False,
-        "policy": "measurements only; no extrapolation beyond the tested source populations",
+        "policy": (
+            "direct synthetic observations; linear estimates and 2x scenarios "
+            "are not real-data bounds"
+        ),
+        "source_commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip(),
+        "qualification_tool_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "code_sha256": pipeline.provenance([], "")["code_sha256"],
         "runtime": pipeline.provenance([], "")["runtime"],
         "limits": execution.REAL_BUDGET,

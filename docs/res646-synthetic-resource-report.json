@@ -2,19 +2,21 @@
   "schema": "fpdbench.res646.synthetic-resource-qualification/1",
   "synthetic_only": true,
   "full_scale_real_readiness": false,
-  "policy": "measurements only; no extrapolation beyond the tested source populations",
+  "policy": "direct synthetic observations; linear estimates and 2x scenarios are not real-data bounds",
+  "source_commit": "c2d267cc84f9257b8407b7c52347a8f641aae407",
+  "qualification_tool_sha256": "4d9fa3d9b82c0e7daaeb4ccb7d7a1e7f58eb7e86bb0ca153abcaadf9f82744dd",
   "code_sha256": {
     "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
-    "res645_independent.py": "1575dfd6a124fe2ca6818270d3cbf3eb3aac20a0417639bb3da2f10e2ab73a2b",
+    "res645_independent.py": "b7a7f85b69614ce6426e32f922fbc88c685989ba35a88ccbcb6544aefc118603",
     "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
-    "res635_execution.py": "4547952532c62bbb13003e5572dfffa54507f21b7e74fa3e388f9f977a31749f",
+    "res635_execution.py": "f50783157c6a1a05e40dab642ca689d429d6c22ee85092442ac8a83f79755912",
     "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
     "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
-    "res645_paths.py": "4f0d9196d9d32ebc2bb3d80092d97531005856fbb57930a38fd3917b2ad9b060",
+    "res645_paths.py": "74cb52d46a19ff26b2261a70dee6479b2af37f9eb7991395969271126faf9ae8",
     "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
     "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
-    "res646_authorization.py": "ef0d4b8572b9c370f9949e92ef6b4e69e9b5c61ee61bc62477174be9a3be72b1",
-    "res646_preflight.py": "4091f55fe907170aba7c6bf2b49620f753c5a1e924df186c8dc70e8abfe0db8c",
+    "res646_authorization.py": "a04f4206c36e8a84ccce84f9462d4bb4da70a54ca435b3a335faadc3560c727d",
+    "res646_preflight.py": "d8876a8f7db94cfba3af70b1f59b323b9d7b51f1860fdf86192036926f5fb583",
     "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
     "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
     "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
@@ -45,61 +47,31 @@
   },
   "measurements": [
     {
-      "samples_per_match": 60,
-      "windows": 80,
-      "records": 72,
-      "cpu_s": 21.125929592,
-      "wall_s": 22.40107860500575,
-      "combined_peak_rss_bytes": 456634368,
-      "transient_disk_bytes": 174311,
-      "read_only_fixture_bytes": 7399272,
-      "scope_sha256": "f984c73ddbd25749f1e10fe5ce996811393cb96bb1fb27854c5baf9ae79beedc",
-      "charged_phases": [
-        "launcher",
-        "supervisor setup",
-        "model setup",
-        "source identity",
-        "source decoding",
-        "inference",
-        "independent feature/truth/metric audit",
-        "receipt verification",
-        "aggregation",
-        "final sealing"
-      ]
-    },
-    {
       "samples_per_match": 240,
       "windows": 800,
       "records": 72,
-      "cpu_s": 90.163884104,
-      "wall_s": 93.00033324601827,
-      "combined_peak_rss_bytes": 457617408,
-      "transient_disk_bytes": 183490,
+      "sealed_receipts": 4,
+      "cells_per_match": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "c1_c2_contrasts": 4,
+      "receipt_seals": [
+        "7d44f65b675e983d380402bcc351371ba27abc83243c0110a888899ddebce4b4",
+        "50596f23a58ccbaadf7274df7b9c947c4674fac964895875a297ed8939992555",
+        "659c5a34bd852442d27ec2195298e4836e41eea17daf0b155d9c0a539eb58448",
+        "d1c202dbec5bbf7318444de1c706d8b4f728077067a620eaa02e99c40389ea4c"
+      ],
+      "aggregate_sha256": "251afc7d4ae52968f33a06ee326fb0c9b8ba074024fd1744251b89f67d072209",
+      "completed_at_utc": "2026-11-13T23:01:57.604683+00:00",
+      "cpu_s": 178.059898542,
+      "wall_s": 181.6814071869885,
+      "combined_peak_rss_bytes": 457613312,
+      "transient_disk_bytes": 191361,
       "read_only_fixture_bytes": 31557397,
-      "scope_sha256": "709f56503f1bbdf7d40121948a6bb81d54286c582b3cab0f349dda8582805366",
-      "charged_phases": [
-        "launcher",
-        "supervisor setup",
-        "model setup",
-        "source identity",
-        "source decoding",
-        "inference",
-        "independent feature/truth/metric audit",
-        "receipt verification",
-        "aggregation",
-        "final sealing"
-      ]
-    },
-    {
-      "samples_per_match": 1040,
-      "windows": 4000,
-      "records": 72,
-      "cpu_s": 437.377860722,
-      "wall_s": 449.7086255810136,
-      "combined_peak_rss_bytes": 458944512,
-      "transient_disk_bytes": 226350,
-      "read_only_fixture_bytes": 139123489,
-      "scope_sha256": "5c3b9ba8738e4c9ac0c5b373962dbcc8e7aafedf0f203e1a65b80f916f5e8879",
+      "scope_sha256": "73c12b677c640f211dfdd68712cf32448cf0d0dc106aa04f50f15095be68e116",
       "charged_phases": [
         "launcher",
         "supervisor setup",
@@ -113,5 +85,134 @@
         "final sealing"
       ]
     }
-  ]
+  ],
+  "prior_qualification": {
+    "note": "Prior measurements predate the final supervisor status-ordering repair and the remediation. Retained as historical observations, not final-code measurements.",
+    "report": {
+      "schema": "fpdbench.res646.synthetic-resource-qualification/1",
+      "synthetic_only": true,
+      "full_scale_real_readiness": false,
+      "policy": "measurements only; no extrapolation beyond the tested source populations",
+      "code_sha256": {
+        "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
+        "res645_independent.py": "1575dfd6a124fe2ca6818270d3cbf3eb3aac20a0417639bb3da2f10e2ab73a2b",
+        "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+        "res635_execution.py": "4547952532c62bbb13003e5572dfffa54507f21b7e74fa3e388f9f977a31749f",
+        "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
+        "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
+        "res645_paths.py": "4f0d9196d9d32ebc2bb3d80092d97531005856fbb57930a38fd3917b2ad9b060",
+        "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
+        "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
+        "res646_authorization.py": "ef0d4b8572b9c370f9949e92ef6b4e69e9b5c61ee61bc62477174be9a3be72b1",
+        "res646_preflight.py": "4091f55fe907170aba7c6bf2b49620f753c5a1e924df186c8dc70e8abfe0db8c",
+        "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+        "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+        "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
+        "res635_verification.py": "5e9892df288c0ec132e46f04645e4e16a2402f0caeecaffd438b3bc9459d0b40",
+        "streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+        "evaluation_population.py": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b",
+        "empirical_experiment_plan.py": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4",
+        "res635_owner_authorization_v1.schema.json": "5472f0c9ca87dcbffe0eb97b892126a3c6758dc520ae0a6d2a7aa1081c4037af",
+        "../../data_sources/protected_skillcorner.py": "030621489eec053fd4e797d313dff3855d0b049fe52e02b38084cd7734058bb4",
+        "../../data_sources/skillcorner.py": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b",
+        "../../data_states/skillcorner.py": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66",
+        "../../eligibility/skillcorner.py": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5",
+        "../../evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+      },
+      "runtime": {
+        "python": "3.12.8",
+        "numpy": "2.2.4",
+        "torch": "2.6.0+cpu",
+        "device": "cpu",
+        "threads": 1,
+        "precision": "float32"
+      },
+      "limits": {
+        "cpu_s": 14400.0,
+        "wall_s": 21600.0,
+        "rss_bytes": 2147483648,
+        "disk_bytes": 2147483648
+      },
+      "measurements": [
+        {
+          "samples_per_match": 60,
+          "windows": 80,
+          "records": 72,
+          "cpu_s": 21.125929592,
+          "wall_s": 22.40107860500575,
+          "combined_peak_rss_bytes": 456634368,
+          "transient_disk_bytes": 174311,
+          "read_only_fixture_bytes": 7399272,
+          "scope_sha256": "f984c73ddbd25749f1e10fe5ce996811393cb96bb1fb27854c5baf9ae79beedc",
+          "charged_phases": [
+            "launcher",
+            "supervisor setup",
+            "model setup",
+            "source identity",
+            "source decoding",
+            "inference",
+            "independent feature/truth/metric audit",
+            "receipt verification",
+            "aggregation",
+            "final sealing"
+          ]
+        },
+        {
+          "samples_per_match": 240,
+          "windows": 800,
+          "records": 72,
+          "cpu_s": 90.163884104,
+          "wall_s": 93.00033324601827,
+          "combined_peak_rss_bytes": 457617408,
+          "transient_disk_bytes": 183490,
+          "read_only_fixture_bytes": 31557397,
+          "scope_sha256": "709f56503f1bbdf7d40121948a6bb81d54286c582b3cab0f349dda8582805366",
+          "charged_phases": [
+            "launcher",
+            "supervisor setup",
+            "model setup",
+            "source identity",
+            "source decoding",
+            "inference",
+            "independent feature/truth/metric audit",
+            "receipt verification",
+            "aggregation",
+            "final sealing"
+          ]
+        },
+        {
+          "samples_per_match": 1040,
+          "windows": 4000,
+          "records": 72,
+          "cpu_s": 437.377860722,
+          "wall_s": 449.7086255810136,
+          "combined_peak_rss_bytes": 458944512,
+          "transient_disk_bytes": 226350,
+          "read_only_fixture_bytes": 139123489,
+          "scope_sha256": "5c3b9ba8738e4c9ac0c5b373962dbcc8e7aafedf0f203e1a65b80f916f5e8879",
+          "charged_phases": [
+            "launcher",
+            "supervisor setup",
+            "model setup",
+            "source identity",
+            "source decoding",
+            "inference",
+            "independent feature/truth/metric audit",
+            "receipt verification",
+            "aggregation",
+            "final sealing"
+          ]
+        }
+      ]
+    }
+  },
+  "extrapolation": {
+    "windows": 51713,
+    "method": "zero-intercept linear scaling from final 800-window campaign; fixed overhead not separately identified",
+    "cpu_s": 11510.014416628059,
+    "wall_s": 11744.113262325922,
+    "two_x_cpu_s": 23020.028833256118,
+    "two_x_wall_s": 23488.226524651844,
+    "policy": "sensitivity scenario, not a proven upper bound; real-data assumptions unverified"
+  }
 }

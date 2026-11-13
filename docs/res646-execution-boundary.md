@@ -84,7 +84,9 @@ See `test_res646_preflight_qualification.py` for the complete invented evidence 
 Every fresh reservation, supervisor attempt, continuation, and worker entry requires an unexpired
 signed approval. Each reservation and continuation records its authorization time in the
 independently MAC-authenticated ledger. A running worker checks expiry at every scoring check;
-expiry raises an integrity failure before another scoring operation and is permanently terminal.
+expiry raises an integrity failure at the next existing check and is permanently terminal.
+An in-flight window can finish; the next window cannot start. This is a check-boundary policy,
+not a wall-clock interrupt of a tensor operation.
 It neither adds a grace period nor extends continuation rights or cumulative limits.
 
 Historical verification authenticates the original signature and checks those ledger times fall
