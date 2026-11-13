@@ -49,12 +49,13 @@ type Mode = Literal["synthetic", "frozen"]
 
 @dataclass(frozen=True, slots=True)
 class SourceMatchSpec:
-    """One match directory: metadata.json, tracking.jsonl, phases.json, locked.jsonl."""
+    """Match inputs with an optional separately stored population lock."""
 
     label: str
     match_id: str
     directory: Path
     role: str = "evaluation"
+    locked_path: Path | None = None
 
 
 def evaluation_match_ids() -> frozenset[str]:
@@ -240,7 +241,9 @@ class SourceMatch:
     ) -> Iterator[Document]:
         if self.source_sha256 is None:
             raise ValueError("prepare() is mandatory before windows()")
-        locked_fd = paths.open_regular_fd(self.spec.directory / "locked.jsonl")
+        locked_fd = paths.open_regular_fd(
+            self.spec.locked_path or self.spec.directory / "locked.jsonl"
+        )
         state = _Pass()
         eligible = 0
         locked_hash = hashlib.sha256()

@@ -101,6 +101,25 @@ def test_metadata_inventory_never_loads_models_and_rejects_changed_checkpoint(
         ck.verify_inventory(manifest, checkpoints, target / "receipts", "synthetic")
 
 
+def test_source_stream_accepts_separate_synthetic_population_lock(tmp_path: Path) -> None:
+    directory = tmp_path / "match"
+    fx.build_match(directory, 0, 46)
+    spec = src.SourceMatchSpec("synthetic-match-0", fx.FIXTURE_MATCH_IDS[0], directory)
+    original = src.SourceMatch(spec, "synthetic")
+    original.prepare()
+    expected = list(original.windows())
+    lock = tmp_path / "population.jsonl"
+    (directory / "locked.jsonl").rename(lock)
+    separate = src.SourceMatch(
+        src.SourceMatchSpec(spec.label, spec.match_id, directory, locked_path=lock), "synthetic"
+    )
+    separate.prepare()
+    assert list(separate.windows()) == expected
+    assert (
+        separate.source_document()["locked_sha256"] == original.source_document()["locked_sha256"]
+    )
+
+
 @functools.cache
 def windows_of(bundle: Path, index: int = 0) -> list[dict[str, Any]]:
     spec = fx.read_bundle(bundle)[0][index]
