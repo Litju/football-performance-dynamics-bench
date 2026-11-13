@@ -424,3 +424,10 @@ class Campaign(CampaignPlan):
             allowed.add(spec.locked_path or spec.directory / "locked.jsonl")
         if path not in allowed:
             raise PermissionError("input path is outside signed campaign inventory")
+
+
+def require_campaign(value: object) -> Campaign:
+    """Reject duck-typed/subclass authority before calling any caller-supplied method."""
+    if type(value) is not Campaign:
+        raise PermissionError("a verified RES646 Campaign authority is required")
+    return value

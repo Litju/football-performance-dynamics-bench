@@ -144,7 +144,7 @@ def reserve(
     *,
     workload: wl.Workload | None = None,
 ) -> s.Document:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     workload.validate_count(count)
     if isinstance(workload, wl.RealWorkload):
         workload.campaign.verify()
@@ -206,7 +206,7 @@ def store_ledger(root: Path, count: int, record: s.Document) -> None:
 def bound_record(
     root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
 ) -> s.Document:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     if isinstance(workload, wl.RealWorkload):
         workload.campaign.verify()
         if (root, output) != (workload.campaign.root, workload.campaign.output):
@@ -269,7 +269,7 @@ def worker(
     *,
     ledger_root: Path | None = None,
 ) -> int:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     if isinstance(workload, wl.RealWorkload):
         campaign = workload.campaign
         if (ledger_root, output) != (campaign.root, campaign.output):
@@ -370,7 +370,7 @@ def supervise(
     workload: wl.Workload | None = None,
     evidence: ev.CgroupEvidence | None = None,
 ) -> int:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     provider = evidence or ev.CgroupEvidence()
     record = bound_record(root, output, count, workload=workload)
     if record["status"] not in ("RESERVED", "CONTINUATION_RESERVED"):
@@ -621,7 +621,7 @@ def supervise(
 def continue_campaign(
     root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
 ) -> None:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     record = bound_record(root, output, count, workload=workload)
     if record["status"] != "CONTINUATION_READY_SAME_SCOPE":
         raise ValueError("campaign is not continuation ready")
@@ -710,7 +710,7 @@ def completion_status(workload: wl.Workload) -> str:
 def verify_complete(
     root: Path, output: Path, count: int, *, workload: wl.Workload | None = None
 ) -> s.Document:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     record = bound_record(root, output, count, workload=workload)
     if record["status"] != "COMPLETED_VERIFIED":
         raise ValueError("campaign not complete")
@@ -738,7 +738,7 @@ def launch(
     wall_limit: float | None = None,
     workload: wl.Workload | None = None,
 ) -> int:
-    workload = workload or wl.SyntheticWorkload()
+    workload = wl.require_workload(workload or wl.SyntheticWorkload())
     safe_path(output)
     if resume:
         continue_campaign(root, output, count, workload=workload)

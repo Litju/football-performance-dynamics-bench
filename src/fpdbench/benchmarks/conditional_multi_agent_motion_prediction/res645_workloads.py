@@ -347,3 +347,17 @@ def make(bundle: Path | None, config: Path | None = None) -> Workload:
             raise ValueError("campaign and fixture modes are mutually exclusive")
         return RealWorkload(config)
     return SyntheticWorkload() if bundle is None else FixtureWorkload(bundle)
+
+
+def require_workload(workload: Workload) -> Workload:
+    """Only registered implementations may reach supervisor or worker execution."""
+    if type(workload) is RealWorkload:
+        campaign = authorization.require_campaign(workload.campaign)
+        campaign.verify()
+        if workload.namespace == campaign.namespace:
+            return workload
+    elif type(workload) is SyntheticWorkload and workload.namespace == "RES643-SYNTHETIC-ONLY-v1":
+        return workload
+    elif type(workload) is FixtureWorkload and workload.namespace == FIXTURE_NAMESPACE:
+        return workload
+    raise PermissionError("unregistered workload or authorization namespace impersonation")

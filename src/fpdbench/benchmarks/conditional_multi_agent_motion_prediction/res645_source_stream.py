@@ -73,6 +73,9 @@ def authorize(spec: SourceMatchSpec, mode: Mode, campaign: Campaign | None = Non
             raise PermissionError(
                 "RES646 real source access requires authenticated owner authorization"
             )
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
         campaign.allow_source(spec)
         return
     if mode != "synthetic":

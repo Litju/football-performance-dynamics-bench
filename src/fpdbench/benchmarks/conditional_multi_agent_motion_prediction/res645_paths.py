@@ -40,6 +40,9 @@ def reject_unsafe_path(path: Path, *, campaign: Campaign | None = None) -> Path:
         raise PermissionError("path traversal components refused")
     lowered = text.lower()
     if campaign is not None:
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
         campaign.allow_input(path)
     if any(
         fragment in lowered

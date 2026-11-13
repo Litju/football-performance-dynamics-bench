@@ -8,6 +8,7 @@ import sys
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -332,3 +333,54 @@ def test_long_fixture_preserves_frozen_panels_and_clock(tmp_path: Path, samples:
             count += 1
             assert all(len(scene["player_ids"]) == 11 for scene in window["scenes"])
         assert count == samples - 40
+
+
+def test_frozen_loaders_refuse_duck_typed_authority_before_input_open(
+    bundle: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = fx.read_bundle(bundle)[0][0]
+    fake = SimpleNamespace(
+        allow_source=lambda *args: None,
+        allow_models=lambda *args: None,
+        allow_input=lambda *args: None,
+    )
+    manifest = wl.ck.frozen_manifest()
+    records = wl.ck.validate_records(manifest)
+    cell = next(iter(records))
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            wl.paths, "read_regular_file", lambda *args, **kwargs: pytest.fail("input opened")
+        )
+        with pytest.raises(PermissionError, match="Campaign authority"):
+            wl.src.SourceMatch(spec, "frozen", fake)
+        with pytest.raises(PermissionError, match="Campaign authority"):
+            wl.ck.load_models(
+                manifest, bundle / "checkpoints", "frozen", bundle / "receipts", campaign=fake
+            )
+        with pytest.raises(PermissionError, match="Campaign authority"):
+            wl.ck.load_checkpoint(bundle / "fake.pt", records[cell], cell, campaign=fake)
+    with pytest.raises(PermissionError, match="Campaign authority"):
+        wl.paths.read_regular_file(bundle / "metadata.json", max_bytes=100, campaign=fake)
+
+
+def test_worker_and_supervisor_reject_namespace_impersonation(tmp_path: Path) -> None:
+    root, output = tmp_path / "ledger", tmp_path / "output"
+    fake = SimpleNamespace(namespace=a.REAL, cli=[])
+    attempts = [
+        lambda: e.reserve(root, output, 1, False, workload=fake),
+        lambda: e.bound_record(root, output, 1, workload=fake),
+        lambda: e.worker(output, 1, 0, -1, fake, ledger_root=root),
+        lambda: e.supervise(root, output, 1, workload=fake),
+        lambda: e.continue_campaign(root, output, 1, workload=fake),
+        lambda: e.verify_complete(root, output, 1, workload=fake),
+        lambda: e.launch(root, output, 1, workload=fake),
+    ]
+    for attempt in attempts:
+        with pytest.raises(PermissionError, match="unregistered workload"):
+            attempt()
+    synthetic = wl.SyntheticWorkload()
+    synthetic.namespace = a.REAL
+    with pytest.raises(PermissionError, match="namespace impersonation"):
+        e.worker(output, 1, 0, -1, synthetic)
+    assert not root.exists() and not output.exists()

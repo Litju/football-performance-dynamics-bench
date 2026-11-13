@@ -284,6 +284,9 @@ def load_checkpoint(
             raise CheckpointContractError(
                 "frozen inference requires authenticated owner authorization"
             )
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
         campaign.allow_models(frozen_manifest(), path.parent, campaign.receipts)
         if record != validate_records(frozen_manifest())[cell]:
             raise CheckpointContractError("checkpoint record differs from frozen manifest")
@@ -340,6 +343,9 @@ def load_models(
             raise CheckpointContractError(
                 "frozen inference requires authenticated owner authorization"
             )
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
         campaign.allow_models(manifest, directory, receipts)
     else:
         campaign = None
