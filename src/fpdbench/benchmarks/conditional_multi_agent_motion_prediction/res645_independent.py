@@ -27,7 +27,9 @@ import torch
 
 from . import learned_deepsets as lds
 from . import res635_post_failure_evaluation as s
+from . import res645_checkpoints as checkpoints_contract
 from . import res645_paths as paths
+from . import res645_source_stream as source
 from .evaluation_population import prospective_window_id_v2
 
 type Document = dict[str, Any]
@@ -118,7 +120,13 @@ class SourcePredictionAudit(PredictionAudit):
         campaign: Campaign | None = None,
     ) -> None:
         super().__init__()
-        self.windows = raw_windows(directory, label, locked_path, campaign)
+        self.windows = raw_windows(
+            directory,
+            label,
+            locked_path,
+            campaign,
+            mode="frozen" if campaign is not None else "synthetic",
+        )
         self.ids, self.masks, self.truths = (hashlib.sha256() for _ in range(3))
         self.count = self.scoreable = self.scenes = self.points = self.finals = 0
         self.missingness = dict.fromkeys(
@@ -307,12 +315,37 @@ def raw_windows(
     label: str,
     locked_path: Path | None = None,
     campaign: Campaign | None = None,
+    *,
+    mode: source.Mode = "synthetic",
 ) -> Iterator[Document]:
     """Stream eligible windows straight from raw frames; no canonicalizer, no producer."""
+    if mode == "frozen":
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
+        campaign.require_worker()
+        specs = [
+            spec
+            for spec in campaign.specs
+            if (spec.directory, spec.label, spec.locked_path) == (directory, label, locked_path)
+        ]
+        if len(specs) != 1:
+            raise PermissionError("source is outside signed campaign")
+        spec = specs[0]
+    else:
+        if campaign is not None or mode != "synthetic":
+            raise PermissionError("explicit real source mode required")
+        marker, _ = paths.read_regular_file(directory / "fixture.json", max_bytes=4096)
+        spec = source.SourceMatchSpec(
+            label, json.loads(marker)["match_id"], directory, locked_path=locked_path
+        )
+    source.authorize(spec, mode, campaign)
     meta_bytes, _ = paths.read_regular_file(
         directory / "metadata.json", max_bytes=16 << 20, campaign=campaign
     )
     meta = json.loads(meta_bytes)
+    if str(meta["id"]) != spec.match_id:
+        raise PermissionError("source match identity differs from authorized fixture or campaign")
     team_of = {p["id"]: p["team_id"] for p in meta["players"]}
     home_team = meta["home_team"]["id"]
     home_ids = sorted(i for i, t in team_of.items() if t == home_team)
@@ -519,14 +552,30 @@ def model_inputs(w: Document, regime: str) -> lds.ModelInputs:
 
 
 def load_models(
-    manifest: Document, directory: Path, receipts: Path
+    manifest: Document,
+    directory: Path,
+    receipts: Path,
+    *,
+    mode: checkpoints_contract.Mode = "synthetic",
+    campaign: Campaign | None = None,
 ) -> tuple[dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP], list[Document]]:
     """Independent loader: reads the manifest-named bytes itself and checks the hash."""
+    checkpoints_contract.validate_manifest(manifest, mode)
+    if mode == "frozen":
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
+        campaign.allow_models(manifest, directory, receipts)
+    elif campaign is not None:
+        raise PermissionError("explicit real checkpoint mode required")
     models: dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP] = {}
     bindings: list[Document] = []
     for rec in manifest["checkpoints"]:
         fit, fit_id = paths.read_regular_file(
-            receipts / f"{rec['receipt_sha256']}.json", max_bytes=1 << 20, require_private=True
+            receipts / f"{rec['receipt_sha256']}.json",
+            max_bytes=1 << 20,
+            require_private=True,
+            campaign=campaign,
         )
         if (
             fit_id.sha256 != rec["receipt_sha256"]
@@ -534,7 +583,10 @@ def load_models(
         ):
             raise ValueError("independent fit receipt mismatch")
         data, ident = paths.read_regular_file(
-            directory / f"{rec['checkpoint_sha256']}.pt", max_bytes=1 << 26, require_private=True
+            directory / f"{rec['checkpoint_sha256']}.pt",
+            max_bytes=1 << 26,
+            require_private=True,
+            campaign=campaign,
         )
         if ident.sha256 != rec["checkpoint_sha256"]:
             raise ValueError("independent checkpoint hash mismatch")
@@ -562,9 +614,19 @@ def load_models(
 
 
 def match_body(
-    directory: Path, label: str, manifest: Document, checkpoints: Path, receipts: Path
+    directory: Path,
+    label: str,
+    manifest: Document,
+    checkpoints: Path,
+    receipts: Path,
+    *,
+    mode: source.Mode = "synthetic",
+    campaign: Campaign | None = None,
 ) -> Document:
-    models, bindings = load_models(manifest, checkpoints, receipts)
+    # Real verification audits captured predictions; it must never replay learned inference.
+    if mode != "synthetic" or campaign is not None:
+        raise PermissionError("match_body is invented-fixture verification only")
+    models, bindings = load_models(manifest, checkpoints, receipts, mode=mode)
     sums = [[[0.0] * 3 for _ in s.STRATA] for _ in s.CELLS]
     counts = [[0] * len(s.STRATA) for _ in s.CELLS]
     ids, masks, truths = hashlib.sha256(), hashlib.sha256(), hashlib.sha256()
@@ -673,5 +735,6 @@ def match_body(
 
 
 def _file_sha(path: Path) -> str:
-    with path.open("rb") as stream:
+    with os.fdopen(paths.open_regular_fd(path), "rb") as stream:
+        paths.check_regular(os.fstat(stream.fileno()), max_bytes=MAX, require_private=False)
         return hashlib.file_digest(stream, "sha256").hexdigest()

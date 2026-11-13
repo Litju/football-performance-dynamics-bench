@@ -107,9 +107,16 @@ def open_regular_fd(
 ) -> int:
     parent, name = _open_parent(path, campaign)
     try:
-        return os.open(
+        fd = os.open(
             name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent
         )
+        try:
+            info = os.fstat(fd)
+            check_regular(info, max_bytes=info.st_size, require_private=require_private)
+        except BaseException:
+            os.close(fd)
+            raise
+        return fd
     except OSError as exc:
         raise PermissionError("input file missing or aliased") from exc
     finally:
