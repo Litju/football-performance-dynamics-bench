@@ -62,13 +62,19 @@ report, including diagnostic paths, must be written into an existing owner-priva
 The prior metadata evidence must use `fpdbench.res646.gate5-evidence/1`. It identifies its verifier,
 method, current UTC observation time, frozen identities, exact code/runtime, and approved read
 scope. `GATE5_READ_SCOPE` is the canonical SHA-256 of that scope: the six configured paths,
-source root, resource report, and `metadata-only-no-source-or-model-bytes` policy. Inventory
+source root, independent source metadata, intended four scoring match specifications, resource report, and `metadata-only-no-source-or-model-bytes` policy. Inventory
 bytes must match the frozen admission's inventory hash. Evidence retains independently verified
 hashes and contemporaneous device/inode/size/mtime/ctime identities for all 81 source files,
 18 frozen checkpoints and 18 verified fit receipts. Current metadata must match those identities;
 new stat observations cannot retroactively establish unchanged bytes after an old readback.
 Checkpoint and receipt paths must match the existing loader's separate bare-hash inventories.
-Only `O_PATH` inode inspection touches these 117 inputs; no contents are opened.
+The four intended scoring matches additionally require 16 independently verified normalized
+input/lock identities. Their metadata/tracking hashes match the original source inventory;
+normalized phases match the independent source report pinned by admission, and lock hashes match
+both admitted producer/verifier artifacts. Only `O_PATH` inode inspection touches these 133 data,
+checkpoint and receipt files; no contents are opened. Exact checkpoint/receipt directory entries
+must match the loader as well. The successful report emits the concrete campaign configuration;
+constructing `CampaignPlan` from it produces the same identities and proposed execution scope.
 
 Qualification also checks private empty ledger/output directories, tree/inode isolation, cgroup
 ancestor limits, CPU affinity, actual filesystem capacity and inode availability, and current

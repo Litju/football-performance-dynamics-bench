@@ -300,6 +300,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         Path(values["SOURCE_INVENTORY"]).name != "source-inventory.json"
         or Path(values["RESEARCH_ADMISSION"]).name != "research-admission.json"
         or Path(scope["resource_report"]).suffix != ".json"
+        or Path(scope["independent_source"]).name != "independent-source.json"
     ):
         raise ValueError("configured metadata paths have unexpected names")
     verified_at = datetime.fromisoformat(evidence["verified_at_utc"].replace("Z", "+00:00"))
@@ -317,6 +318,20 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         or inventory_sha != admission["source_inventory_sha256"]
     ):
         raise ValueError("wrong source inventory")
+    independent_bytes = _metadata(Path(scope["independent_source"]))
+    if hashlib.sha256(independent_bytes).hexdigest() != admission["independent_source_sha256"]:
+        raise ValueError("independent source metadata differs from frozen admission")
+    independent_source = json.loads(independent_bytes)
+    independent_files = independent_source["source_files"]
+    expected_readback = {r["path"]: (r["bytes"], r["sha256"]) for r in inventory}
+    observed_readback = {r["path"]: (r["bytes"], r["sha256"]) for r in independent_files}
+    if (
+        len(independent_files) != 81
+        or len(observed_readback) != 81
+        or observed_readback != expected_readback
+    ):
+        raise ValueError("independent source inventory differs")
+    normalization = {str(r["match_id"]): r for r in independent_source["normalization_receipts"]}
     checked: dict[str, Any] = {}
     entries = evidence["files"]
     if len(entries) != 117 or len({r["path"] for r in entries}) != 117:
@@ -351,9 +366,85 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         raise ValueError("aliased input identities")
     if evidence["fit_receipt_bindings_verified"] is not True:
         raise ValueError("incomplete independent fit receipt verification")
+    matches = evidence["matches"]
+    if matches != scope["matches"] or [m["match_id"] for m in matches] != list(counts):
+        raise ValueError("intended scoring matches differ from approved scope or admission")
+    expected_scoring: dict[str, str] = {}
+    originals = {r["path"]: r["sha256"] for r in inventory}
+    for match in matches:
+        mid = match["match_id"]
+        if (
+            set(match) != {"match_id", "directory", "locked_path", "eligible_windows", "sha256"}
+            or match["eligible_windows"] != counts[mid]
+            or set(match["sha256"])
+            != {"metadata_sha256", "phases_sha256", "tracking_raw_sha256", "locked_sha256"}
+        ):
+            raise ValueError("incomplete intended scoring match binding")
+        for key, raw_name in (
+            ("metadata_sha256", "match.json"),
+            ("tracking_raw_sha256", "tracking_extrapolated.jsonl"),
+        ):
+            if match["sha256"][key] != originals[f"data/matches/{mid}/{mid}_{raw_name}"]:
+                raise ValueError("normalized scoring source differs from frozen source inventory")
+        normalized = normalization[mid]
+        if (
+            match["sha256"]["phases_sha256"] != normalized["phases_sha256"]
+            or match["sha256"]["metadata_sha256"] != normalized["metadata_sha256"]
+            or normalized["raw_csv_sha256"]
+            != originals[f"data/matches/{mid}/{mid}_phases_of_play.csv"]
+        ):
+            raise ValueError("normalized phases differ from frozen independent source evidence")
+        lock_hash = match["sha256"]["locked_sha256"]
+        if (
+            admission["artifacts"][mid]["producer_sha256"] != lock_hash
+            or admission["artifacts"][mid]["verifier_sha256"] != lock_hash
+        ):
+            raise ValueError("scoring population lock differs from frozen admission")
+        directory = Path(match["directory"])
+        checked[f"SOURCE_{mid}"] = _directory(directory)
+        checked[f"LOCK_{mid}"] = _directory(Path(match["locked_path"]).parent)
+        expected_scoring.update(
+            {
+                str(directory / name): match["sha256"][key]
+                for name, key in (
+                    ("metadata.json", "metadata_sha256"),
+                    ("phases.json", "phases_sha256"),
+                    ("tracking.jsonl", "tracking_raw_sha256"),
+                )
+            }
+        )
+        expected_scoring[match["locked_path"]] = lock_hash
+    if any(re.fullmatch(r"[0-9a-f]{64}", value) is None for value in expected_scoring.values()):
+        raise ValueError("scoring input byte identity must be SHA-256")
+    scoring_files = evidence["scoring_files"]
+    if (
+        len(expected_scoring) != 16
+        or len(scoring_files) != 16
+        or {r["path"]: r["sha256"] for r in scoring_files} != expected_scoring
+    ):
+        raise ValueError("incomplete independent scoring input/lock evidence")
+    for entry in scoring_files:
+        identity = _file_identity(Path(entry["path"]))
+        if identity != entry["identity"]:
+            raise ValueError("scoring input identity differs from independent readback")
+        identities.append((identity["device"], identity["inode"]))
+    if len(set(identities)) != 133:
+        raise ValueError("aliased scoring input identities")
     ledger, output = Path(values["LEDGER_ROOT"]), Path(values["OUTPUT_DIRECTORY"])
-    for name in ("CHECKPOINT_DIRECTORY", "FIT_RECEIPTS_DIRECTORY"):
-        checked[name] = _directory(Path(values[name]))
+    for name, expected_files in (
+        ("CHECKPOINT_DIRECTORY", expected_models),
+        ("FIT_RECEIPTS_DIRECTORY", expected_receipts),
+    ):
+        directory = Path(values[name])
+        checked[name] = _directory(directory)
+        fd = _private_fd(directory, directory=True)
+        try:
+            if sorted(os.listdir(fd)) != sorted(Path(name).name for name in expected_files):
+                raise ValueError(
+                    "checkpoint/receipt directory inventory differs from frozen loader"
+                )
+        finally:
+            os.close(fd)
     checked["LEDGER_ROOT"], checked["OUTPUT_DIRECTORY"] = _directory(ledger), _directory(output)
     if (
         ledger == output
@@ -363,7 +454,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         == (checked["OUTPUT_DIRECTORY"]["device"], checked["OUTPUT_DIRECTORY"]["inode"])
     ):
         raise ValueError("ledger/output identity collision")
-    for entry in entries:
+    for entry in [*entries, *scoring_files]:
         p = Path(entry["path"])
         if ledger == p or output == p or ledger in p.parents or output in p.parents:
             raise ValueError("ledger/output must be isolated from input evidence")
@@ -423,8 +514,19 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         value = projection[key]
         if type(value) not in (float, int) or not math.isfinite(value) or not 0 < value <= ceiling:
             raise ValueError("proposed cumulative resources exceed frozen limits")
+    campaign_configuration = {
+        "schema": "fpdbench.res646.campaign/1",
+        "namespace": "RES646-REAL-v1",
+        "matches": matches,
+        "checkpoint_directory": values["CHECKPOINT_DIRECTORY"],
+        "receipt_directory": values["FIT_RECEIPTS_DIRECTORY"],
+        "admission": values["RESEARCH_ADMISSION"],
+        "ledger_root": str(ledger),
+        "output": str(output),
+        "independent_report_sha256": hashlib.sha256(prior).hexdigest(),
+    }
     bindings = {
-        "source_sha256": _digest(inventory),
+        "source_sha256": scorer.digest({"config": campaign_configuration, "fixture_sha256": None}),
         "scorer_sha256": _digest(code),
         "verifier_sha256": _digest(verifier),
         "runtime_sha256": _digest(runtime),
@@ -434,6 +536,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     }
     return {
         "checked_directories": checked,
+        "campaign_configuration": campaign_configuration,
         "identities": bindings,
         "proposed_scope_sha256": proposed_scope(bindings),
         "resources": resources,

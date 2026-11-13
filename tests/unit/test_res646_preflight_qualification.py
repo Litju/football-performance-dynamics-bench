@@ -68,15 +68,113 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
         directories[name] = path
     entries = []
     inventory = []
-    for index in range(81):
+    matches = []
+    scoring_files = []
+    normalization = []
+    artifacts = {}
+    roles = p.protocol_split_v2()["roles"]
+    inputs, producer = tmp_path / "inputs", tmp_path / "producer"
+    inputs.mkdir(mode=0o700)
+    producer.mkdir(mode=0o700)
+    for mid in roles["evaluation"]:
+        raw_directory = directories["source"] / "data" / "matches" / mid
+        raw_directory.mkdir(parents=True, mode=0o700)
+        # Every ancestor is owner-controlled; the actual file parents are owner-private.
+        directory = inputs / mid
+        directory.mkdir(mode=0o700)
+        hashes = {}
+        for raw_name, normalized_name, key in (
+            ("match.json", "metadata.json", "metadata_sha256"),
+            ("phases_of_play.csv", "phases.json", "phases_sha256"),
+            ("tracking_extrapolated.jsonl", "tracking.jsonl", "tracking_raw_sha256"),
+        ):
+            original = raw_directory / f"{mid}_{raw_name}"
+            original_bytes = write(original, {"invented": f"{mid}/{raw_name}"})
+            original_sha = hashlib.sha256(original_bytes).hexdigest()
+            inventory.append(
+                {
+                    "path": str(original.relative_to(directories["source"])),
+                    "bytes": len(original_bytes),
+                    "sha256": original_sha,
+                    "git_blob_sha": "b" * 40,
+                }
+            )
+            entries.append(
+                {
+                    "path": str(original),
+                    "sha256": original_sha,
+                    "identity": p._file_identity(original),
+                }
+            )
+            normalized = directory / normalized_name
+            if key == "phases_sha256":
+                normalized_bytes = write(normalized, {"invented_normalized_phases": mid})
+                raw_csv_sha = original_sha
+            else:
+                normalized.write_bytes(original_bytes)
+                normalized.chmod(0o600)
+                normalized_bytes = original_bytes
+            hashes[key] = hashlib.sha256(normalized_bytes).hexdigest()
+            scoring_files.append(
+                {
+                    "path": str(normalized),
+                    "sha256": hashes[key],
+                    "identity": p._file_identity(normalized),
+                }
+            )
+        locked = producer / f"{mid}.jsonl"
+        hashes["locked_sha256"] = hashlib.sha256(write(locked, {"invented_lock": mid})).hexdigest()
+        scoring_files.append(
+            {
+                "path": str(locked),
+                "sha256": hashes["locked_sha256"],
+                "identity": p._file_identity(locked),
+            }
+        )
+        artifacts[mid] = {
+            "producer_sha256": hashes["locked_sha256"],
+            "verifier_sha256": hashes["locked_sha256"],
+        }
+        normalization.append(
+            {
+                "match_id": mid,
+                "metadata_sha256": hashes["metadata_sha256"],
+                "phases_sha256": hashes["phases_sha256"],
+                "raw_csv_sha256": raw_csv_sha,
+                "lineage_sha256": "c" * 64,
+            }
+        )
+        matches.append(
+            {
+                "match_id": mid,
+                "directory": str(directory),
+                "locked_path": str(locked),
+                "eligible_windows": 1000,
+                "sha256": hashes,
+            }
+        )
+    for index in range(69):
         path = directories["source"] / f"invented-{index}.bin"
         data = write(path, {"invented": index})
         sha = hashlib.sha256(data).hexdigest()
-        inventory.append({"path": path.name, "bytes": len(data), "sha256": sha})
+        inventory.append(
+            {"path": path.name, "bytes": len(data), "sha256": sha, "git_blob_sha": "b" * 40}
+        )
         entries.append({"path": str(path), "sha256": sha, "identity": p._file_identity(path)})
     inventory_path = tmp_path / "source-inventory.json"
     inventory_sha = hashlib.sha256(write(inventory_path, inventory)).hexdigest()
-    roles = p.protocol_split_v2()["roles"]
+    independent_source = tmp_path / "independent-source.json"
+    independent_sha = hashlib.sha256(
+        write(
+            independent_source,
+            {
+                "source_files": [
+                    {key: row[key] for key in ("path", "bytes", "sha256")} for row in inventory
+                ],
+                "normalization_receipts": normalization,
+            },
+        )
+    ).hexdigest()
     admission = {
         "status": "RESEARCH_RECONCILED",
         "protected_status": "NOT_QUALIFIED",
@@ -85,10 +183,12 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
             "e9054b7ddc2dfeff4dd8425ea61a23ed0b326076a08899e47502484228fdbdf4"
         ),
         "source_inventory_sha256": inventory_sha,
+        "independent_source_sha256": independent_sha,
+        "artifacts": artifacts,
         "per_match": {
             match: {"role": role, "counts": {"scoreable_windows": 1000}}
-            for role, matches in roles.items()
-            for match in matches
+            for role, members in roles.items()
+            for match in members
         },
     }
     admission_path = tmp_path / "research-admission.json"
@@ -156,6 +256,8 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
             "paths": values.copy(),
             "source_root": str(directories["source"]),
             "resource_report": str(resource_report),
+            "independent_source": str(independent_source),
+            "matches": copy.deepcopy(matches),
         },
         "evidence_id": "invented-independent-readback-001",
         "verification_method": "invented independent byte-readback fixture",
@@ -167,6 +269,8 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
         "runtime": provenance["runtime"],
         "source_inventory_sha256": inventory_sha,
         "files": entries,
+        "scoring_files": scoring_files,
+        "matches": matches,
         "fit_receipt_bindings_verified": True,
         "quotas": {
             name: {
@@ -197,7 +301,9 @@ def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumpti
     local: LocalEvidence,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    protected = {row["path"] for row in local.document["files"]}
+    protected = {
+        row["path"] for row in [*local.document["files"], *local.document["scoring_files"]]
+    }
     original_open = os.open
     inspected = []
 
@@ -220,7 +326,7 @@ def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumpti
     assert first["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", first
     assert first["proposed_scope_sha256"] == second["proposed_scope_sha256"]
     assert len(first["evaluation_role_counts"]) == 4
-    assert len(inspected) == 234
+    assert len(inspected) == 266
     assert first["independent_review_accepted"] is False
     assert first["remaining_gate6_conditions"]
     assert first["limitations"]
@@ -581,3 +687,98 @@ def test_effective_cgroup_limits_include_ancestors_and_never_guess_unlimited(
     assert observed["filesystems"]["output"]["device"] == tmp_path.stat().st_dev
     assert observed["filesystems"]["output"]["available_bytes"] > 0
     assert observed["hierarchy"][1]["memory.max"] == str(2**31)
+
+
+def test_success_emits_the_exact_campaign_plan_identity(
+    local: LocalEvidence, tmp_path: Path
+) -> None:
+    from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+        res646_authorization as authorization,
+    )
+
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", result["blockers"]
+    campaign_path = tmp_path / "proposed-campaign.json"
+    write(campaign_path, result["campaign_configuration"])
+    plan = authorization.CampaignPlan(campaign_path)
+    assert plan.identities == result["identities"]
+    assert plan.scope == result["proposed_scope_sha256"]
+    assert list(plan.root.iterdir()) == []
+    assert list(plan.output.iterdir()) == []
+
+
+@pytest.mark.parametrize("directory", ["CHECKPOINT_DIRECTORY", "FIT_RECEIPTS_DIRECTORY"])
+def test_checkpoint_and_receipt_directories_reject_extra_files(
+    local: LocalEvidence,
+    directory: str,
+) -> None:
+    write(Path(local.values[directory]) / "extra-invented-file.json", {"invented": True})
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_BLOCKED"
+    assert "directory inventory" in str(result["blockers"])
+
+
+@pytest.mark.parametrize(
+    "key", ["metadata_sha256", "tracking_raw_sha256", "phases_sha256", "locked_sha256"]
+)
+def test_scoring_input_bindings_must_match_frozen_source_and_admission(
+    local: LocalEvidence,
+    key: str,
+) -> None:
+    local.document["matches"][0]["sha256"][key] = "f" * 64
+    local.document["read_scope"]["matches"] = copy.deepcopy(local.document["matches"])
+    local.save()
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_BLOCKED"
+    assert "frozen" in str(result["blockers"])
+
+
+@pytest.mark.parametrize(
+    "kind", ["missing", "changed-normalized", "changed-lock", "hardlink", "symlink"]
+)
+def test_normalized_scoring_and_lock_evidence_is_complete_and_alias_free(
+    local: LocalEvidence,
+    kind: str,
+    tmp_path: Path,
+) -> None:
+    if kind == "missing":
+        local.document["scoring_files"].pop()
+        local.save()
+    else:
+        row = local.document["scoring_files"][3 if kind == "changed-lock" else 0]
+        path = Path(row["path"])
+        if kind in ("changed-normalized", "changed-lock"):
+            write(path, {"invented_substitution": True})
+        else:
+            original = tmp_path / "invented-original-scoring"
+            path.rename(original)
+            path.symlink_to(original) if kind == "symlink" else os.link(original, path)
+    assert local.check()["status"] == "RES646_GATE5_BLOCKED"
+
+
+@pytest.mark.parametrize("field", ["bytes", "sha256", "normalization-phases"])
+def test_pinned_independent_source_must_agree_with_inventory_and_normalization(
+    local: LocalEvidence,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+) -> None:
+    independent_path = Path(local.document["read_scope"]["independent_source"])
+    independent = json.loads(independent_path.read_bytes())
+    if field == "normalization-phases":
+        independent["normalization_receipts"][0]["phases_sha256"] = "f" * 64
+    else:
+        independent["source_files"][0][field] = -1 if field == "bytes" else "f" * 64
+    independent_sha = hashlib.sha256(write(independent_path, independent)).hexdigest()
+    admission_path = Path(local.values["RESEARCH_ADMISSION"])
+    admission = json.loads(admission_path.read_bytes())
+    admission["independent_source_sha256"] = independent_sha
+    admission_sha = hashlib.sha256(write(admission_path, admission)).hexdigest()
+    # Pin the deliberately inconsistent invented admission so this tests reconciliation,
+    # rather than stopping at an ordinary metadata hash mismatch.
+    monkeypatch.setattr(p, "ADMISSION_SHA256", admission_sha)
+    local.document["admission_sha256"] = admission_sha
+    local.save()
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_BLOCKED"
+    expected = "normalized phases" if field == "normalization-phases" else "source inventory"
+    assert expected in str(result["blockers"])
