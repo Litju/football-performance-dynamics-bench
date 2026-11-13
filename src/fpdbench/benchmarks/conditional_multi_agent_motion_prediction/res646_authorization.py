@@ -469,3 +469,45 @@ def require_campaign(value: object) -> Campaign:
     if type(value) is not Campaign:
         raise PermissionError("a verified RES646 Campaign authority is required")
     return value
+
+
+def authorize_independent_source(
+    directory: Path, label: str, locked_path: Path | None, mode: Any, campaign: Campaign | None
+) -> str:
+    """Share access controls only; the independent reader keeps its own scientific calculation."""
+    from . import res645_paths as paths
+    from . import res645_source_stream as source
+
+    if mode == "frozen":
+        campaign = require_campaign(campaign)
+        campaign.require_worker()
+        specs = [
+            spec
+            for spec in campaign.specs
+            if (spec.directory, spec.label, spec.locked_path) == (directory, label, locked_path)
+        ]
+        if len(specs) != 1:
+            raise PermissionError("source is outside signed campaign")
+        spec = specs[0]
+    else:
+        if campaign is not None or mode != "synthetic":
+            raise PermissionError("explicit real source mode required")
+        marker, _ = paths.read_regular_file(directory / "fixture.json", max_bytes=4096)
+        spec = source.SourceMatchSpec(
+            label, json.loads(marker)["match_id"], directory, locked_path=locked_path
+        )
+    source.authorize(spec, mode, campaign)
+    return spec.match_id
+
+
+def authorize_independent_models(
+    manifest: dict[str, Any], directory: Path, receipts: Path, mode: Any, campaign: Campaign | None
+) -> None:
+    """Share manifest/access policy, never tensor loading or scientific verification."""
+    from . import res645_checkpoints as ck
+
+    ck.validate_manifest(manifest, mode)
+    if mode == "frozen":
+        require_campaign(campaign).allow_models(manifest, directory, receipts)
+    elif campaign is not None:
+        raise PermissionError("explicit real checkpoint mode required")

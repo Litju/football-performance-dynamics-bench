@@ -8,6 +8,9 @@ import pytest
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import res645_checkpoints as ck
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import res645_fixtures as fx
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import res645_independent as ind
+from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import (
+    res645_source_stream as source,
+)
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction import res646_authorization as a
 
 
@@ -93,7 +96,7 @@ def test_real_source_requires_reserved_worker(
     # Use the exact authority type; no fake capability is accepted by require_campaign.
     campaign = object.__new__(a.Campaign)
     campaign.namespace = a.SYNTHETIC if failure == "namespace" else a.REAL
-    campaign.specs = [ind.source.SourceMatchSpec("1874553", "1874553", tmp_path)]
+    campaign.specs = [source.SourceMatchSpec("1874553", "1874553", tmp_path)]
     deny = Mock(side_effect=PermissionError(failure))
     monkeypatch.setattr(a.Campaign, "require_worker", deny)
     opened = Mock(side_effect=AssertionError("protected input opened"))

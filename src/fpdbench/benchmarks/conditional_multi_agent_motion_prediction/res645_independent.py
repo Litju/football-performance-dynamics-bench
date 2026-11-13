@@ -17,7 +17,7 @@ import os
 from collections import deque
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from .res646_authorization import Campaign
@@ -27,12 +27,11 @@ import torch
 
 from . import learned_deepsets as lds
 from . import res635_post_failure_evaluation as s
-from . import res645_checkpoints as checkpoints_contract
 from . import res645_paths as paths
-from . import res645_source_stream as source
 from .evaluation_population import prospective_window_id_v2
 
 type Document = dict[str, Any]
+type Mode = Literal["synthetic", "frozen"]
 MAX = 8 * 1024**3
 
 
@@ -316,35 +315,17 @@ def raw_windows(
     locked_path: Path | None = None,
     campaign: Campaign | None = None,
     *,
-    mode: source.Mode = "synthetic",
+    mode: Mode = "synthetic",
 ) -> Iterator[Document]:
     """Stream eligible windows straight from raw frames; no canonicalizer, no producer."""
-    if mode == "frozen":
-        from .res646_authorization import require_campaign
+    from .res646_authorization import authorize_independent_source
 
-        campaign = require_campaign(campaign)
-        campaign.require_worker()
-        specs = [
-            spec
-            for spec in campaign.specs
-            if (spec.directory, spec.label, spec.locked_path) == (directory, label, locked_path)
-        ]
-        if len(specs) != 1:
-            raise PermissionError("source is outside signed campaign")
-        spec = specs[0]
-    else:
-        if campaign is not None or mode != "synthetic":
-            raise PermissionError("explicit real source mode required")
-        marker, _ = paths.read_regular_file(directory / "fixture.json", max_bytes=4096)
-        spec = source.SourceMatchSpec(
-            label, json.loads(marker)["match_id"], directory, locked_path=locked_path
-        )
-    source.authorize(spec, mode, campaign)
+    match_id = authorize_independent_source(directory, label, locked_path, mode, campaign)
     meta_bytes, _ = paths.read_regular_file(
         directory / "metadata.json", max_bytes=16 << 20, campaign=campaign
     )
     meta = json.loads(meta_bytes)
-    if str(meta["id"]) != spec.match_id:
+    if str(meta["id"]) != match_id:
         raise PermissionError("source match identity differs from authorized fixture or campaign")
     team_of = {p["id"]: p["team_id"] for p in meta["players"]}
     home_team = meta["home_team"]["id"]
@@ -556,18 +537,13 @@ def load_models(
     directory: Path,
     receipts: Path,
     *,
-    mode: checkpoints_contract.Mode = "synthetic",
+    mode: Mode = "synthetic",
     campaign: Campaign | None = None,
 ) -> tuple[dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP], list[Document]]:
     """Independent loader: reads the manifest-named bytes itself and checks the hash."""
-    checkpoints_contract.validate_manifest(manifest, mode)
-    if mode == "frozen":
-        from .res646_authorization import require_campaign
+    from .res646_authorization import authorize_independent_models
 
-        campaign = require_campaign(campaign)
-        campaign.allow_models(manifest, directory, receipts)
-    elif campaign is not None:
-        raise PermissionError("explicit real checkpoint mode required")
+    authorize_independent_models(manifest, directory, receipts, mode, campaign)
     models: dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP] = {}
     bindings: list[Document] = []
     for rec in manifest["checkpoints"]:
@@ -620,7 +596,7 @@ def match_body(
     checkpoints: Path,
     receipts: Path,
     *,
-    mode: source.Mode = "synthetic",
+    mode: Mode = "synthetic",
     campaign: Campaign | None = None,
 ) -> Document:
     # Real verification audits captured predictions; it must never replay learned inference.
