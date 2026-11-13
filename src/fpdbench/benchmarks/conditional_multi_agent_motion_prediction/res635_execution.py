@@ -168,7 +168,7 @@ def reserve(
         "seals": [],
         "attempt": 0,
         "continuation_predeclared": continuation,
-        "key": os.urandom(32).hex(),
+        "key": os.urandom(32).hex(),  # replaced below for keyed campaign namespaces
         "cpu_used": 0.0,
         "wall_used": 0.0,
         "budget": REAL_BUDGET if isinstance(workload, wl.RealWorkload) else BUDGET,
@@ -183,6 +183,13 @@ def reserve(
         record["authorization_sha256"] = hashlib.sha256(raw).hexdigest()
         record["cpu_used"] = process_tree_cpu()
         record["wall_used"] = process_wall_age()
+    ledger_key = authorization.ledger_key(workload.namespace, root)
+    if ledger_key is not None:
+        # Result authentication derives from the independently held key, never from the ledger.
+        record["key"] = hmac.new(
+            ledger_key, b"result:" + scope.encode(), hashlib.sha256
+        ).hexdigest()
+        record["ledger_mac"] = authorization.ledger_mac(record, ledger_key)
     record["record_sha256"] = s.digest(record)
     with os.fdopen(fd, "wb") as stream:
         stream.write(s.canonical(record))
@@ -198,6 +205,9 @@ def reserve(
 
 
 def store_ledger(root: Path, count: int, record: s.Document) -> None:
+    ledger_key = authorization.ledger_key(cast(str, record.get("namespace")), root)
+    if ledger_key is not None:
+        record["ledger_mac"] = authorization.ledger_mac(record, ledger_key)
     body = {k: value for k, value in record.items() if k != "record_sha256"}
     record["record_sha256"] = s.digest(body)
     atomic(ledger_path(root, cast(str, record["scope_sha256"])), record)
@@ -221,6 +231,11 @@ def bound_record(
         {k: value for k, value in record.items() if k != "record_sha256"}
     ):
         raise ValueError("ledger record hash differs")
+    ledger_key = authorization.ledger_key(cast(str, record.get("namespace")), root)
+    if ledger_key is not None and not hmac.compare_digest(
+        str(record.get("ledger_mac")), authorization.ledger_mac(record, ledger_key)
+    ):
+        raise PermissionError("ledger record is not authenticated by the independent key")
     if record["output"] != str(output.resolve()) or record["scope_sha256"] != (
         workload.scope_sha256(count)
     ):

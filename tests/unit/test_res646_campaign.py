@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -35,6 +36,8 @@ def signed_campaign(base: Path, bundle: Path) -> Path:
     root, output = base / "ledger", base / "output"
     root.mkdir(mode=0o700)
     output.mkdir(mode=0o700)
+    # Independent ledger integrity key: a private sibling of, never inside, ledger or output.
+    write(base / "ledger.ledger-key", os.urandom(32))
     config = base / "campaign.json"
     write(
         config,

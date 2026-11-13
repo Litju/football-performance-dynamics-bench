@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import math
 import os
@@ -28,6 +29,7 @@ SYNTHETIC = "RES646-SYNTHETIC-v1"
 PRINCIPAL = "res646-owner"
 NAMESPACE = "fpdbench-res646-owner-go-v1"
 TRUST_FILE = "res646-owner-signers"
+LEDGER_KEY_FILE = "res646-ledger-key"
 
 
 def _schema() -> dict[str, Any]:
@@ -113,6 +115,37 @@ def _verify(
     ):
         raise ValueError("authorization is not currently valid")
     protected._verify_ssh_signature(payload, signature, signers, PRINCIPAL, NAMESPACE)
+
+
+def ledger_key(namespace: str, root: Path) -> bytes | None:
+    """Ledger integrity key held outside the ledger and output trees.
+
+    Production reads it from the root-owned protected trust directory beside the owner signers;
+    the synthetic namespace reads a private sibling of the artificial ledger root. Legacy
+    namespaces have no key and keep their previous unkeyed behaviour.
+    """
+    if namespace == REAL:
+        try:
+            with protected._trusted_directory() as directory:
+                key = protected._trusted_file(directory, LEDGER_KEY_FILE, limit=256)
+        except OSError:
+            raise ValueError("ledger integrity key unavailable") from None
+    elif namespace == SYNTHETIC:
+        from . import res645_paths as paths
+
+        key, _ = paths.read_regular_file(
+            root.with_name(root.name + ".ledger-key"), max_bytes=256, require_private=True
+        )
+    else:
+        return None
+    if len(key) < 32:
+        raise ValueError("ledger integrity key too short")
+    return key
+
+
+def ledger_mac(record: dict[str, Any], key: bytes) -> str:
+    body = {k: v for k, v in record.items() if k not in ("ledger_mac", "record_sha256")}
+    return hmac.new(key, canonical_bytes(body), hashlib.sha256).hexdigest()
 
 
 def verify_real(payload: bytes, signature: bytes, expected_identities: dict[str, str]) -> None:
@@ -348,6 +381,11 @@ class Campaign(CampaignPlan):
             {k: value for k, value in record.items() if k != "record_sha256"}
         ):
             raise ValueError("ledger record hash differs")
+        key = ledger_key(self.namespace, self.root)
+        if key is None or not hmac.compare_digest(
+            str(record.get("ledger_mac")), ledger_mac(record, key)
+        ):
+            raise PermissionError("ledger record is not authenticated by the independent key")
         approval, _ = paths.read_regular_file(
             self.path.with_suffix(".approval.json"), max_bytes=131072, require_private=True
         )
