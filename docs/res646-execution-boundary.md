@@ -50,9 +50,34 @@ python -m fpdbench.benchmarks.conditional_multi_agent_motion_prediction.res646_p
 
 It preserves prior readback evidence without reopening source rows, deserializing checkpoints or
 reserving a scope. Missing config and target resource attestations remain explicit blockers.
-An old text report is never promoted into a newly signed success. The existing owner-local
-configuration currently leaves all seven fields empty. Production key provisioning is separately
-deferred until independent review; it is not needed to qualify synthetic execution.
+An old text report is never promoted into a new attestation. Production key provisioning is
+separately deferred until independent review; it is not needed to qualify synthetic execution.
+
+A complete run returns `RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW` and exit 0; missing
+configuration returns `MISSING_OWNER_LOCAL_CONFIG`, and failed or incomplete qualification
+returns `RES646_GATE5_BLOCKED` (both exit 2). Readiness requests independent review, and does
+not assert its acceptance. The CLI prints only disposition and missing field names. The complete
+report, including diagnostic paths, must be written into an existing owner-private directory.
+
+The prior metadata evidence must use `fpdbench.res646.gate5-evidence/1`. It identifies its verifier,
+method, current UTC observation time, frozen identities, exact code/runtime, and approved read
+scope. `GATE5_READ_SCOPE` is the canonical SHA-256 of that scope: the six configured paths,
+source root, resource report, and `metadata-only-no-source-or-model-bytes` policy. Inventory
+bytes must match the frozen admission's inventory hash. Evidence retains independently verified
+hashes and contemporaneous device/inode/size/mtime/ctime identities for all 81 source files,
+18 frozen checkpoints and 18 verified fit receipts. Current metadata must match those identities;
+new stat observations cannot retroactively establish unchanged bytes after an old readback.
+Checkpoint and receipt paths must match the existing loader's separate bare-hash inventories.
+Only `O_PATH` inode inspection touches these 117 inputs; no contents are opened.
+
+Qualification also checks private empty ledger/output directories, tree/inode isolation, cgroup
+ancestor limits, CPU affinity, actual filesystem capacity and inode availability, and current
+independent quota evidence bound to UID, device and mount-table identity. Missing quota evidence
+fails closed. The final-code signed synthetic resource report is read by its exact hash. Its
+largest population supplies a linear estimate and a 2x sensitivity scenario against the unchanged
+14,400 CPU-second, 21,600 wall-second and 2 GiB RSS/transient limits. This scenario is not a proven
+bound on unseen real bytes. The owner-private report retains every assumption and Gate 6 condition.
+See `test_res646_preflight_qualification.py` for the complete invented evidence contract.
 
 ## Approval expiry and archival verification
 
