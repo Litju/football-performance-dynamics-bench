@@ -25,7 +25,7 @@ def main() -> int:
         environment = root / "venv"
         empty_working_directory = root / "work"
         empty_working_directory.mkdir()
-        venv.EnvBuilder(with_pip=True).create(environment)
+        venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(environment)
         python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         cli = environment / ("Scripts/fpdbench.exe" if os.name == "nt" else "bin/fpdbench")
         subprocess.run(
@@ -357,7 +357,7 @@ assert "limitations under the License." in license_text
         sdist_environment = root / "sdist-venv"
         sdist_working_directory = root / "sdist-work"
         sdist_working_directory.mkdir()
-        venv.EnvBuilder(with_pip=True).create(sdist_environment)
+        venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(sdist_environment)
         sdist_python = sdist_environment / (
             "Scripts/python.exe" if os.name == "nt" else "bin/python"
         )
