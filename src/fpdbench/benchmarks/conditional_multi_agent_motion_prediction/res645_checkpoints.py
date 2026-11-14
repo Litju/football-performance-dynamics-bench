@@ -249,13 +249,17 @@ def artifact_file_maps(
     checkpoint_files = select(checkpoint_names, "checkpoint_sha256", "checkpoint", "pt")
     receipt_files = select(receipt_names, "receipt_sha256", "fit-receipt", "json")
     if set(checkpoint_names) != set(checkpoint_files.values()):
-        raise CheckpointContractError("checkpoint directory has unexpected files")
+        raise CheckpointContractError(
+            "checkpoint directory inventory differs from the manifest files: unexpected files"
+        )
     if any(
         (name.startswith("fit-receipt-") or re.fullmatch(r"[0-9a-f]{64}\.json", name) is not None)
         and name not in receipt_files.values()
         for name in receipt_names
     ):
-        raise CheckpointContractError("unexpected additional fit receipt")
+        raise CheckpointContractError(
+            "receipt directory differs from the manifest files: unexpected additional fit receipt"
+        )
     return checkpoint_files, receipt_files
 
 
