@@ -298,6 +298,25 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
     return result
 
 
+def test_doubled_cpu_sensitivity_is_disclosed_not_a_new_admission_gate(
+    local: LocalEvidence,
+) -> None:
+    # Four invented matches x 1000 windows; 800-window observation fits the true
+    # ceilings but the arbitrary 2x projection exceeds the 14,400-second CPU cap.
+    report = json.loads(local.resource_report.read_bytes())
+    report["measurements"][0]["cpu_s"] = 2160
+    local.document["resource_report_sha256"] = hashlib.sha256(
+        write(local.resource_report, report)
+    ).hexdigest()
+    local.save()
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW"
+    assert result["resource_linear_projection"]["cpu_s"] == 10800
+    assert result["resource_sensitivity_scenario"]["cpu_s"] == 21600
+    assert result["resource_scenario_exceeds_frozen_budget"] is True
+    assert result["scope_consumed"] is False
+
+
 def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption(
     local: LocalEvidence,
     monkeypatch: pytest.MonkeyPatch,

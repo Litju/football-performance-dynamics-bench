@@ -44,10 +44,14 @@ cost; real-source density and decode cost can also increase it. Neither effect w
 | combined RSS | 2 GiB | observed 436.6 MiB | real-data scaling unverified |
 | transient disk | 2 GiB | observed 186,048 bytes | real-data scaling unverified |
 
-The doubled cost is a sensitivity scenario, **not a proven worst-case upper bound**. It exceeds
-the cumulative CPU ceiling on the final observation; its wall estimate fits. The linear estimate fits, but that
-does not establish real-scale qualification. The preflight records this uncertainty and fails
-closed when the required resource evidence/scenario does not qualify. No frozen budget changed.
+The doubled cost is a sensitivity scenario, **not a proven worst-case upper bound or
+a ratified Gate 5 acceptance threshold**. It exceeds the cumulative CPU ceiling on the
+final observation; its wall estimate fits. The linear estimate fits, but neither projection
+establishes real-scale qualification. The preflight now records both projections and flags
+when the doubled scenario exceeds the budget; it does **not** reject solely on this
+hypothetical multiplier. Observed resource violations and a baseline wall estimate that
+is incompatible with effective CPU capacity remain disqualifying. Actual execution continues
+to enforce the frozen cumulative CPU/wall/RSS/disk ceilings without exception.
 
 ## Remaining qualification
 
