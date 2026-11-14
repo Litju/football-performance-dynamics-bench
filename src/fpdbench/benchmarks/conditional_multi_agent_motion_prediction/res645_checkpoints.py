@@ -220,7 +220,7 @@ def artifact_file_maps(
     """
     records = validate_records(manifest)
 
-    def matches(name: str, digest: str, kind: str, extension: str) -> bool:
+    def matches(name: object, digest: str, kind: str, extension: str) -> bool:
         if (
             not isinstance(name, str)
             or name != Path(name).name
@@ -261,16 +261,18 @@ def artifact_file_maps(
 
 def validate_artifact_file_maps(
     manifest: Mapping[str, object],
-    checkpoint_files: dict[str, str],
-    receipt_files: dict[str, str],
+    checkpoint_files: object,
+    receipt_files: object,
 ) -> None:
-    """Validate a mapping that is embedded in the separately signed campaign configuration."""
+    """Validate untrusted filename maps embedded in the separately signed campaign config."""
     if not isinstance(checkpoint_files, dict) or not isinstance(receipt_files, dict):
         raise CheckpointContractError("signed artifact map must contain two mappings")
+    checkpoint_map = cast(dict[str, object], checkpoint_files)
+    receipt_map = cast(dict[str, object], receipt_files)
     expected = validate_records(manifest)
     for files, field, kind, ext in (
-        (checkpoint_files, "checkpoint_sha256", "checkpoint", "pt"),
-        (receipt_files, "receipt_sha256", "fit-receipt", "json"),
+        (checkpoint_map, "checkpoint_sha256", "checkpoint", "pt"),
+        (receipt_map, "receipt_sha256", "fit-receipt", "json"),
     ):
         wanted = {cast(str, record[field]) for record in expected.values()}
         if set(files) != wanted or len(set(files.values())) != 18:

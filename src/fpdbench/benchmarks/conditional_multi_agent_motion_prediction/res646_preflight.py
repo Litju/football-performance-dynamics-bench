@@ -501,14 +501,22 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             raise ValueError("ledger/output filesystem is read-only")
         if observed["available_bytes"] < 2**31 or observed["available_inodes"] < 16:
             raise ValueError("insufficient target filesystem capacity")
-        quotas = evidence.get("quotas", {})
-        quota = quotas.get(name) if isinstance(quotas, dict) else None
-        if quota is None:
+        quotas_raw: object = evidence.get("quotas")
+        if quotas_raw is None:
+            quotas: dict[str, object] = {}
+        elif isinstance(quotas_raw, dict):
+            quotas = cast(dict[str, object], quotas_raw)
+        else:
+            raise ValueError("invalid filesystem quota evidence object")
+        quota_raw = quotas.get(name)
+        if quota_raw is None:
             quota_status[name] = "QUOTA_UNKNOWN"
             continue
+        if not isinstance(quota_raw, dict):
+            raise ValueError("invalid filesystem quota evidence")
+        quota = cast(dict[str, object], quota_raw)
         if (
-            not isinstance(quota, dict)
-            or quota.get("device") != observed["device"]
+            quota.get("device") != observed["device"]
             or quota.get("uid") != os.geteuid()
             or quota.get("mountinfo_sha256") != resources["mountinfo_sha256"]
             or not quota.get("evidence_id")
@@ -519,12 +527,13 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             if quota.get("verified_absence") is not True or not quota.get("verification_method"):
                 raise ValueError("missing independent evidence of unenforced quotas")
         elif status == "QUOTA_VERIFIED_SUFFICIENT":
-            if type(quota.get("available_bytes")) is not int or quota["available_bytes"] < 2**31:
+            available = quota.get("available_bytes")
+            if type(available) is not int or available < 2**31:
                 raise ValueError("insufficient enforced filesystem quota")
         else:
             quota_status[name] = "QUOTA_UNKNOWN"
             continue
-        quota_status[name] = status
+        quota_status[name] = cast(str, status)
     qualification_raw = _metadata(Path(scope["resource_report"]))
     if hashlib.sha256(qualification_raw).hexdigest() != evidence["resource_report_sha256"]:
         raise ValueError("synthetic resource report identity differs")
