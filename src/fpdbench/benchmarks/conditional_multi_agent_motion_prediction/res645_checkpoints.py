@@ -208,12 +208,95 @@ RECEIPT_COPIED_FIELDS = (
 )
 
 
+
+def artifact_file_maps(
+    manifest: Mapping[str, object],
+    checkpoint_names: list[str],
+    receipt_names: list[str],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Select each frozen digest once from bare or original prefixed filenames.
+
+    No file bytes are read. Ambiguous, aliased, or additional checkpoint candidates fail closed.
+    Auxiliary non-fit receipt files may coexist in the original receipts directory.
+    """
+    records = validate_records(manifest)
+
+    def matches(name: str, digest: str, kind: str, extension: str) -> bool:
+        if (
+            not isinstance(name, str)
+            or name != Path(name).name
+            or re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None
+        ):
+            return False
+        return name == f"{digest}.{extension}" or (
+            name.startswith(f"{kind}-") and name.endswith(f"-{digest}.{extension}")
+        )
+
+    def select(names: list[str], field: str, kind: str, extension: str) -> dict[str, str]:
+        selected: dict[str, str] = {}
+        for record in records.values():
+            digest = cast(str, record[field])
+            candidates = [n for n in names if matches(n, digest, kind, extension)]
+            if len(candidates) != 1:
+                raise CheckpointContractError(
+                    f"{kind} artifact selection is missing or ambiguous for frozen digest"
+                )
+            selected[digest] = candidates[0]
+        if len(set(selected.values())) != 18:
+            raise CheckpointContractError("selected artifact filenames must be unique")
+        return selected
+
+    checkpoint_files = select(checkpoint_names, "checkpoint_sha256", "checkpoint", "pt")
+    receipt_files = select(receipt_names, "receipt_sha256", "fit-receipt", "json")
+    if set(checkpoint_names) != set(checkpoint_files.values()):
+        raise CheckpointContractError("checkpoint directory has unexpected files")
+    if any(
+        name.startswith("fit-receipt-") and name not in receipt_files.values()
+        for name in receipt_names
+    ):
+        raise CheckpointContractError("unexpected additional fit receipt")
+    return checkpoint_files, receipt_files
+
+
+def validate_artifact_file_maps(
+    manifest: Mapping[str, object],
+    checkpoint_files: dict[str, str],
+    receipt_files: dict[str, str],
+) -> None:
+    """Validate a mapping that is embedded in the separately signed campaign configuration."""
+    if not isinstance(checkpoint_files, dict) or not isinstance(receipt_files, dict):
+        raise CheckpointContractError("signed artifact map must contain two mappings")
+    expected = validate_records(manifest)
+    for files, field, kind, ext in (
+        (checkpoint_files, "checkpoint_sha256", "checkpoint", "pt"),
+        (receipt_files, "receipt_sha256", "fit-receipt", "json"),
+    ):
+        wanted = {cast(str, record[field]) for record in expected.values()}
+        if set(files) != wanted or len(set(files.values())) != 18:
+            raise CheckpointContractError("signed artifact map is incomplete or duplicated")
+        for digest, name in files.items():
+            if not isinstance(name, str) or not (
+                name == f"{digest}.{ext}"
+                or (
+                    name.startswith(f"{kind}-")
+                    and name.endswith(f"-{digest}.{ext}")
+                    and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
+                )
+            ):
+                raise CheckpointContractError("signed artifact filename differs from digest")
+
+
 def verify_fit_receipt(
-    directory: Path, record: Mapping[str, object], cell: Cell, *, campaign: Campaign | None = None
+    directory: Path,
+    record: Mapping[str, object],
+    cell: Cell,
+    *,
+    campaign: Campaign | None = None,
+    filename: str | None = None,
 ) -> None:
     """The owner-private completed-fit receipt must hash to, and agree with, its manifest record."""
     data, identity = paths.read_regular_file(
-        directory / f"{record['receipt_sha256']}.json",
+        directory / (filename or f"{record['receipt_sha256']}.json"),
         max_bytes=1 << 20,
         require_private=True,
         campaign=campaign,
@@ -241,17 +324,21 @@ def verify_inventory(
     """Verify bytes and fit bindings without deserializing checkpoints or loading models."""
     manifest_sha = validate_manifest(manifest, mode)
     records = validate_records(manifest)
-    if paths.list_directory(directory, require_private=True) != sorted(
-        f"{r['checkpoint_sha256']}.pt" for r in records.values()
-    ):
-        raise CheckpointContractError("checkpoint directory differs from the manifest files")
-    if paths.list_directory(receipts, require_private=True) != sorted(
-        f"{r['receipt_sha256']}.json" for r in records.values()
-    ):
-        raise CheckpointContractError("receipt directory differs from the manifest receipts")
+    checkpoint_files, receipt_files = artifact_file_maps(
+        manifest,
+        paths.list_directory(directory, require_private=True),
+        paths.list_directory(receipts, require_private=True),
+    )
     for cell, record in records.items():
-        verify_fit_receipt(receipts, record, cell)
-        fd = paths.open_regular_fd(directory / f"{record['checkpoint_sha256']}.pt")
+        verify_fit_receipt(
+            receipts,
+            record,
+            cell,
+            filename=receipt_files[cast(str, record["receipt_sha256"])],
+        )
+        fd = paths.open_regular_fd(
+            directory / checkpoint_files[cast(str, record["checkpoint_sha256"])]
+        )
         with os.fdopen(fd, "rb") as stream:
             before = os.fstat(stream.fileno())
             paths.check_regular(before, max_bytes=MAX_CHECKPOINT_BYTES, require_private=True)
@@ -353,25 +440,36 @@ def load_models(
     by_cell = validate_records(manifest)
     try:
         present = paths.list_directory(directory, require_private=True, campaign=campaign)
-    except PermissionError as exc:
-        raise CheckpointContractError(str(exc)) from exc
-    wanted = sorted(f"{r['checkpoint_sha256']}.pt" for r in by_cell.values())
-    if present != wanted:
-        raise CheckpointContractError("checkpoint directory differs from the manifest files")
-    try:
         listed = paths.list_directory(receipts, require_private=True, campaign=campaign)
     except PermissionError as exc:
         raise CheckpointContractError(str(exc)) from exc
-    if listed != sorted(f"{r['receipt_sha256']}.json" for r in by_cell.values()):
-        raise CheckpointContractError("receipt directory differs from the manifest receipts")
+    selected_checkpoints, selected_receipts = artifact_file_maps(manifest, present, listed)
+    if campaign is not None:
+        validate_artifact_file_maps(
+            manifest, campaign.checkpoint_files, campaign.receipt_files
+        )
+        if (
+            selected_checkpoints != campaign.checkpoint_files
+            or selected_receipts != campaign.receipt_files
+        ):
+            raise CheckpointContractError("artifact filenames differ from signed scope")
     models: dict[Cell, lds.PerTargetContextDeepSetsMLP] = {}
     bindings: list[Binding] = []
     for cell in EXPECTED_CELLS:
         record = by_cell[cell]
         try:
-            verify_fit_receipt(receipts, record, cell, campaign=campaign)
+            verify_fit_receipt(
+                receipts,
+                record,
+                cell,
+                campaign=campaign,
+                filename=selected_receipts[cast(str, record["receipt_sha256"])],
+            )
             state, digest = load_checkpoint(
-                directory / f"{record['checkpoint_sha256']}.pt", record, cell, campaign=campaign
+                directory / selected_checkpoints[cast(str, record["checkpoint_sha256"])],
+                record,
+                cell,
+                campaign=campaign,
             )
         except (PermissionError, OSError, ValueError) as exc:
             if isinstance(exc, CheckpointContractError):

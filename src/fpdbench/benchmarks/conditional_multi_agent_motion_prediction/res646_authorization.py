@@ -217,6 +217,8 @@ class CampaignPlan:
                 "matches",
                 "checkpoint_directory",
                 "receipt_directory",
+                "checkpoint_files",
+                "receipt_files",
                 "admission",
             }:
                 raise ValueError("invalid real campaign configuration")
@@ -259,6 +261,11 @@ class CampaignPlan:
             self.manifest = ck.frozen_manifest()
             self.checkpoints = Path(self.config["checkpoint_directory"])
             self.receipts = Path(self.config["receipt_directory"])
+            self.checkpoint_files = self.config["checkpoint_files"]
+            self.receipt_files = self.config["receipt_files"]
+            ck.validate_artifact_file_maps(
+                self.manifest, self.checkpoint_files, self.receipt_files
+            )
         else:
             raise PermissionError("unknown campaign namespace")
         if len(self.declared) != 4 or any(type(n) is not int or n < 1 for n in self.declared):
@@ -497,8 +504,10 @@ class Campaign(CampaignPlan):
             raise PermissionError("synthetic authority cannot open real inputs")
         allowed = {self.checkpoints, self.receipts}
         for record in cast(list[dict[str, Any]], self.manifest["checkpoints"]):
-            allowed.add(self.checkpoints / f"{record['checkpoint_sha256']}.pt")
-            allowed.add(self.receipts / f"{record['receipt_sha256']}.json")
+            allowed.add(
+                self.checkpoints / self.checkpoint_files[record["checkpoint_sha256"]]
+            )
+            allowed.add(self.receipts / self.receipt_files[record["receipt_sha256"]])
         for spec in self.specs:
             allowed.update(
                 spec.directory / name

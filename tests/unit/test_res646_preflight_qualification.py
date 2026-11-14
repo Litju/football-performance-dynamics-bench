@@ -317,6 +317,47 @@ def test_doubled_cpu_sensitivity_is_disclosed_not_a_new_admission_gate(
     assert result["scope_consumed"] is False
 
 
+def test_prefixed_original_frozen_artifacts_and_auxiliary_receipts_are_supported(
+    local: LocalEvidence,
+) -> None:
+    frozen = ck.frozen_manifest()["checkpoints"]
+    cp_dir = Path(local.values["CHECKPOINT_DIRECTORY"])
+    receipt_dir = Path(local.values["FIT_RECEIPTS_DIRECTORY"])
+    for record in frozen:
+        for directory, field, extension, prefix in (
+            (cp_dir, "checkpoint_sha256", "pt", "checkpoint"),
+            (receipt_dir, "receipt_sha256", "json", "fit-receipt"),
+        ):
+            digest = record[field]
+            old = directory / f"{digest}.{extension}"
+            new = directory / f"{prefix}-per_target_context_deepsets_mlp_v1-{digest}.{extension}"
+            old.rename(new)
+            entry = next(row for row in local.document["files"] if row["path"] == str(old))
+            entry["path"] = str(new)
+            entry["identity"] = p._file_identity(new)
+    write(receipt_dir / "cache-pack-completion.json", {"unrelated": "auxiliary receipt"})
+    local.save()
+    result = local.check()
+    assert result["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", result.get("blockers")
+    config = result["campaign_configuration"]
+    assert len(config["checkpoint_files"]) == 18
+    assert len(config["receipt_files"]) == 18
+    assert all(name.startswith("checkpoint-") for name in config["checkpoint_files"].values())
+    assert all(name.startswith("fit-receipt-") for name in config["receipt_files"].values())
+
+
+def test_duplicate_prefixed_checkpoint_identity_fails_closed(local: LocalEvidence) -> None:
+    frozen = ck.frozen_manifest()["checkpoints"]
+    directory = Path(local.values["CHECKPOINT_DIRECTORY"])
+    digest = frozen[0]["checkpoint_sha256"]
+    original = directory / f"{digest}.pt"
+    alias = directory / f"checkpoint-{digest}.pt"
+    alias.write_bytes(original.read_bytes())
+    alias.chmod(0o600)
+    local.save()
+    assert local.check()["status"] == "RES646_GATE5_BLOCKED"
+
+
 def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption(
     local: LocalEvidence,
     monkeypatch: pytest.MonkeyPatch,

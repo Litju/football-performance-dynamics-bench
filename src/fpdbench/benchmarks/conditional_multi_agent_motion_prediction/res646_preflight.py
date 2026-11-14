@@ -338,17 +338,28 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     if len(entries) != 117 or len({r["path"] for r in entries}) != 117:
         raise ValueError("incomplete independent evidence: 81+18+18 unique files required")
     frozen = cast(list[dict[str, Any]], ck.frozen_manifest()["checkpoints"])
+    checkpoint_dir = Path(values["CHECKPOINT_DIRECTORY"])
+    receipt_dir = Path(values["FIT_RECEIPTS_DIRECTORY"])
+
+    def names_in(directory: Path) -> list[str]:
+        fd = _private_fd(directory, directory=True)
+        try:
+            return sorted(os.listdir(fd))
+        finally:
+            os.close(fd)
+
+    checkpoint_names = names_in(checkpoint_dir)
+    receipt_names = names_in(receipt_dir)
+    checkpoint_files, receipt_files = ck.artifact_file_maps(
+        ck.frozen_manifest(), checkpoint_names, receipt_names
+    )
     expected_models = {
-        str(Path(values["CHECKPOINT_DIRECTORY"]) / f"{r['checkpoint_sha256']}.pt"): r[
-            "checkpoint_sha256"
-        ]
-        for r in frozen
+        str(checkpoint_dir / filename): digest
+        for digest, filename in checkpoint_files.items()
     }
     expected_receipts = {
-        str(Path(values["FIT_RECEIPTS_DIRECTORY"]) / f"{r['receipt_sha256']}.json"): r[
-            "receipt_sha256"
-        ]
-        for r in frozen
+        str(receipt_dir / filename): digest
+        for digest, filename in receipt_files.items()
     }
     # Inventory is metadata only; prior independently checked byte hashes stay bound to stat IDs.
     expected_sources = {str(Path(scope["source_root"]) / r["path"]): r["sha256"] for r in inventory}
@@ -440,10 +451,17 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         checked[name] = _directory(directory)
         fd = _private_fd(directory, directory=True)
         try:
-            if sorted(os.listdir(fd)) != sorted(Path(name).name for name in expected_files):
-                raise ValueError(
-                    "checkpoint/receipt directory inventory differs from frozen loader"
-                )
+            names = sorted(os.listdir(fd))
+            selected = {Path(name).name for name in expected_files}
+            if not selected.issubset(names):
+                raise ValueError("selected frozen artifact missing")
+            if name == "CHECKPOINT_DIRECTORY" and set(names) != selected:
+                raise ValueError("unexpected checkpoint files")
+            if name == "FIT_RECEIPTS_DIRECTORY" and any(
+                entry.startswith("fit-receipt-") and entry not in selected
+                for entry in names
+            ):
+                raise ValueError("unexpected additional fit receipts")
         finally:
             os.close(fd)
     checked["LEDGER_ROOT"], checked["OUTPUT_DIRECTORY"] = _directory(ledger), _directory(output)
@@ -532,13 +550,17 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         "disk_bytes": measured["disk_bytes"],
     }
     if linear_projection["wall_s"] > ceilings["wall_s"]:
-        raise ValueError("measured-throughput wall projection incompatible with effective CPU quota")
+        raise ValueError(
+            "measured-throughput wall projection incompatible with effective CPU quota"
+        )
     campaign_configuration = {
         "schema": "fpdbench.res646.campaign/1",
         "namespace": "RES646-REAL-v1",
         "matches": matches,
         "checkpoint_directory": values["CHECKPOINT_DIRECTORY"],
         "receipt_directory": values["FIT_RECEIPTS_DIRECTORY"],
+        "checkpoint_files": checkpoint_files,
+        "receipt_files": receipt_files,
         "admission": values["RESEARCH_ADMISSION"],
         "ledger_root": str(ledger),
         "output": str(output),
@@ -565,7 +587,10 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         "resource_scenario_exceeds_frozen_budget": any(
             projection[name] > limit for name, limit in ceilings.items()
         ),
-        "resource_scenario_policy": "2x linear synthetic cost is a disclosure-only sensitivity, not a frozen admission gate",
+        "resource_scenario_policy": (
+            "2x linear synthetic cost is a disclosure-only sensitivity, "
+            "not a frozen admission gate"
+        ),
         "evaluation_role_counts": counts,
         "independent_evidence": evidence,
         "limitations": [

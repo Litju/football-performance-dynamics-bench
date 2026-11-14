@@ -67,7 +67,12 @@ bytes must match the frozen admission's inventory hash. Evidence retains indepen
 hashes and contemporaneous device/inode/size/mtime/ctime identities for all 81 source files,
 18 frozen checkpoints and 18 verified fit receipts. Current metadata must match those identities;
 new stat observations cannot retroactively establish unchanged bytes after an old readback.
-Checkpoint and receipt paths must match the existing loader's separate bare-hash inventories.
+Checkpoint and receipt paths use an exact signed digest-to-existing-filename mapping.
+The loader accepts only one unique bare-hash or verified prefixed name for each of the
+18 checkpoints and 18 completed-fit receipts. The checkpoint directory has no extra
+files; the receipts directory may retain unrelated auxiliary records. No originals
+are moved, renamed, hard-linked, or reselected. The map is frozen in the signed
+campaign configuration and the actual bytes are verified again at authorized use.
 The four intended scoring matches additionally require 16 independently verified normalized
 input/lock identities. Their metadata/tracking hashes match the original source inventory;
 normalized phases match the independent source report pinned by admission, and lock hashes match
