@@ -457,7 +457,10 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             selected = {Path(name).name for name in expected_files}
             if not selected.issubset(names):
                 raise ValueError("selected frozen artifact missing")
-            if name == "CHECKPOINT_DIRECTORY" and set(names) != selected:
+            if name == "CHECKPOINT_DIRECTORY" and any(
+                (entry.startswith("checkpoint-") or entry.endswith(".pt")) and entry not in selected
+                for entry in names
+            ):
                 raise ValueError("unexpected checkpoint files")
             if name == "FIT_RECEIPTS_DIRECTORY" and any(
                 (

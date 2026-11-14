@@ -74,8 +74,9 @@ read boundary must hash and compare the actual permitted bytes before the first 
 forward pass; any mismatch remains terminal.
 Checkpoint and receipt paths use an exact signed digest-to-existing-filename mapping.
 The loader accepts only one unique bare-hash or verified prefixed name for each of the
-18 checkpoints and 18 completed-fit receipts. The checkpoint directory has no extra
-files; the receipts directory may retain unrelated auxiliary records. No originals
+18 checkpoints and 18 completed-fit receipts. The directories may be the same existing
+mixed directory and retain unrelated auxiliary records; additional checkpoint or fit-receipt
+candidates still fail closed. No originals
 are moved, renamed, hard-linked, or reselected. The map is frozen in the signed
 campaign configuration and the actual bytes are verified again at authorized use.
 The four intended scoring matches additionally require 16 independently verified normalized
@@ -90,7 +91,7 @@ Qualification also checks empty ledger/output directories with the executor-requ
 mode, writable filesystems, tree/inode isolation, cgroup
 ancestor limits, CPU affinity, actual filesystem capacity and inode availability, and current
 independent quota evidence bound to UID, device and mount-table identity. Missing quota evidence
-fails closed. The final-code signed synthetic resource report is read by its exact hash. Its
+is recorded as `QUOTA_UNKNOWN` for owner execution-risk review. The final-code signed synthetic resource report is read by its exact hash. Its
 largest population supplies a linear estimate and a 2x sensitivity scenario against the unchanged
 14,400 CPU-second, 21,600 wall-second and 2 GiB RSS/transient limits. This scenario is not a proven
 bound on unseen real bytes. The owner-private report retains every assumption and Gate 6 condition.

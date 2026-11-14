@@ -216,7 +216,7 @@ def artifact_file_maps(
     """Select each frozen digest once from bare or original prefixed filenames.
 
     No file bytes are read. Ambiguous, aliased, or additional checkpoint candidates fail closed.
-    Auxiliary non-fit receipt files may coexist in the original receipts directory.
+    Auxiliary records may coexist with selected artifacts in the original mixed directory.
     """
     records = validate_records(manifest)
 
@@ -248,7 +248,11 @@ def artifact_file_maps(
 
     checkpoint_files = select(checkpoint_names, "checkpoint_sha256", "checkpoint", "pt")
     receipt_files = select(receipt_names, "receipt_sha256", "fit-receipt", "json")
-    if set(checkpoint_names) != set(checkpoint_files.values()):
+    if any(
+        (name.startswith("checkpoint-") or name.endswith(".pt"))
+        and name not in checkpoint_files.values()
+        for name in checkpoint_names
+    ):
         raise CheckpointContractError(
             "checkpoint directory inventory differs from the manifest files: unexpected files"
         )

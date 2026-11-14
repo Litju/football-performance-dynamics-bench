@@ -336,6 +336,14 @@ def test_prefixed_original_frozen_artifacts_and_auxiliary_receipts_are_supported
             entry["path"] = str(new)
             entry["identity"] = p._file_identity(new)
     write(receipt_dir / "cache-pack-completion.json", {"unrelated": "auxiliary receipt"})
+    # The owner layout keeps checkpoints, fit receipts and auxiliary records together.
+    for receipt in receipt_dir.iterdir():
+        receipt.rename(cp_dir / receipt.name)
+    local.values["FIT_RECEIPTS_DIRECTORY"] = str(cp_dir)
+    for entry in local.document["files"]:
+        if Path(entry["path"]).parent == receipt_dir:
+            entry["path"] = str(cp_dir / Path(entry["path"]).name)
+            entry["identity"] = p._file_identity(Path(entry["path"]))
     local.save()
     result = local.check()
     assert result["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", result.get("blockers")
@@ -346,12 +354,21 @@ def test_prefixed_original_frozen_artifacts_and_auxiliary_receipts_are_supported
     assert all(name.startswith("fit-receipt-") for name in config["receipt_files"].values())
 
 
-def test_duplicate_prefixed_checkpoint_identity_fails_closed(local: LocalEvidence) -> None:
+@pytest.mark.parametrize(
+    ("directory_key", "field", "prefix", "extension"),
+    [
+        ("CHECKPOINT_DIRECTORY", "checkpoint_sha256", "checkpoint", "pt"),
+        ("FIT_RECEIPTS_DIRECTORY", "receipt_sha256", "fit-receipt", "json"),
+    ],
+)
+def test_duplicate_prefixed_artifact_identity_fails_closed(
+    local: LocalEvidence, directory_key: str, field: str, prefix: str, extension: str
+) -> None:
     frozen = ck.frozen_manifest()["checkpoints"]
-    directory = Path(local.values["CHECKPOINT_DIRECTORY"])
-    digest = frozen[0]["checkpoint_sha256"]
-    original = directory / f"{digest}.pt"
-    alias = directory / f"checkpoint-{digest}.pt"
+    directory = Path(local.values[directory_key])
+    digest = frozen[0][field]
+    original = directory / f"{digest}.{extension}"
+    alias = directory / f"{prefix}-original-{digest}.{extension}"
     alias.write_bytes(original.read_bytes())
     alias.chmod(0o600)
     local.save()
@@ -808,15 +825,22 @@ def test_success_emits_the_exact_campaign_plan_identity(
     assert list(plan.output.iterdir()) == []
 
 
-@pytest.mark.parametrize("directory", ["CHECKPOINT_DIRECTORY", "FIT_RECEIPTS_DIRECTORY"])
-def test_checkpoint_and_receipt_directories_reject_extra_files(
+@pytest.mark.parametrize(
+    ("directory", "filename"),
+    [
+        ("CHECKPOINT_DIRECTORY", "checkpoint-extra-invented-file.pt"),
+        ("FIT_RECEIPTS_DIRECTORY", "fit-receipt-extra-invented-file.json"),
+    ],
+)
+def test_checkpoint_and_receipt_directories_reject_extra_artifacts(
     local: LocalEvidence,
     directory: str,
+    filename: str,
 ) -> None:
-    write(Path(local.values[directory]) / "extra-invented-file.json", {"invented": True})
+    write(Path(local.values[directory]) / filename, {"invented": True})
     result = local.check()
     assert result["status"] == "RES646_GATE5_BLOCKED"
-    assert "directory inventory" in str(result["blockers"])
+    assert "directory" in str(result["blockers"])
 
 
 @pytest.mark.parametrize(
