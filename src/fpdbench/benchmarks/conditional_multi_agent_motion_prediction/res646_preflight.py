@@ -353,12 +353,10 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         ck.frozen_manifest(), checkpoint_names, receipt_names
     )
     expected_models = {
-        str(checkpoint_dir / filename): digest
-        for digest, filename in checkpoint_files.items()
+        str(checkpoint_dir / filename): digest for digest, filename in checkpoint_files.items()
     }
     expected_receipts = {
-        str(receipt_dir / filename): digest
-        for digest, filename in receipt_files.items()
+        str(receipt_dir / filename): digest for digest, filename in receipt_files.items()
     }
     # Inventory is metadata only; prior independently checked byte hashes stay bound to stat IDs.
     expected_sources = {str(Path(scope["source_root"]) / r["path"]): r["sha256"] for r in inventory}
@@ -462,7 +460,11 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             if name == "CHECKPOINT_DIRECTORY" and set(names) != selected:
                 raise ValueError("unexpected checkpoint files")
             if name == "FIT_RECEIPTS_DIRECTORY" and any(
-                entry.startswith("fit-receipt-") and entry not in selected
+                (
+                    entry.startswith("fit-receipt-")
+                    or re.fullmatch(r"[0-9a-f]{64}\.json", entry) is not None
+                )
+                and entry not in selected
                 for entry in names
             ):
                 raise ValueError("unexpected additional fit receipts")
@@ -517,10 +519,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             if quota.get("verified_absence") is not True or not quota.get("verification_method"):
                 raise ValueError("missing independent evidence of unenforced quotas")
         elif status == "QUOTA_VERIFIED_SUFFICIENT":
-            if (
-                type(quota.get("available_bytes")) is not int
-                or quota["available_bytes"] < 2**31
-            ):
+            if type(quota.get("available_bytes")) is not int or quota["available_bytes"] < 2**31:
                 raise ValueError("insufficient enforced filesystem quota")
         else:
             quota_status[name] = "QUOTA_UNKNOWN"
@@ -560,8 +559,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             raise ValueError("observed synthetic campaign exceeds frozen execution limits")
     linear_projection = {
         "cpu_s": measured["cpu_s"] * windows / row["windows"],
-        "wall_s": max(measured["wall_s"], measured["cpu_s"] / capacity)
-        * windows / row["windows"],
+        "wall_s": max(measured["wall_s"], measured["cpu_s"] / capacity) * windows / row["windows"],
         "rss_bytes": measured["rss_bytes"],
         "disk_bytes": measured["disk_bytes"],
     }
@@ -610,8 +608,7 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
             projection[name] > limit for name, limit in ceilings.items()
         ),
         "resource_scenario_policy": (
-            "2x linear synthetic cost is a disclosure-only sensitivity, "
-            "not a frozen admission gate"
+            "2x linear synthetic cost is a disclosure-only sensitivity, not a frozen admission gate"
         ),
         "evaluation_role_counts": counts,
         "independent_evidence": evidence,

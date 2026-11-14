@@ -208,7 +208,6 @@ RECEIPT_COPIED_FIELDS = (
 )
 
 
-
 def artifact_file_maps(
     manifest: Mapping[str, object],
     checkpoint_names: list[str],
@@ -237,10 +236,11 @@ def artifact_file_maps(
         for record in records.values():
             digest = cast(str, record[field])
             candidates = [n for n in names if matches(n, digest, kind, extension)]
+            if not candidates:
+                name = "checkpoint directory" if kind == "checkpoint" else "receipt directory"
+                raise CheckpointContractError(f"{name} differs from the manifest files")
             if len(candidates) != 1:
-                raise CheckpointContractError(
-                    f"{kind} artifact selection is missing or ambiguous for frozen digest"
-                )
+                raise CheckpointContractError("frozen artifact digest has ambiguous filenames")
             selected[digest] = candidates[0]
         if len(set(selected.values())) != 18:
             raise CheckpointContractError("selected artifact filenames must be unique")
@@ -251,7 +251,11 @@ def artifact_file_maps(
     if set(checkpoint_names) != set(checkpoint_files.values()):
         raise CheckpointContractError("checkpoint directory has unexpected files")
     if any(
-        name.startswith("fit-receipt-") and name not in receipt_files.values()
+        (
+            name.startswith("fit-receipt-")
+            or re.fullmatch(r"[0-9a-f]{64}\.json", name) is not None
+        )
+        and name not in receipt_files.values()
         for name in receipt_names
     ):
         raise CheckpointContractError("unexpected additional fit receipt")
@@ -445,9 +449,7 @@ def load_models(
         raise CheckpointContractError(str(exc)) from exc
     selected_checkpoints, selected_receipts = artifact_file_maps(manifest, present, listed)
     if campaign is not None:
-        validate_artifact_file_maps(
-            manifest, campaign.checkpoint_files, campaign.receipt_files
-        )
+        validate_artifact_file_maps(manifest, campaign.checkpoint_files, campaign.receipt_files)
         if (
             selected_checkpoints != campaign.checkpoint_files
             or selected_receipts != campaign.receipt_files
