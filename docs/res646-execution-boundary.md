@@ -67,6 +67,11 @@ bytes must match the frozen admission's inventory hash. Evidence retains indepen
 hashes and contemporaneous device/inode/size/mtime/ctime identities for all 81 source files,
 18 frozen checkpoints and 18 verified fit receipts. Current metadata must match those identities;
 new stat observations cannot retroactively establish unchanged bytes after an old readback.
+The metadata-only preflight now records current inode/stat observations separately and
+preserves prior SHA-256 results as historical expected-content evidence. Missing old stat
+bindings are disclosed, not manufactured. The separately signed Gate 6 source/checkpoint
+read boundary must hash and compare the actual permitted bytes before the first learned
+forward pass; any mismatch remains terminal.
 Checkpoint and receipt paths use an exact signed digest-to-existing-filename mapping.
 The loader accepts only one unique bare-hash or verified prefixed name for each of the
 18 checkpoints and 18 completed-fit receipts. The checkpoint directory has no extra

@@ -337,7 +337,6 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     entries = evidence["files"]
     if len(entries) != 117 or len({r["path"] for r in entries}) != 117:
         raise ValueError("incomplete independent evidence: 81+18+18 unique files required")
-    frozen = cast(list[dict[str, Any]], ck.frozen_manifest()["checkpoints"])
     checkpoint_dir = Path(values["CHECKPOINT_DIRECTORY"])
     receipt_dir = Path(values["FIT_RECEIPTS_DIRECTORY"])
 
@@ -369,10 +368,13 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     if len(expected) != 117 or {r["path"]: r["sha256"] for r in entries} != expected:
         raise ValueError("independent file evidence differs from frozen inventory")
     identities: list[tuple[int, int]] = []
+    observed_stat: dict[str, dict[str, int]] = {}
     for entry in entries:
         identity = _file_identity(Path(entry["path"]))
-        if identity != entry["identity"]:
-            raise ValueError("filesystem identity differs from independent readback")
+        recorded = entry.get("identity")
+        if recorded is not None and identity != recorded:
+            raise ValueError("filesystem identity differs from previously recorded stat")
+        observed_stat[entry["path"]] = identity
         identities.append((identity["device"], identity["inode"]))
     if len(set(identities)) != 117:
         raise ValueError("aliased input identities")
@@ -437,8 +439,10 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         raise ValueError("incomplete independent scoring input/lock evidence")
     for entry in scoring_files:
         identity = _file_identity(Path(entry["path"]))
-        if identity != entry["identity"]:
-            raise ValueError("scoring input identity differs from independent readback")
+        recorded = entry.get("identity")
+        if recorded is not None and identity != recorded:
+            raise ValueError("scoring input identity differs from previously recorded stat")
+        observed_stat[entry["path"]] = identity
         identities.append((identity["device"], identity["inode"]))
     if len(set(identities)) != 133:
         raise ValueError("aliased scoring input identities")
@@ -489,21 +493,39 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     resources = resource_observations(ledger, output)
     if resources["memory_limit_bytes"] is not None and resources["memory_limit_bytes"] < 2**31:
         raise ValueError("insufficient cgroup memory")
+    quota_status: dict[str, str] = {}
     for name, observed in resources["filesystems"].items():
         if observed["read_only"]:
             raise ValueError("ledger/output filesystem is read-only")
-        quota = evidence["quotas"][name]
+        if observed["available_bytes"] < 2**31 or observed["available_inodes"] < 16:
+            raise ValueError("insufficient target filesystem capacity")
+        quotas = evidence.get("quotas", {})
+        quota = quotas.get(name) if isinstance(quotas, dict) else None
+        if quota is None:
+            quota_status[name] = "QUOTA_UNKNOWN"
+            continue
         if (
-            quota["device"] != observed["device"]
-            or quota["uid"] != os.geteuid()
-            or quota["mountinfo_sha256"] != resources["mountinfo_sha256"]
-            or type(quota["available_bytes"]) is not int
-            or not quota["evidence_id"]
-            or quota["available_bytes"] < 2**31
-            or observed["available_bytes"] < 2**31
-            or observed["available_inodes"] < 16
+            not isinstance(quota, dict)
+            or quota.get("device") != observed["device"]
+            or quota.get("uid") != os.geteuid()
+            or quota.get("mountinfo_sha256") != resources["mountinfo_sha256"]
+            or not quota.get("evidence_id")
         ):
-            raise ValueError("insufficient or unqualified disk quota/capacity")
+            raise ValueError("untrusted or mismatched filesystem quota evidence")
+        status = quota.get("status", "QUOTA_VERIFIED_SUFFICIENT")
+        if status == "NO_ENFORCED_QUOTA_VERIFIED":
+            if quota.get("verified_absence") is not True or not quota.get("verification_method"):
+                raise ValueError("missing independent evidence of unenforced quotas")
+        elif status == "QUOTA_VERIFIED_SUFFICIENT":
+            if (
+                type(quota.get("available_bytes")) is not int
+                or quota["available_bytes"] < 2**31
+            ):
+                raise ValueError("insufficient enforced filesystem quota")
+        else:
+            quota_status[name] = "QUOTA_UNKNOWN"
+            continue
+        quota_status[name] = status
     qualification_raw = _metadata(Path(scope["resource_report"]))
     if hashlib.sha256(qualification_raw).hexdigest() != evidence["resource_report_sha256"]:
         raise ValueError("synthetic resource report identity differs")
@@ -593,10 +615,19 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         ),
         "evaluation_role_counts": counts,
         "independent_evidence": evidence,
+        "current_file_stat_sha256": _digest(observed_stat),
+        "historical_byte_continuity": (
+            "UNVERIFIED_PENDING_AUTHORIZED_READ: current stat is not retrospective byte proof"
+        ),
+        "quota_status": quota_status,
         "limitations": [
-            "Prior byte verification is reused only for unchanged filesystem identities.",
-            "Real-source performance remains an unverified assumption.",
-            "Quota attestations require independent review and recheck before Gate 6.",
+            "Past SHA-256 readbacks establish expected contents at the time of readback; "
+            "current stat observations do not retroactively prove unchanged bytes.",
+            "Current bytes must match all frozen digests at the separately authorized "
+            "Gate 6 read boundary, before the first learned forward pass.",
+            "Real-source execution time remains unverified; the 2x scenario is a warning.",
+            "Unknown quota status must be explicitly considered by the owner before Gate 6; "
+            "the executor's frozen disk/RSS limits remain mandatory.",
         ],
     }
 

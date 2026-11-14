@@ -358,6 +358,46 @@ def test_duplicate_prefixed_checkpoint_identity_fails_closed(local: LocalEvidenc
     assert local.check()["status"] == "RES646_GATE5_BLOCKED"
 
 
+def test_historical_byte_readback_without_old_stat_is_not_fabricated(
+    local: LocalEvidence,
+) -> None:
+    # The actual old SHA readbacks did not retain contemporaneous inode/stat values.
+    for entry in [*local.document["files"], *local.document["scoring_files"]]:
+        entry.pop("identity", None)
+    local.save()
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW"
+    assert report["historical_byte_continuity"].startswith("UNVERIFIED_PENDING_AUTHORIZED_READ")
+    assert len(report["current_file_stat_sha256"]) == 64
+
+
+def test_verified_absence_of_enforced_quota_is_sufficient(
+    local: LocalEvidence,
+) -> None:
+    for quota in local.document["quotas"].values():
+        quota.update(
+            status="NO_ENFORCED_QUOTA_VERIFIED",
+            verified_absence=True,
+            verification_method="invented read-only local quota probe",
+        )
+        quota.pop("available_bytes", None)
+    local.save()
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW"
+    assert set(report["quota_status"].values()) == {"NO_ENFORCED_QUOTA_VERIFIED"}
+
+
+def test_unknown_quota_is_explicitly_disclosed_not_misrepresented(
+    local: LocalEvidence,
+) -> None:
+    local.document.pop("quotas")
+    local.save()
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW"
+    assert set(report["quota_status"].values()) == {"QUOTA_UNKNOWN"}
+    assert any("Unknown quota" in warning for warning in report["limitations"])
+
+
 def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption(
     local: LocalEvidence,
     monkeypatch: pytest.MonkeyPatch,
