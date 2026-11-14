@@ -19,7 +19,10 @@ import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+if TYPE_CHECKING:
+    from .res646_authorization import Campaign
 
 from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.evaluation_population import (
     prospective_window_id_v2,
@@ -49,12 +52,13 @@ type Mode = Literal["synthetic", "frozen"]
 
 @dataclass(frozen=True, slots=True)
 class SourceMatchSpec:
-    """One match directory: metadata.json, tracking.jsonl, phases.json, locked.jsonl."""
+    """Match inputs with an optional separately stored population lock."""
 
     label: str
     match_id: str
     directory: Path
     role: str = "evaluation"
+    locked_path: Path | None = None
 
 
 def evaluation_match_ids() -> frozenset[str]:
@@ -62,12 +66,18 @@ def evaluation_match_ids() -> frozenset[str]:
     return frozenset(roles["evaluation"])
 
 
-def authorize(spec: SourceMatchSpec, mode: Mode) -> None:
+def authorize(spec: SourceMatchSpec, mode: Mode, campaign: Campaign | None = None) -> None:
     """Gate every open. No real held-out access can be granted from this module."""
     if mode == "frozen":
-        raise PermissionError(
-            "real source access requires the separate RES646 owner decision; not authorized"
-        )
+        if campaign is None:
+            raise PermissionError(
+                "RES646 real source access requires authenticated owner authorization"
+            )
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
+        campaign.allow_source(spec)
+        return
     if mode != "synthetic":
         raise PermissionError("unknown source mode")
     if spec.role != "evaluation":
@@ -79,6 +89,10 @@ def authorize(spec: SourceMatchSpec, mode: Mode) -> None:
     marker = json.loads(raw)
     if marker != {"synthetic_source_fixture": SOURCE_MARKER, "match_id": spec.match_id}:
         raise PermissionError("source directory is not an invented RES645 fixture")
+    if spec.locked_path is not None:
+        raw, _ = paths.read_regular_file(spec.locked_path.parent / "fixture.json", max_bytes=4096)
+        if json.loads(raw) != marker:
+            raise PermissionError("separate lock directory is not the same synthetic fixture")
 
 
 def _unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -136,14 +150,21 @@ class _Pass:
 class SourceMatch:
     """Opened, validated match. ``prepare`` is the mandatory first pass; ``windows`` the second."""
 
-    def __init__(self, spec: SourceMatchSpec, mode: Mode) -> None:
-        authorize(spec, mode)
+    def __init__(self, spec: SourceMatchSpec, mode: Mode, campaign: Campaign | None = None) -> None:
+        authorize(spec, mode, campaign)
         self.spec = spec
+        self.campaign = campaign if mode == "frozen" else None
         meta_bytes, self.metadata_identity = paths.read_regular_file(
-            spec.directory / "metadata.json", max_bytes=MAX_SMALL_BYTES
+            spec.directory / "metadata.json",
+            max_bytes=MAX_SMALL_BYTES,
+            campaign=self.campaign,
+            require_private=self.campaign is not None,
         )
         phase_bytes, self.phase_identity = paths.read_regular_file(
-            spec.directory / "phases.json", max_bytes=MAX_SMALL_BYTES
+            spec.directory / "phases.json",
+            max_bytes=MAX_SMALL_BYTES,
+            campaign=self.campaign,
+            require_private=self.campaign is not None,
         )
         self.metadata = _mapping(parse_json(meta_bytes), "match metadata")
         if type(self.metadata.get("id")) is not int or str(self.metadata["id"]) != spec.match_id:
@@ -178,10 +199,12 @@ class SourceMatch:
 
     # -- streamed tracking rows -------------------------------------------------------------
     def _samples(self, state: _Pass) -> Iterator[dict[str, object]]:
-        fd = paths.open_regular_fd(self.spec.directory / "tracking.jsonl")
+        fd = paths.open_regular_fd(self.spec.directory / "tracking.jsonl", campaign=self.campaign)
         with os.fdopen(fd, "rb") as stream:
             before = os.fstat(stream.fileno())
-            paths.check_regular(before, max_bytes=MAX_TRACKING_BYTES, require_private=False)
+            paths.check_regular(
+                before, max_bytes=MAX_TRACKING_BYTES, require_private=self.campaign is not None
+            )
             state.raw, state.canonical = hashlib.sha256(), hashlib.sha256()
 
             def frames() -> Iterator[Mapping[str, object]]:
@@ -233,6 +256,34 @@ class SourceMatch:
             )
         ).hexdigest()
         self._expected_canonical = state.canonical.hexdigest()
+        if self.campaign is not None:
+            self.campaign.allow_source(self.spec)
+            assert self.campaign.inventory is not None
+            expected = self.campaign.inventory[self.campaign.specs.index(self.spec)]
+            if any(
+                self.source_document()[k] != expected[k]
+                for k in (
+                    "metadata_sha256",
+                    "phases_sha256",
+                    "tracking_raw_sha256",
+                )
+            ):
+                raise ValueError("source bytes differ from signed inventory before inference")
+            fd = paths.open_regular_fd(
+                self.spec.locked_path or self.spec.directory / "locked.jsonl",
+                campaign=self.campaign,
+            )
+            with os.fdopen(fd, "rb") as locked:
+                before = os.fstat(locked.fileno())
+                paths.check_regular(before, max_bytes=MAX_TRACKING_BYTES, require_private=True)
+                digest = hashlib.sha256()
+                for block in iter(lambda: locked.read(1 << 20), b""):
+                    check()
+                    digest.update(block)
+                if paths.stat_key(before) != paths.stat_key(os.fstat(locked.fileno())):
+                    raise ValueError("locked population changed during identity check")
+            if digest.hexdigest() != expected["locked_sha256"]:
+                raise ValueError("locked population differs from signed inventory before inference")
 
     # -- ordered scientific windows ---------------------------------------------------------
     def windows(
@@ -240,13 +291,17 @@ class SourceMatch:
     ) -> Iterator[Document]:
         if self.source_sha256 is None:
             raise ValueError("prepare() is mandatory before windows()")
-        locked_fd = paths.open_regular_fd(self.spec.directory / "locked.jsonl")
+        locked_fd = paths.open_regular_fd(
+            self.spec.locked_path or self.spec.directory / "locked.jsonl", campaign=self.campaign
+        )
         state = _Pass()
         eligible = 0
         locked_hash = hashlib.sha256()
         with os.fdopen(locked_fd, "rb") as locked:
             paths.check_regular(
-                os.fstat(locked.fileno()), max_bytes=MAX_TRACKING_BYTES, require_private=False
+                os.fstat(locked.fileno()),
+                max_bytes=MAX_TRACKING_BYTES,
+                require_private=self.campaign is not None,
             )
             for (period, frame, origin_id), support in _population_events(
                 self._samples(state), self.periods
@@ -292,6 +347,15 @@ class SourceMatch:
                 if state.canonical.hexdigest() != self._expected_canonical:
                     raise ValueError("tracking content differs between passes")
                 self.locked_sha256 = locked_hash.hexdigest()
+                if self.campaign is not None:
+                    assert self.campaign.inventory is not None
+                    if (
+                        self.locked_sha256
+                        != self.campaign.inventory[self.campaign.specs.index(self.spec)][
+                            "locked_sha256"
+                        ]
+                    ):
+                        raise ValueError("locked population changed during inference")
 
     def source_document(self) -> Document:
         """Source identities for the receipt; complete only after a full ``windows()`` pass."""

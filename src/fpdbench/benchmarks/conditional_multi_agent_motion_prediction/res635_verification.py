@@ -7,6 +7,7 @@ Shares only synthetic input/model prediction and public frozen measurement contr
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -89,9 +90,29 @@ def assert_equivalent(actual: Any, expected: Any) -> None:
         raise ValueError("identity, denominator, or provenance differs")
 
 
-def aggregate(receipts: list[scorer.Document]) -> scorer.Document:
-    if [r["match"] for r in receipts] != list(scorer.MATCHES):
-        raise ValueError("exactly four ordered artificial matches required")
+EVALUATION_MATCHES = ("1874553", "1925299", "2006229", "2010085")
+
+
+def _valid_metrics(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    metrics = cast(dict[str, object], value)
+    for name in scorer.METRICS:
+        number = metrics.get(name)
+        if type(number) not in (int, float) or not math.isfinite(cast(float, number)):
+            return False
+        if cast(float, number) < 0:
+            return False
+    return True
+
+
+def aggregate(
+    receipts: list[scorer.Document], *, matches: tuple[str, ...] = scorer.MATCHES
+) -> scorer.Document:
+    if matches not in (scorer.MATCHES, EVALUATION_MATCHES):
+        raise ValueError("unrecognized match inventory")
+    if [r["match"] for r in receipts] != list(matches):
+        raise ValueError("exactly four ordered matches required")
     seed_means: dict[str, list[dict[str, float]]] = {}
     for regime in lds.INFORMATION_REGIMES:
         for representation in lds.TARGET_REPRESENTATIONS:
@@ -106,6 +127,8 @@ def aggregate(receipts: list[scorer.Document]) -> scorer.Document:
                     for r in records
                     if r["cell"][:2] == [regime, representation]
                 ]
+                if any(not _valid_metrics(row) for row in selected):
+                    raise ValueError("invalid aggregate metric")
                 seed_means[key].append({m: sum(r[m] for r in selected) / 3 for m in scorer.METRICS})
     means = {
         key: {m: sum(v[m] for v in matches) / 4 for m in scorer.METRICS}
@@ -132,6 +155,33 @@ def aggregate(receipts: list[scorer.Document]) -> scorer.Document:
         "equal_match_means": means,
         "contrasts": contrasts,
     }
+
+
+def verify_real_receipts(
+    receipts: list[scorer.Document], scope_sha256: str, seals: list[str]
+) -> scorer.Document:
+    """Verify a four-match chain against independently supplied seals; never run inference."""
+    from .res646_preflight import CONSUMED_SCOPE
+
+    if (
+        re.fullmatch(r"[0-9a-f]{64}", scope_sha256) is None
+        or scope_sha256 == CONSUMED_SCOPE
+        or len(receipts) != 4
+        or len(seals) != 4
+        or any(re.fullmatch(r"[0-9a-f]{64}", seal) is None for seal in seals)
+    ):
+        raise ValueError("invalid scope or incomplete receipt seals")
+    previous = "0" * 64
+    for match, receipt, seal in zip(EVALUATION_MATCHES, receipts, seals, strict=True):
+        if (
+            receipt.get("match") != match
+            or receipt.get("scope_sha256") != scope_sha256
+            or receipt.get("previous_sha256") != previous
+            or scorer.digest(receipt) != seal
+        ):
+            raise ValueError("receipt identity or seal differs")
+        previous = seal
+    return aggregate(receipts, matches=EVALUATION_MATCHES)
 
 
 def verify_prefix(

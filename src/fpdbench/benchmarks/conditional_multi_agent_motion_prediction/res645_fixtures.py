@@ -88,7 +88,9 @@ def invented_frames(match_index: int, samples: int) -> tuple[dict[str, Any], lis
         for sub in (0, 1):
             frame = FIRST_FRAME + 2 * step + sub
             t = (frame - FIRST_FRAME) / 10
-            xy = base + velocity * t + rng.normal(0, 0.05, (22, 2))
+            # Long qualification streams stay inside the invented pitch rather than drifting out.
+            travel = 10 * np.sin(t / 10) if samples > 100 else t
+            xy = base + velocity * travel + rng.normal(0, 0.05, (22, 2))
             players: list[dict[str, Any]] = []
             for i, pid in enumerate(ids):
                 dropout = rng.random() < 0.06 and sub == 0
@@ -111,13 +113,16 @@ def invented_frames(match_index: int, samples: int) -> tuple[dict[str, Any], lis
                     for pid in substitutes
                     if match_index == 3 or pid >= 1034
                 ]
+            seconds, tenth = divmod(frame, 10)
+            hours, seconds = divmod(seconds, 3600)
+            minutes, seconds = divmod(seconds, 60)
             frames.append(
                 {
                     "frame": frame,
-                    "timestamp": f"00:00:{frame // 10:02d}.{frame % 10}0",
+                    "timestamp": f"{hours:02d}:{minutes:02d}:{seconds:02d}.{tenth}0",
                     "period": 1,
                     "ball_data": {
-                        "x": float(ball_base[0] + 0.5 * t),
+                        "x": float(ball_base[0] + 0.5 * travel),
                         "y": float(ball_base[1]),
                         "z": None,
                         "is_detected": bool(rng.random() > 0.1),
@@ -134,6 +139,7 @@ def _fix_origins(frames: list[dict[str, Any]], samples: int) -> None:
     """Every window origin keeps all 22 players observed so the frozen 11-player panels exist."""
     for step in range(25, samples - 15):
         frame = frames[2 * step]
+        frame["player_data"] = [p for p in frame["player_data"] if 1001 <= p["player_id"] <= 1022]
         present = {p["player_id"]: p for p in frame["player_data"]}
         for pid in range(1001, 1023):
             player = present.get(pid)

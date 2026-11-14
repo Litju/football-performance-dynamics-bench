@@ -250,6 +250,12 @@ def predictions(row: Document, random_models: Models) -> Iterator[tuple[int, Doc
 
 def scene_metrics(prediction: Any, scene: Document, stratum: str) -> dict[str, float] | None:
     truth, _, mask = lds.validate_truth_scene(scene)
+    return validated_scene_metrics(prediction, scene, stratum, truth, mask)
+
+
+def validated_scene_metrics(
+    prediction: Any, scene: Document, stratum: str, truth: Any, mask: Any
+) -> dict[str, float] | None:
     if not scene["scoreable"] or (stratum in STRATA[4:] and scene["quality"] != stratum):
         return None
     if stratum in ("early", "middle", "late"):

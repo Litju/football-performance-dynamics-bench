@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import platform
 from collections.abc import Callable, Iterable, Iterator
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,8 @@ from fpdbench.benchmarks.conditional_multi_agent_motion_prediction.evaluation_po
 
 from . import learned_deepsets as lds
 from . import res635_post_failure_evaluation as s
+from . import res635_verification as verification
+from . import res645_independent as independent
 from .information import validate_information_boundary
 from .res645_checkpoints import Binding, FrozenModelSet
 
@@ -37,14 +40,27 @@ CODE_FILES = (
     "res645_paths.py",
     "res645_fixtures.py",
     "res645_workloads.py",
+    "res646_authorization.py",
+    "res646_preflight.py",
     "learned_deepsets.py",
     "information.py",
     "res635_post_failure_evaluation.py",
     "res635_verification.py",
+    "streaming_population_producer_v1.py",
+    "evaluation_population.py",
+    "empirical_experiment_plan.py",
+    "res635_owner_authorization_v1.schema.json",
+    "../../data_sources/protected_skillcorner.py",
+    "../../data_sources/skillcorner.py",
+    "../../data_states/skillcorner.py",
+    "../../eligibility/skillcorner.py",
+    "../../evaluation/metrics/trajectory.py",
 )
 
 
-def provenance(bindings: Iterable[Binding], manifest_sha256: str) -> Document:
+def provenance(
+    bindings: Iterable[Binding], manifest_sha256: str, *, real: bool = False
+) -> Document:
     root = Path(__file__).parent
     protocol = root / "res635_post_failure_descriptive_protocol_v1.json"
     if hashlib.sha256(protocol.read_bytes()).hexdigest() != s.PROTOCOL_SHA256:
@@ -53,8 +69,10 @@ def provenance(bindings: Iterable[Binding], manifest_sha256: str) -> Document:
         "protocol_sha256": s.PROTOCOL_SHA256,
         "runtime": {**s.runtime(), "python": platform.python_version()},
         "code_sha256": {n: hashlib.sha256((root / n).read_bytes()).hexdigest() for n in CODE_FILES},
-        "synthetic_only": True,
-        "weights": "artificial CPU checkpoints from a synthetic manifest",
+        "synthetic_only": not real,
+        "weights": "frozen RES593 CPU checkpoints"
+        if real
+        else "artificial CPU checkpoints from a synthetic manifest",
         "checkpoint_manifest_sha256": manifest_sha256,
         "checkpoint_bindings": [b.document() for b in bindings],
     }
@@ -64,7 +82,7 @@ class SourceIdentity:
     """Ordered, bounded-state identity and denominator accounting for one streamed match."""
 
     def __init__(self, label: str, match_id: str) -> None:
-        if label not in s.MATCHES:
+        if label not in (*s.MATCHES, *verification.EVALUATION_MATCHES):
             raise ValueError("unexpected match label")
         self.label, self.match_id = label, match_id
         self.count = self.scoreable_windows = self.scenes = self.points = self.finals = 0
@@ -167,7 +185,7 @@ class SourceIdentity:
 
 
 def predictions(
-    w: Document, frozen: FrozenModelSet
+    w: Document, frozen: FrozenModelSet, *, raw_window: Document | None = None
 ) -> Iterator[tuple[int, Document, np.ndarray[Any, Any]]]:
     """One window, two scenes, one forward per cell; physical absolute-XY reconstruction."""
     scenes = [c for c in w["scenes"]]
@@ -185,6 +203,14 @@ def predictions(
                 for c in scenes
             ]
             inputs = lds.collate_feature_payloads(payloads, regime)
+            if raw_window is not None:
+                expected = independent.model_inputs(raw_window, regime)
+                for field in fields(inputs):
+                    actual, wanted = getattr(inputs, field.name), getattr(expected, field.name)
+                    if (actual is None) != (wanted is None) or (
+                        actual is not None and not torch.equal(actual, wanted)
+                    ):
+                        raise ValueError("independent model feature inputs differ")
             for representation in lds.TARGET_REPRESENTATIONS:
                 for seed in lds.SEEDS:
                     cell = (regime, representation, seed)
@@ -205,23 +231,43 @@ def score_stream(
     frozen: FrozenModelSet,
     expected_windows: int,
     check: Callable[[], None] = lambda: None,
+    *,
+    source_audit: independent.SourcePredictionAudit | None = None,
 ) -> Document:
     identity = SourceIdentity(label, match_id)
+    audit = source_audit or independent.PredictionAudit()
     totals = np.zeros((18, len(s.STRATA), 3), dtype=np.float64)
     denominators = np.zeros((18, len(s.STRATA)), dtype=np.int64)
     for w in windows:
         check()
         identity.observe(w)
+        if source_audit is not None:
+            source_audit.begin_source(w)
+        else:
+            audit.begin(w["scenes"])
+        truth = {scene["scene_id"]: lds.validate_truth_scene(scene) for scene in w["scenes"]}
         sums, scenes = np.zeros_like(totals), np.zeros_like(denominators)
-        for cell, scene, prediction in predictions(w, frozen):
+        stream = (
+            predictions(w, frozen)
+            if source_audit is None
+            else predictions(
+                w,
+                frozen,
+                raw_window=source_audit.current,
+            )
+        )
+        for cell, scene, prediction in stream:
+            audit.observe(cell, scene, prediction)
+            absolute, _, mask = truth[scene["scene_id"]]
             for j, stratum in enumerate(s.STRATA):
-                measured = s.scene_metrics(prediction, scene, stratum)
+                measured = s.validated_scene_metrics(prediction, scene, stratum, absolute, mask)
                 if measured is not None:
                     sums[cell, j] += [measured[m] for m in s.METRICS]
                     scenes[cell, j] += 1
         present = scenes > 0
         totals[present] += sums[present] / scenes[present, None]
         denominators += present
+        audit.end()
     frozen.assert_unchanged()
     if identity.count != expected_windows or not denominators[:, 0].all():
         raise ValueError("incomplete or unscoreable match")
@@ -239,9 +285,21 @@ def score_stream(
             for j, name in enumerate(s.STRATA)
         }
         records.append({"cell": list(cell), "strata": strata})
-    return {
+    independent_records = audit.records()
+    verification.assert_equivalent(records, independent_records)
+    result: Document = {
         "match": label,
         "identity": identity.result(),
         "records": records,
+        "independent_records_sha256": s.digest(independent_records),
         "provenance": provenance(frozen.bindings, frozen.manifest_sha256),
     }
+    if source_audit is not None:
+        independent_identity = source_audit.result()
+        if any(result["identity"][k] != value for k, value in independent_identity.items()):
+            raise ValueError("independent source denominators or identity differ")
+        result["independent_audit"] = {
+            "identity": independent_identity,
+            "records": independent_records,
+        }
+    return result
