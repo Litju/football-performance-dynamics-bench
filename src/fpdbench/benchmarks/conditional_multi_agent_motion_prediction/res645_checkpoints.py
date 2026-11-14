@@ -251,10 +251,7 @@ def artifact_file_maps(
     if set(checkpoint_names) != set(checkpoint_files.values()):
         raise CheckpointContractError("checkpoint directory has unexpected files")
     if any(
-        (
-            name.startswith("fit-receipt-")
-            or re.fullmatch(r"[0-9a-f]{64}\.json", name) is not None
-        )
+        (name.startswith("fit-receipt-") or re.fullmatch(r"[0-9a-f]{64}\.json", name) is not None)
         and name not in receipt_files.values()
         for name in receipt_names
     ):
