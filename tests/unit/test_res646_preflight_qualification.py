@@ -245,6 +245,7 @@ def local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalEvidence:
                 "device": directories[name].stat().st_dev,
                 "available_bytes": 2**40,
                 "available_inodes": 100,
+                "read_only": False,
             }
             for name in ("ledger", "output")
         },
@@ -782,3 +783,22 @@ def test_pinned_independent_source_must_agree_with_inventory_and_normalization(
     assert result["status"] == "RES646_GATE5_BLOCKED"
     expected = "normalized phases" if field == "normalization-phases" else "source inventory"
     assert expected in str(result["blockers"])
+
+
+@pytest.mark.parametrize("target", ["LEDGER_ROOT", "OUTPUT_DIRECTORY"])
+@pytest.mark.parametrize("mode", [0o500, 0o1700])
+def test_target_modes_must_match_executor_exactly(
+    local: LocalEvidence, target: str, mode: int
+) -> None:
+    Path(local.values[target]).chmod(mode)
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_BLOCKED"
+    assert "0700" in str(report["blockers"])
+
+
+@pytest.mark.parametrize("target", ["ledger", "output"])
+def test_read_only_target_filesystem_is_blocked(local: LocalEvidence, target: str) -> None:
+    local.resources["filesystems"][target]["read_only"] = True
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_BLOCKED"
+    assert "read-only" in str(report["blockers"])

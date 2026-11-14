@@ -76,7 +76,8 @@ checkpoint and receipt files; no contents are opened. Exact checkpoint/receipt d
 must match the loader as well. The successful report emits the concrete campaign configuration;
 constructing `CampaignPlan` from it produces the same identities and proposed execution scope.
 
-Qualification also checks private empty ledger/output directories, tree/inode isolation, cgroup
+Qualification also checks empty ledger/output directories with the executor-required exact 0700
+mode, writable filesystems, tree/inode isolation, cgroup
 ancestor limits, CPU affinity, actual filesystem capacity and inode availability, and current
 independent quota evidence bound to UID, device and mount-table identity. Missing quota evidence
 fails closed. The final-code signed synthetic resource report is read by its exact hash. Its

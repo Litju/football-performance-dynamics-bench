@@ -248,6 +248,7 @@ def resource_observations(ledger: Path, output: Path) -> dict[str, Any]:
             "device": path.stat().st_dev,
             "available_bytes": stat.f_bavail * stat.f_frsize,
             "available_inodes": stat.f_favail,
+            "read_only": bool(stat.f_flag & os.ST_RDONLY),
         }
     return {
         "mountinfo_sha256": hashlib.sha256(Path("/proc/self/mountinfo").read_bytes()).hexdigest(),
@@ -446,6 +447,8 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
         finally:
             os.close(fd)
     checked["LEDGER_ROOT"], checked["OUTPUT_DIRECTORY"] = _directory(ledger), _directory(output)
+    if any(checked[name]["mode"] & 0o7777 != 0o700 for name in ("LEDGER_ROOT", "OUTPUT_DIRECTORY")):
+        raise PermissionError("ledger/output must have executor-required owner mode 0700")
     if (
         ledger == output
         or ledger in output.parents
@@ -469,6 +472,8 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     if resources["memory_limit_bytes"] is not None and resources["memory_limit_bytes"] < 2**31:
         raise ValueError("insufficient cgroup memory")
     for name, observed in resources["filesystems"].items():
+        if observed["read_only"]:
+            raise ValueError("ledger/output filesystem is read-only")
         quota = evidence["quotas"][name]
         if (
             quota["device"] != observed["device"]
