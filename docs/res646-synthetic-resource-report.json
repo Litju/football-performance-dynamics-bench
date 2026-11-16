@@ -1,0 +1,418 @@
+{
+  "schema": "fpdbench.res646.synthetic-resource-qualification/1",
+  "synthetic_only": true,
+  "full_scale_real_readiness": false,
+  "policy": "direct synthetic observations; linear estimates and 2x scenarios are not real-data bounds",
+  "source_commit": "29e519104246866ed66f98a4c2fab1b26405e073",
+  "qualification_tool_sha256": "4d9fa3d9b82c0e7daaeb4ccb7d7a1e7f58eb7e86bb0ca153abcaadf9f82744dd",
+  "code_sha256": {
+    "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
+    "res645_independent.py": "b7a7f85b69614ce6426e32f922fbc88c685989ba35a88ccbcb6544aefc118603",
+    "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+    "res635_execution.py": "f50783157c6a1a05e40dab642ca689d429d6c22ee85092442ac8a83f79755912",
+    "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
+    "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
+    "res645_paths.py": "74cb52d46a19ff26b2261a70dee6479b2af37f9eb7991395969271126faf9ae8",
+    "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
+    "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
+    "res646_authorization.py": "a04f4206c36e8a84ccce84f9462d4bb4da70a54ca435b3a335faadc3560c727d",
+    "res646_preflight.py": "5752b2e11f62e4d2949fba50621f24df37bfb8975ad2f180da9c1dbe4cd6e43b",
+    "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+    "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+    "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
+    "res635_verification.py": "5e9892df288c0ec132e46f04645e4e16a2402f0caeecaffd438b3bc9459d0b40",
+    "streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+    "evaluation_population.py": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b",
+    "empirical_experiment_plan.py": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4",
+    "res635_owner_authorization_v1.schema.json": "5472f0c9ca87dcbffe0eb97b892126a3c6758dc520ae0a6d2a7aa1081c4037af",
+    "../../data_sources/protected_skillcorner.py": "030621489eec053fd4e797d313dff3855d0b049fe52e02b38084cd7734058bb4",
+    "../../data_sources/skillcorner.py": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b",
+    "../../data_states/skillcorner.py": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66",
+    "../../eligibility/skillcorner.py": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5",
+    "../../evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+  },
+  "runtime": {
+    "python": "3.12.8",
+    "numpy": "2.2.4",
+    "torch": "2.6.0+cpu",
+    "device": "cpu",
+    "threads": 1,
+    "precision": "float32"
+  },
+  "limits": {
+    "cpu_s": 14400.0,
+    "wall_s": 21600.0,
+    "rss_bytes": 2147483648,
+    "disk_bytes": 2147483648
+  },
+  "measurements": [
+    {
+      "samples_per_match": 240,
+      "windows": 800,
+      "records": 72,
+      "sealed_receipts": 4,
+      "cells_per_match": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "c1_c2_contrasts": 4,
+      "receipt_seals": [
+        "d27d1ba04e61689a5b210dccc2561d7d8a08aeda663478918d58ead93f303353",
+        "9909d715e8eb5544fb2779904406470e55b3fa80324cdd04e125e16940880e0b",
+        "1afb4b1f623b5e3bae3376f695e39d8a449c89dfe6547ec514e7f74267c92d34",
+        "7055efaa6975144ea2a112efad12a56cbe3cd6aa3c443a69c435965b33f398f3"
+      ],
+      "aggregate_sha256": "251afc7d4ae52968f33a06ee326fb0c9b8ba074024fd1744251b89f67d072209",
+      "completed_at_utc": "2026-11-14T00:04:49.599472+00:00",
+      "cpu_s": 115.98664864399998,
+      "wall_s": 114.95436732399685,
+      "combined_peak_rss_bytes": 457859072,
+      "transient_disk_bytes": 186048,
+      "read_only_fixture_bytes": 31557397,
+      "scope_sha256": "de3650ab62f4b8d6e9e15922c345a2b8b44d2df776bcf6b6493e6694f32ac1cc",
+      "charged_phases": [
+        "launcher",
+        "supervisor setup",
+        "model setup",
+        "source identity",
+        "source decoding",
+        "inference",
+        "independent feature/truth/metric audit",
+        "receipt verification",
+        "aggregation",
+        "final sealing"
+      ]
+    }
+  ],
+  "prior_qualification": {
+    "note": "Historical observations retain their exact original provenance; only measurements at the top level use the final source code.",
+    "reports": [
+      {
+        "schema": "fpdbench.res646.synthetic-resource-qualification/1",
+        "synthetic_only": true,
+        "full_scale_real_readiness": false,
+        "policy": "measurements only; no extrapolation beyond the tested source populations",
+        "code_sha256": {
+          "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
+          "res645_independent.py": "1575dfd6a124fe2ca6818270d3cbf3eb3aac20a0417639bb3da2f10e2ab73a2b",
+          "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+          "res635_execution.py": "4547952532c62bbb13003e5572dfffa54507f21b7e74fa3e388f9f977a31749f",
+          "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
+          "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
+          "res645_paths.py": "4f0d9196d9d32ebc2bb3d80092d97531005856fbb57930a38fd3917b2ad9b060",
+          "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
+          "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
+          "res646_authorization.py": "ef0d4b8572b9c370f9949e92ef6b4e69e9b5c61ee61bc62477174be9a3be72b1",
+          "res646_preflight.py": "4091f55fe907170aba7c6bf2b49620f753c5a1e924df186c8dc70e8abfe0db8c",
+          "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+          "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+          "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
+          "res635_verification.py": "5e9892df288c0ec132e46f04645e4e16a2402f0caeecaffd438b3bc9459d0b40",
+          "streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+          "evaluation_population.py": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b",
+          "empirical_experiment_plan.py": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4",
+          "res635_owner_authorization_v1.schema.json": "5472f0c9ca87dcbffe0eb97b892126a3c6758dc520ae0a6d2a7aa1081c4037af",
+          "../../data_sources/protected_skillcorner.py": "030621489eec053fd4e797d313dff3855d0b049fe52e02b38084cd7734058bb4",
+          "../../data_sources/skillcorner.py": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b",
+          "../../data_states/skillcorner.py": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66",
+          "../../eligibility/skillcorner.py": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5",
+          "../../evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+        },
+        "runtime": {
+          "python": "3.12.8",
+          "numpy": "2.2.4",
+          "torch": "2.6.0+cpu",
+          "device": "cpu",
+          "threads": 1,
+          "precision": "float32"
+        },
+        "limits": {
+          "cpu_s": 14400.0,
+          "wall_s": 21600.0,
+          "rss_bytes": 2147483648,
+          "disk_bytes": 2147483648
+        },
+        "measurements": [
+          {
+            "samples_per_match": 60,
+            "windows": 80,
+            "records": 72,
+            "cpu_s": 21.125929592,
+            "wall_s": 22.40107860500575,
+            "combined_peak_rss_bytes": 456634368,
+            "transient_disk_bytes": 174311,
+            "read_only_fixture_bytes": 7399272,
+            "scope_sha256": "f984c73ddbd25749f1e10fe5ce996811393cb96bb1fb27854c5baf9ae79beedc",
+            "charged_phases": [
+              "launcher",
+              "supervisor setup",
+              "model setup",
+              "source identity",
+              "source decoding",
+              "inference",
+              "independent feature/truth/metric audit",
+              "receipt verification",
+              "aggregation",
+              "final sealing"
+            ]
+          },
+          {
+            "samples_per_match": 240,
+            "windows": 800,
+            "records": 72,
+            "cpu_s": 90.163884104,
+            "wall_s": 93.00033324601827,
+            "combined_peak_rss_bytes": 457617408,
+            "transient_disk_bytes": 183490,
+            "read_only_fixture_bytes": 31557397,
+            "scope_sha256": "709f56503f1bbdf7d40121948a6bb81d54286c582b3cab0f349dda8582805366",
+            "charged_phases": [
+              "launcher",
+              "supervisor setup",
+              "model setup",
+              "source identity",
+              "source decoding",
+              "inference",
+              "independent feature/truth/metric audit",
+              "receipt verification",
+              "aggregation",
+              "final sealing"
+            ]
+          },
+          {
+            "samples_per_match": 1040,
+            "windows": 4000,
+            "records": 72,
+            "cpu_s": 437.377860722,
+            "wall_s": 449.7086255810136,
+            "combined_peak_rss_bytes": 458944512,
+            "transient_disk_bytes": 226350,
+            "read_only_fixture_bytes": 139123489,
+            "scope_sha256": "5c3b9ba8738e4c9ac0c5b373962dbcc8e7aafedf0f203e1a65b80f916f5e8879",
+            "charged_phases": [
+              "launcher",
+              "supervisor setup",
+              "model setup",
+              "source identity",
+              "source decoding",
+              "inference",
+              "independent feature/truth/metric audit",
+              "receipt verification",
+              "aggregation",
+              "final sealing"
+            ]
+          }
+        ]
+      },
+      {
+        "schema": "fpdbench.res646.synthetic-resource-qualification/1",
+        "synthetic_only": true,
+        "full_scale_real_readiness": false,
+        "policy": "direct synthetic observations; linear estimates and 2x scenarios are not real-data bounds",
+        "source_commit": "c2d267cc84f9257b8407b7c52347a8f641aae407",
+        "qualification_tool_sha256": "4d9fa3d9b82c0e7daaeb4ccb7d7a1e7f58eb7e86bb0ca153abcaadf9f82744dd",
+        "code_sha256": {
+          "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
+          "res645_independent.py": "b7a7f85b69614ce6426e32f922fbc88c685989ba35a88ccbcb6544aefc118603",
+          "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+          "res635_execution.py": "f50783157c6a1a05e40dab642ca689d429d6c22ee85092442ac8a83f79755912",
+          "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
+          "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
+          "res645_paths.py": "74cb52d46a19ff26b2261a70dee6479b2af37f9eb7991395969271126faf9ae8",
+          "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
+          "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
+          "res646_authorization.py": "a04f4206c36e8a84ccce84f9462d4bb4da70a54ca435b3a335faadc3560c727d",
+          "res646_preflight.py": "d8876a8f7db94cfba3af70b1f59b323b9d7b51f1860fdf86192036926f5fb583",
+          "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+          "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+          "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
+          "res635_verification.py": "5e9892df288c0ec132e46f04645e4e16a2402f0caeecaffd438b3bc9459d0b40",
+          "streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+          "evaluation_population.py": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b",
+          "empirical_experiment_plan.py": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4",
+          "res635_owner_authorization_v1.schema.json": "5472f0c9ca87dcbffe0eb97b892126a3c6758dc520ae0a6d2a7aa1081c4037af",
+          "../../data_sources/protected_skillcorner.py": "030621489eec053fd4e797d313dff3855d0b049fe52e02b38084cd7734058bb4",
+          "../../data_sources/skillcorner.py": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b",
+          "../../data_states/skillcorner.py": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66",
+          "../../eligibility/skillcorner.py": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5",
+          "../../evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+        },
+        "runtime": {
+          "python": "3.12.8",
+          "numpy": "2.2.4",
+          "torch": "2.6.0+cpu",
+          "device": "cpu",
+          "threads": 1,
+          "precision": "float32"
+        },
+        "limits": {
+          "cpu_s": 14400.0,
+          "wall_s": 21600.0,
+          "rss_bytes": 2147483648,
+          "disk_bytes": 2147483648
+        },
+        "measurements": [
+          {
+            "samples_per_match": 240,
+            "windows": 800,
+            "records": 72,
+            "sealed_receipts": 4,
+            "cells_per_match": [
+              18,
+              18,
+              18,
+              18
+            ],
+            "c1_c2_contrasts": 4,
+            "receipt_seals": [
+              "7d44f65b675e983d380402bcc351371ba27abc83243c0110a888899ddebce4b4",
+              "50596f23a58ccbaadf7274df7b9c947c4674fac964895875a297ed8939992555",
+              "659c5a34bd852442d27ec2195298e4836e41eea17daf0b155d9c0a539eb58448",
+              "d1c202dbec5bbf7318444de1c706d8b4f728077067a620eaa02e99c40389ea4c"
+            ],
+            "aggregate_sha256": "251afc7d4ae52968f33a06ee326fb0c9b8ba074024fd1744251b89f67d072209",
+            "completed_at_utc": "2026-11-13T23:01:57.604683+00:00",
+            "cpu_s": 178.059898542,
+            "wall_s": 181.6814071869885,
+            "combined_peak_rss_bytes": 457613312,
+            "transient_disk_bytes": 191361,
+            "read_only_fixture_bytes": 31557397,
+            "scope_sha256": "73c12b677c640f211dfdd68712cf32448cf0d0dc106aa04f50f15095be68e116",
+            "charged_phases": [
+              "launcher",
+              "supervisor setup",
+              "model setup",
+              "source identity",
+              "source decoding",
+              "inference",
+              "independent feature/truth/metric audit",
+              "receipt verification",
+              "aggregation",
+              "final sealing"
+            ]
+          }
+        ],
+        "extrapolation": {
+          "windows": 51713,
+          "method": "zero-intercept linear scaling from final 800-window campaign; fixed overhead not separately identified",
+          "cpu_s": 11510.014416628059,
+          "wall_s": 11744.113262325922,
+          "two_x_cpu_s": 23020.028833256118,
+          "two_x_wall_s": 23488.226524651844,
+          "policy": "sensitivity scenario, not a proven upper bound; real-data assumptions unverified"
+        }
+      },
+      {
+        "schema": "fpdbench.res646.synthetic-resource-qualification/1",
+        "synthetic_only": true,
+        "full_scale_real_readiness": false,
+        "policy": "direct synthetic observations; linear estimates and 2x scenarios are not real-data bounds",
+        "source_commit": "55bee37498de1baf7a4f473aa54c1904731aa30a",
+        "qualification_tool_sha256": "4d9fa3d9b82c0e7daaeb4ccb7d7a1e7f58eb7e86bb0ca153abcaadf9f82744dd",
+        "code_sha256": {
+          "res645_pipeline.py": "a1a517858fe6bfa5ca624590bcb38b89dcae75e0880042d4672283dc37bf7359",
+          "res645_independent.py": "b7a7f85b69614ce6426e32f922fbc88c685989ba35a88ccbcb6544aefc118603",
+          "res645_evidence.py": "47230fa5bbb2185b0cfcab7076a432e4c4c8cd905870d73d9ff315a0918e0c7f",
+          "res635_execution.py": "f50783157c6a1a05e40dab642ca689d429d6c22ee85092442ac8a83f79755912",
+          "res645_source_stream.py": "f2ce1c6719fceb9ce5a283ee18b8336e84e8748baedb35143a1510d61a99d287",
+          "res645_checkpoints.py": "26b3d80c129aa524c8dc3b9b8ee597124e4a7974dbf820a13c3ee11f3e2d57c6",
+          "res645_paths.py": "74cb52d46a19ff26b2261a70dee6479b2af37f9eb7991395969271126faf9ae8",
+          "res645_fixtures.py": "0af037035ffe00ce73ac6c21facb6a262d37b1b50d76265767e7401a734590cb",
+          "res645_workloads.py": "c56afd6eeab4e7b81f296a0bd60a2d27d9bcceb8d20f34749d53edef594a3fd7",
+          "res646_authorization.py": "a04f4206c36e8a84ccce84f9462d4bb4da70a54ca435b3a335faadc3560c727d",
+          "res646_preflight.py": "089d4724c40145c59270f0985f55f73ba6d7e7000322ccb5b0c94118b30031ef",
+          "learned_deepsets.py": "55e56e2d20013e3216f1cf29c751f2d39412f895486308c4a77fa5dd87a17c6f",
+          "information.py": "b5d41830bc98877b65c215cb2936a34217e3bb13fea3ea4491f9aad1c077b741",
+          "res635_post_failure_evaluation.py": "ae11849cdcf7e5800e8ab44837abac58e858480c945ea268beede6e56949db8d",
+          "res635_verification.py": "5e9892df288c0ec132e46f04645e4e16a2402f0caeecaffd438b3bc9459d0b40",
+          "streaming_population_producer_v1.py": "c38cd593e3036261e91c6200ff2e2bc5841b7d6a0674ae7a39b577cf254950e6",
+          "evaluation_population.py": "e05a654d0d2cf37d5f148bd23f2db2ec0ef328febbd02c8f9986e7b36d78390b",
+          "empirical_experiment_plan.py": "d048b5fc9c8d89f3b3dcb6ad50cc9ac1e765a036618d0e54551ed2ab58c367d4",
+          "res635_owner_authorization_v1.schema.json": "5472f0c9ca87dcbffe0eb97b892126a3c6758dc520ae0a6d2a7aa1081c4037af",
+          "../../data_sources/protected_skillcorner.py": "030621489eec053fd4e797d313dff3855d0b049fe52e02b38084cd7734058bb4",
+          "../../data_sources/skillcorner.py": "598e681c894cd9f890fb1e77f6a083a4c566c14c4c1119950ba0dff99eeb8e1b",
+          "../../data_states/skillcorner.py": "e214a810fc1a364e48e0015048b0da076678cddd369fd410000f3dfe72a6fa66",
+          "../../eligibility/skillcorner.py": "ccedb9ac76f5ca64bb857d53474a555c9e8f47b680fba3de383204da57db37c5",
+          "../../evaluation/metrics/trajectory.py": "662ba2717b8644e22349da4994215b9494010a7ae394db6488e5de4ab3228fa8"
+        },
+        "runtime": {
+          "python": "3.12.8",
+          "numpy": "2.2.4",
+          "torch": "2.6.0+cpu",
+          "device": "cpu",
+          "threads": 1,
+          "precision": "float32"
+        },
+        "limits": {
+          "cpu_s": 14400.0,
+          "wall_s": 21600.0,
+          "rss_bytes": 2147483648,
+          "disk_bytes": 2147483648
+        },
+        "measurements": [
+          {
+            "samples_per_match": 240,
+            "windows": 800,
+            "records": 72,
+            "sealed_receipts": 4,
+            "cells_per_match": [
+              18,
+              18,
+              18,
+              18
+            ],
+            "c1_c2_contrasts": 4,
+            "receipt_seals": [
+              "d137030cbe9fc745abad2569f8a4759ec4b2b2f7ee2a2d483e06533056a19012",
+              "922b7b6f4d9fbd93dffeec544894a6fec50ac3175bc8d5e9251ad409304a9346",
+              "d6413050d5265c4a64876df875f5461ea1f0415a801e0d0031c68e3d63f32bc0",
+              "f309d22a8493949447e000fb4e6a36b49d3592bc8a6b42282a152b2ecf32f9a0"
+            ],
+            "aggregate_sha256": "251afc7d4ae52968f33a06ee326fb0c9b8ba074024fd1744251b89f67d072209",
+            "completed_at_utc": "2026-11-13T23:25:23.162668+00:00",
+            "cpu_s": 127.22301958700001,
+            "wall_s": 125.36437226799899,
+            "combined_peak_rss_bytes": 458018816,
+            "transient_disk_bytes": 187233,
+            "read_only_fixture_bytes": 31557397,
+            "scope_sha256": "0a07568fffd356971d6532357765d4eb649bd8caae48145af3174b62dc34f80c",
+            "charged_phases": [
+              "launcher",
+              "supervisor setup",
+              "model setup",
+              "source identity",
+              "source decoding",
+              "inference",
+              "independent feature/truth/metric audit",
+              "receipt verification",
+              "aggregation",
+              "final sealing"
+            ]
+          }
+        ],
+        "verified_execution_source_commit": "6c303e8877b927b36f0216c9ee4c5d863c816a26",
+        "source_commit_policy": "source_commit records launcher HEAD before the pending preflight repair commit; every measured code_sha256 is verified against verified_execution_source_commit",
+        "extrapolation": {
+          "windows": 51713,
+          "method": "zero-intercept linear scaling from final 800-window campaign; fixed overhead not separately identified",
+          "cpu_s": 8223.855014878165,
+          "wall_s": 8103.70972886879,
+          "two_x_cpu_s": 16447.71002975633,
+          "two_x_wall_s": 16207.41945773758,
+          "policy": "sensitivity scenario, not a proven upper bound; real-data assumptions unverified"
+        }
+      }
+    ]
+  },
+  "extrapolation": {
+    "windows": 51713,
+    "method": "zero-intercept linear scaling from final 800-window campaign; fixed overhead not separately identified",
+    "cpu_s": 7497.521951658964,
+    "wall_s": 7430.793996782311,
+    "two_x_cpu_s": 14995.043903317928,
+    "two_x_wall_s": 14861.587993564623,
+    "policy": "sensitivity scenario, not a proven upper bound; real-data assumptions unverified"
+  }
+}

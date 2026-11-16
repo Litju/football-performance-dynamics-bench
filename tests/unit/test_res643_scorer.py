@@ -58,6 +58,16 @@ def test_scalar_coordinate_rmse_and_mask():
         lds.validate_truth_scene(bad)
 
 
+def test_cached_scene_truth_preserves_all_stratum_metrics():
+    for scene in s.window(s.MATCHES[0], 1)["scenes"]:
+        truth, _, mask = lds.validate_truth_scene(scene)
+        prediction = np.nan_to_num(truth) + np.array([3.0, 4.0])
+        for stratum in s.STRATA:
+            assert s.validated_scene_metrics(prediction, scene, stratum, truth, mask) == (
+                s.scene_metrics(prediction, scene, stratum)
+            )
+
+
 def test_feature_boundary_and_source_mask():
     row = s.window(s.MATCHES[0], 1)
     for regime in lds.INFORMATION_REGIMES:

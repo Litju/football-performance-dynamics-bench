@@ -12,6 +12,10 @@ import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .res646_authorization import Campaign
 
 # "checkpoint" is deliberately absent: checkpoint directories are legitimate inputs.
 FORBIDDEN_FRAGMENTS = ("res594", "fpdbench-private", "owner-go", "heldout", "held-out")
@@ -27,7 +31,7 @@ class FileIdentity:
     sha256: str
 
 
-def reject_unsafe_path(path: Path) -> Path:
+def reject_unsafe_path(path: Path, *, campaign: Campaign | None = None) -> Path:
     """Return an absolute, lexically normal path or refuse aliases and historical scopes."""
     text = str(path)
     if "\x00" in text or not path.is_absolute():
@@ -35,13 +39,22 @@ def reject_unsafe_path(path: Path) -> Path:
     if ".." in path.parts or "." in path.parts[1:]:
         raise PermissionError("path traversal components refused")
     lowered = text.lower()
-    if any(fragment in lowered for fragment in FORBIDDEN_FRAGMENTS):
+    if campaign is not None:
+        from .res646_authorization import require_campaign
+
+        campaign = require_campaign(campaign)
+        campaign.allow_input(path)
+    if any(
+        fragment in lowered
+        for fragment in FORBIDDEN_FRAGMENTS
+        if campaign is None or fragment != "fpdbench-private"
+    ):
         raise PermissionError("historical or held-out path refused")
     return path
 
 
-def _open_parent(path: Path) -> tuple[int, str]:
-    reject_unsafe_path(path)
+def _open_parent(path: Path, campaign: Campaign | None = None) -> tuple[int, str]:
+    reject_unsafe_path(path, campaign=campaign)
     parts = path.parts
     fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
     try:
@@ -60,8 +73,10 @@ def _open_parent(path: Path) -> tuple[int, str]:
     return fd, parts[-1]
 
 
-def open_directory_fd(path: Path, *, require_private: bool) -> int:
-    parent, name = _open_parent(path)
+def open_directory_fd(
+    path: Path, *, require_private: bool, campaign: Campaign | None = None
+) -> int:
+    parent, name = _open_parent(path, campaign)
     try:
         fd = os.open(
             name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent
@@ -77,20 +92,31 @@ def open_directory_fd(path: Path, *, require_private: bool) -> int:
     return fd
 
 
-def list_directory(path: Path, *, require_private: bool) -> list[str]:
-    fd = open_directory_fd(path, require_private=require_private)
+def list_directory(
+    path: Path, *, require_private: bool, campaign: Campaign | None = None
+) -> list[str]:
+    fd = open_directory_fd(path, require_private=require_private, campaign=campaign)
     try:
         return sorted(os.listdir(fd))
     finally:
         os.close(fd)
 
 
-def open_regular_fd(path: Path, *, require_private: bool = False) -> int:
-    parent, name = _open_parent(path)
+def open_regular_fd(
+    path: Path, *, require_private: bool = False, campaign: Campaign | None = None
+) -> int:
+    parent, name = _open_parent(path, campaign)
     try:
-        return os.open(
+        fd = os.open(
             name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent
         )
+        try:
+            info = os.fstat(fd)
+            check_regular(info, max_bytes=info.st_size, require_private=require_private)
+        except BaseException:
+            os.close(fd)
+            raise
+        return fd
     except OSError as exc:
         raise PermissionError("input file missing or aliased") from exc
     finally:
@@ -112,10 +138,10 @@ def stat_key(info: os.stat_result) -> tuple[int, int, int, int, int]:
 
 
 def read_regular_file(
-    path: Path, *, max_bytes: int, require_private: bool = False
+    path: Path, *, max_bytes: int, require_private: bool = False, campaign: Campaign | None = None
 ) -> tuple[bytes, FileIdentity]:
     """Read one exclusive regular file once; identity is taken before and after the read."""
-    fd = open_regular_fd(path)
+    fd = open_regular_fd(path, campaign=campaign)
     with os.fdopen(fd, "rb") as stream:
         before = os.fstat(stream.fileno())
         check_regular(before, max_bytes=max_bytes, require_private=require_private)

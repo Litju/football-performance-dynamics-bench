@@ -85,6 +85,47 @@ def clone(bundle: Path, tmp_path: Path) -> Path:
     return target
 
 
+def test_metadata_inventory_never_loads_models_and_rejects_changed_checkpoint(
+    bundle: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = clone(bundle, tmp_path)
+    _, manifest, checkpoints = fx.read_bundle(target)
+    monkeypatch.setattr(torch, "load", lambda *args, **kwargs: pytest.fail("deserialized"))
+    assert ck.verify_inventory(manifest, checkpoints, target / "receipts", "synthetic") == (
+        ck.validate_manifest(manifest, "synthetic")
+    )
+    path = next(checkpoints.glob("*.pt"))
+    with path.open("ab") as stream:
+        stream.write(b"changed")
+    with pytest.raises(ck.CheckpointContractError, match="SHA-256 mismatch"):
+        ck.verify_inventory(manifest, checkpoints, target / "receipts", "synthetic")
+
+
+def test_source_stream_accepts_separate_synthetic_population_lock(tmp_path: Path) -> None:
+    directory = tmp_path / "match"
+    fx.build_match(directory, 0, 46)
+    spec = src.SourceMatchSpec("synthetic-match-0", fx.FIXTURE_MATCH_IDS[0], directory)
+    original = src.SourceMatch(spec, "synthetic")
+    original.prepare()
+    expected = list(original.windows())
+    lock = tmp_path / "population.jsonl"
+    (directory / "locked.jsonl").rename(lock)
+    shutil.copyfile(directory / "fixture.json", tmp_path / "fixture.json")
+    separate = src.SourceMatch(
+        src.SourceMatchSpec(spec.label, spec.match_id, directory, locked_path=lock), "synthetic"
+    )
+    separate.prepare()
+    assert list(separate.windows()) == expected
+    assert (
+        separate.source_document()["locked_sha256"] == original.source_document()["locked_sha256"]
+    )
+    (tmp_path / "fixture.json").unlink()
+    with pytest.raises(PermissionError):
+        src.SourceMatch(
+            src.SourceMatchSpec(spec.label, spec.match_id, directory, locked_path=lock), "synthetic"
+        )
+
+
 @functools.cache
 def windows_of(bundle: Path, index: int = 0) -> list[dict[str, Any]]:
     spec = fx.read_bundle(bundle)[0][index]
@@ -936,13 +977,33 @@ def test_frozen_contract_never_opens_private_checkpoints(tmp_path: Path, bundle:
     synthetic = json.loads((bundle / "manifest.json").read_bytes())
     with pytest.raises(ck.CheckpointContractError, match="not the pinned frozen"):
         ck.validate_manifest(synthetic, "frozen")
-    # Pointing the frozen mode at an empty (or synthetic) directory fails before any file read.
+    # The frozen loader refuses access before opening checkpoints or receipts.
     empty = tmp_path / "empty"
     empty.mkdir(mode=0o700)
-    with pytest.raises(ck.CheckpointContractError, match="differs from the manifest files"):
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
         ck.load_models(frozen_manifest, empty, "frozen", empty)
     with pytest.raises(ck.CheckpointContractError, match="not the pinned frozen"):
         ck.load_models(synthetic, bundle / "checkpoints", "frozen", bundle / "receipts")
+
+
+def test_direct_frozen_checkpoint_load_refused_before_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    records = ck.validate_records(ck.frozen_manifest())
+    cell, record = next(iter(records.items()))
+    monkeypatch.setattr(ck.paths, "read_regular_file", lambda *a, **k: pytest.fail("opened"))
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
+        ck.load_checkpoint(Path("/invented/missing"), record, cell)
+
+
+def test_mislabeled_frozen_checkpoint_is_not_deserialized(monkeypatch: pytest.MonkeyPatch) -> None:
+    records = ck.validate_records(ck.frozen_manifest())
+    cell, record = next(iter(records.items()))
+    identity = paths.FileIdentity(1, 1, 0, 0, 0, str(record["checkpoint_sha256"]))
+    monkeypatch.setattr(ck.paths, "read_regular_file", lambda *a, **k: (b"", identity))
+    monkeypatch.setattr(torch, "load", lambda *a, **k: pytest.fail("deserialized"))
+    with pytest.raises(ck.CheckpointContractError, match="authenticated owner authorization"):
+        ck.load_checkpoint(
+            Path("/invented/missing"), {**record, "checkpoint_sha256": "0" * 64}, cell
+        )
 
 
 def test_mutated_model_is_detected(frozen: ck.FrozenModelSet) -> None:
@@ -1001,6 +1062,54 @@ def test_fit_receipt_binding(bundle: Path, tmp_path: Path) -> None:
 
 
 # ----------------------------------------------------------------------- end-to-end parity
+def test_independent_metric_audit_never_repeats_inference(
+    bundle: Path, frozen: ck.FrozenModelSet
+) -> None:
+    calls: list[int] = []
+    hooks = [
+        model.register_forward_hook(lambda *_: calls.append(1)) for model in frozen.models.values()
+    ]
+    try:
+        result = pipe.score_stream(
+            "synthetic-match-0", "1886347", windows_of(bundle, 0)[:1], frozen, 1
+        )
+    finally:
+        for hook in hooks:
+            hook.remove()
+    assert len(calls) == 18
+    assert len(result["independent_records_sha256"]) == 64
+
+
+def test_single_pass_independent_metric_mismatch_fails(
+    bundle: Path, frozen: ck.FrozenModelSet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = ind.PredictionAudit.records
+
+    def forged(audit: ind.PredictionAudit) -> list[dict[str, Any]]:
+        records = original(audit)
+        records[0]["strata"]["all"]["metrics"]["ade_m"] += 1.0
+        return records
+
+    monkeypatch.setattr(ind.PredictionAudit, "records", forged)
+    with pytest.raises(ValueError, match="independent metric parity"):
+        pipe.score_stream("synthetic-match-0", "1886347", windows_of(bundle, 0)[:1], frozen, 1)
+
+
+def test_cached_truth_matches_per_call_validation_bitwise(
+    bundle: Path, frozen: ck.FrozenModelSet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    window = windows_of(bundle, 0)[0]
+    expected = pipe.score_stream("synthetic-match-0", "1886347", [window], frozen, 1)
+    calculate = s.validated_scene_metrics
+
+    def original(prediction: Any, scene: dict[str, Any], stratum: str, *_: Any) -> Any:
+        truth, _, mask = lds.validate_truth_scene(scene)
+        return calculate(prediction, scene, stratum, truth, mask)
+
+    monkeypatch.setattr(s, "validated_scene_metrics", original)
+    assert pipe.score_stream("synthetic-match-0", "1886347", [window], frozen, 1) == expected
+
+
 def test_complete_72_record_pipeline_and_independent_verification(
     workload: wl.FixtureWorkload, receipts: list[dict[str, Any]]
 ) -> None:

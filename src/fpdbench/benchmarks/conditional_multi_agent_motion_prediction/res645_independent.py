@@ -13,10 +13,14 @@ import hashlib
 import io
 import json
 import math
+import os
 from collections import deque
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from .res646_authorization import Campaign
 
 import numpy as np
 import torch
@@ -27,7 +31,193 @@ from . import res645_paths as paths
 from .evaluation_population import prospective_window_id_v2
 
 type Document = dict[str, Any]
+type Mode = Literal["synthetic", "frozen"]
 MAX = 8 * 1024**3
+
+
+class PredictionAudit:
+    """Recalculate match metrics as predictions pass, without calling any model."""
+
+    def __init__(self) -> None:
+        self.sums = [[[0.0] * 3 for _ in s.STRATA] for _ in s.CELLS]
+        self.counts = [[0] * len(s.STRATA) for _ in s.CELLS]
+        self.values: dict[tuple[int, int], list[list[float]]] = {}
+        self.truth: dict[str, tuple[Any, Any]] = {}
+
+    def begin(self, scenes: list[Document]) -> None:
+        self.values = {}
+        self.truth = {}
+        for scene in scenes:
+            panel = scene["absolute_xy"]
+            mask = np.asarray([[point is not None for point in row] for row in panel]).T
+            truth = np.asarray(
+                [[point if point is not None else [0.0, 0.0] for point in row] for row in panel],
+                dtype=np.float64,
+            ).transpose(1, 0, 2)
+            if mask.tolist() != np.asarray(scene["truth_mask"]).T.tolist():
+                raise ValueError("independent truth mask differs")
+            self.truth[scene["scene_id"]] = truth, mask
+
+    def observe(self, cell: int, scene: Document, prediction: Any) -> None:
+        if not scene["scoreable"]:
+            return
+        truth, full_mask = self.truth[scene["scene_id"]]
+        for j, stratum in enumerate(s.STRATA):
+            if j >= 4 and scene["quality"] != stratum:
+                continue
+            start, end = {"early": (0, 5), "middle": (5, 10), "late": (10, 15)}.get(
+                stratum, (0, 15)
+            )
+            mask = full_mask[:, start:end]
+            if not mask[:, -1].any():
+                continue
+            squared = np.square(prediction[:, start:end] - truth[:, start:end]).sum(axis=-1)
+            distances = np.sqrt(squared)
+            self.values.setdefault((cell, j), []).append(
+                [
+                    float(distances[mask].mean()),
+                    float(distances[:, -1][mask[:, -1]].mean()),
+                    float(np.sqrt(squared[mask].sum() / (2 * mask.sum()))),
+                ]
+            )
+
+    def end(self) -> None:
+        for (cell, j), rows in self.values.items():
+            for k in range(3):
+                self.sums[cell][j][k] += sum(row[k] for row in rows) / len(rows)
+            self.counts[cell][j] += 1
+
+    def records(self) -> list[Document]:
+        return [
+            {
+                "cell": list(cell),
+                "strata": {
+                    name: {
+                        "windows": self.counts[i][j],
+                        "metrics": {
+                            metric: self.sums[i][j][k] / self.counts[i][j]
+                            for k, metric in enumerate(s.METRICS)
+                        }
+                        if self.counts[i][j]
+                        else None,
+                    }
+                    for j, name in enumerate(s.STRATA)
+                },
+            }
+            for i, cell in enumerate(s.CELLS)
+        ]
+
+
+class SourcePredictionAudit(PredictionAudit):
+    """Independent raw eligibility/truth readback, sharing the one prediction pass only."""
+
+    def __init__(
+        self,
+        directory: Path,
+        label: str,
+        locked_path: Path | None,
+        campaign: Campaign | None = None,
+    ) -> None:
+        super().__init__()
+        self.windows = raw_windows(
+            directory,
+            label,
+            locked_path,
+            campaign,
+            mode="frozen" if campaign is not None else "synthetic",
+        )
+        self.ids, self.masks, self.truths = (hashlib.sha256() for _ in range(3))
+        self.count = self.scoreable = self.scenes = self.points = self.finals = 0
+        self.missingness = dict.fromkeys(
+            (
+                "observed_detected",
+                "provider_extrapolated",
+                "flag_missing",
+                "missing_xy",
+            ),
+            0,
+        )
+        self.quality = dict.fromkeys(
+            ("detected_only", "with_provider_extrapolation", "unclassified"), 0
+        )
+
+    def begin_source(self, window: Document) -> None:
+        raw = next(self.windows, None)
+        if raw is None or (raw["index"], raw["window_id"]) != (
+            window["index"],
+            window["window_id"],
+        ):
+            raise ValueError("independent source window inventory differs")
+        self.current = raw
+        self.ids.update(raw["window_id"].encode() + b"\n")
+        scenes = []
+        scoreable = False
+        for actual, expected in zip(window["scenes"], raw["scenes"], strict=True):
+            panel = [
+                [
+                    None if np.isnan(p[0]) else [float(p[0]), float(p[1])]
+                    for p in expected["absolute"][:, t]
+                ]
+                for t in range(15)
+            ]
+            mask = expected["mask"].T.tolist()
+            if any(
+                actual[k] != value
+                for k, value in {
+                    "scene_id": expected["scene_id"],
+                    "player_ids": expected["player_ids"],
+                    "origin_xy": expected["origin"].tolist(),
+                    "absolute_xy": panel,
+                    "truth_mask": mask,
+                    "scoreable": expected["scoreable"],
+                    "quality": expected["quality"],
+                }.items()
+            ):
+                raise ValueError("independent source truth, origin, mask or quality differs")
+            scenes.append({**actual, "absolute_xy": panel, "truth_mask": mask})
+            self.masks.update(_digest(mask) + b"\n")
+            self.truths.update(_digest(panel) + b"\n")
+            if expected["scoreable"]:
+                scoreable = True
+                self.scenes += 1
+                self.points += int(expected["mask"].sum())
+                self.finals += int(expected["mask"][:, -1].sum())
+                self.quality[expected["quality"]] += 1
+                for frame in raw["support"][26:]:
+                    for pid in expected["player_ids"]:
+                        point = _xy(frame, pid)
+                        category = (
+                            "missing_xy"
+                            if point is None
+                            else (
+                                "observed_detected"
+                                if point[2] is True
+                                else "provider_extrapolated"
+                                if point[2] is False
+                                else "flag_missing"
+                            )
+                        )
+                        self.missingness[category] += 1
+        self.count += 1
+        self.scoreable += scoreable
+        self.begin(scenes)
+
+    def result(self) -> Document:
+        if next(self.windows, None) is not None:
+            raise ValueError("independent source has missing scored windows")
+        return {
+            "windows": self.count,
+            "scoreable_windows": self.scoreable,
+            "scoreable_scenes": self.scenes,
+            "scored_points": self.points,
+            "final_targets": self.finals,
+            "scalar_coordinates": 2 * self.points,
+            "window_ids_sha256": self.ids.hexdigest(),
+            "mask_sha256": self.masks.hexdigest(),
+            "truth_sha256": self.truths.hexdigest(),
+            "scoreable_scene_quality": self.quality,
+            "future_target_missingness": self.missingness,
+        }
 
 
 def _digest(value: object) -> bytes:
@@ -72,7 +262,11 @@ def raw_eligible(support: list[Any], meta: Document, phases: list[Document]) -> 
         seen = set()
         for player in frame["player_data"]:
             pid = player["player_id"]
-            if pid in seen or pid not in roster or type(player["is_detected"]) is not bool:
+            if (
+                pid in seen
+                or pid not in roster
+                or (player["is_detected"] is not None and type(player["is_detected"]) is not bool)
+            ):
                 return False
             seen.add(pid)
             person = roster[pid]
@@ -115,22 +309,43 @@ def raw_eligible(support: list[Any], meta: Document, phases: list[Document]) -> 
     return ball_count >= 39
 
 
-def raw_windows(directory: Path, label: str) -> Iterator[Document]:
+def raw_windows(
+    directory: Path,
+    label: str,
+    locked_path: Path | None = None,
+    campaign: Campaign | None = None,
+    *,
+    mode: Mode = "synthetic",
+) -> Iterator[Document]:
     """Stream eligible windows straight from raw frames; no canonicalizer, no producer."""
-    meta_bytes, _ = paths.read_regular_file(directory / "metadata.json", max_bytes=MAX)
+    from .res646_authorization import authorize_independent_source
+
+    match_id = authorize_independent_source(directory, label, locked_path, mode, campaign)
+    meta_bytes, _ = paths.read_regular_file(
+        directory / "metadata.json", max_bytes=16 << 20, campaign=campaign
+    )
     meta = json.loads(meta_bytes)
+    if str(meta["id"]) != match_id:
+        raise PermissionError("source match identity differs from authorized fixture or campaign")
     team_of = {p["id"]: p["team_id"] for p in meta["players"]}
     home_team = meta["home_team"]["id"]
     home_ids = sorted(i for i, t in team_of.items() if t == home_team)
     away_ids = sorted(i for i, t in team_of.items() if t != home_team)
-    phases = json.loads((directory / "phases.json").read_bytes())
+    phase_bytes, _ = paths.read_regular_file(
+        directory / "phases.json", max_bytes=16 << 20, campaign=campaign
+    )
+    phases = json.loads(phase_bytes)
     origins = (
         (p["period"], f)
         for p in sorted(meta["match_periods"], key=lambda q: q["period"])
         for f in range(p["start_frame"] + p["start_frame"] % 2, p["end_frame"], 2)
     )
-    locked = open(directory / "locked.jsonl", "rb")  # noqa: SIM115 - closed in finally
-    tracking = open(directory / "tracking.jsonl", "rb")  # noqa: SIM115
+    locked = os.fdopen(
+        paths.open_regular_fd(locked_path or directory / "locked.jsonl", campaign=campaign), "rb"
+    )
+    tracking = os.fdopen(
+        paths.open_regular_fd(directory / "tracking.jsonl", campaign=campaign), "rb"
+    )
     ordinal = 0
     try:
         recent: deque[dict[str, Any]] = deque(maxlen=41)
@@ -139,7 +354,10 @@ def raw_windows(directory: Path, label: str) -> Iterator[Document]:
 
         def emit(origin: tuple[int, int]) -> Document | None:
             nonlocal ordinal
-            row = json.loads(locked.readline())
+            line = locked.readline(1024 * 1024 + 1)
+            if len(line) > 1024 * 1024:
+                raise ValueError("oversized independent lock row")
+            row = json.loads(line)
             period, frame = origin
             if (row["period"], row["source_frame"], row["match_id"], row["role"]) != (
                 period,
@@ -148,7 +366,7 @@ def raw_windows(directory: Path, label: str) -> Iterator[Document]:
                 "evaluation",
             ):
                 raise ValueError("locked row differs from the raw origin grid")
-            by_frame = {f["frame"]: f for f in recent}
+            by_frame = {f["frame"]: f for f in recent if f["period"] == period}
             support = [by_frame.get(frame + 2 * k) for k in range(-25, 16)]
             eligible = raw_eligible(support, meta, phases)
             origin_id = f"period_{period}/sample_{frame // 2}"
@@ -163,7 +381,9 @@ def raw_windows(directory: Path, label: str) -> Iterator[Document]:
             ordinal += 1
             return window
 
-        for line in tracking:
+        for line in iter(lambda: tracking.readline(1024 * 1024 + 1), b""):
+            if len(line) > 1024 * 1024:
+                raise ValueError("oversized independent tracking row")
             frame = json.loads(line)
             if frame["frame"] % 2:
                 continue
@@ -194,10 +414,10 @@ def raw_windows(directory: Path, label: str) -> Iterator[Document]:
         tracking.close()
 
 
-def _xy(frame: dict[str, Any], pid: int) -> tuple[float, float, bool] | None:
+def _xy(frame: dict[str, Any], pid: int) -> tuple[float, float, bool | None] | None:
     for p in frame["player_data"]:
         if p["player_id"] == pid and p["x"] is not None and p["y"] is not None:
-            return float(p["x"]), float(p["y"]), bool(p["is_detected"])
+            return float(p["x"]), float(p["y"]), p["is_detected"]
     return None
 
 
@@ -215,7 +435,7 @@ def _build(
     for side, roster in (("home", home_ids), ("away", away_ids)):
         targets = [pid for pid in roster if _xy(support[25], pid) is not None]
         absolute = np.full((11, 15, 2), np.nan)
-        flags: list[bool] = []
+        flags: list[bool | None] = []
         for p, pid in enumerate(targets[:11]):
             for t in range(15):
                 got = _xy(support[26 + t], pid)
@@ -226,10 +446,10 @@ def _build(
         mask = ~np.isnan(absolute[..., 0])
         quality = (
             "with_provider_extrapolation"
-            if any(not f for f in flags)
-            else "detected_only"
-            if flags
+            if any(f is False for f in flags)
             else "unclassified"
+            if not flags or any(f is None for f in flags)
+            else "detected_only"
         )
         scenes.append(
             {
@@ -313,14 +533,25 @@ def model_inputs(w: Document, regime: str) -> lds.ModelInputs:
 
 
 def load_models(
-    manifest: Document, directory: Path, receipts: Path
+    manifest: Document,
+    directory: Path,
+    receipts: Path,
+    *,
+    mode: Mode = "synthetic",
+    campaign: Campaign | None = None,
 ) -> tuple[dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP], list[Document]]:
     """Independent loader: reads the manifest-named bytes itself and checks the hash."""
+    from .res646_authorization import authorize_independent_models
+
+    authorize_independent_models(manifest, directory, receipts, mode, campaign)
     models: dict[tuple[str, str, int], lds.PerTargetContextDeepSetsMLP] = {}
     bindings: list[Document] = []
     for rec in manifest["checkpoints"]:
         fit, fit_id = paths.read_regular_file(
-            receipts / f"{rec['receipt_sha256']}.json", max_bytes=1 << 20, require_private=True
+            receipts / f"{rec['receipt_sha256']}.json",
+            max_bytes=1 << 20,
+            require_private=True,
+            campaign=campaign,
         )
         if (
             fit_id.sha256 != rec["receipt_sha256"]
@@ -328,7 +559,10 @@ def load_models(
         ):
             raise ValueError("independent fit receipt mismatch")
         data, ident = paths.read_regular_file(
-            directory / f"{rec['checkpoint_sha256']}.pt", max_bytes=1 << 26, require_private=True
+            directory / f"{rec['checkpoint_sha256']}.pt",
+            max_bytes=1 << 26,
+            require_private=True,
+            campaign=campaign,
         )
         if ident.sha256 != rec["checkpoint_sha256"]:
             raise ValueError("independent checkpoint hash mismatch")
@@ -356,9 +590,19 @@ def load_models(
 
 
 def match_body(
-    directory: Path, label: str, manifest: Document, checkpoints: Path, receipts: Path
+    directory: Path,
+    label: str,
+    manifest: Document,
+    checkpoints: Path,
+    receipts: Path,
+    *,
+    mode: Mode = "synthetic",
+    campaign: Campaign | None = None,
 ) -> Document:
-    models, bindings = load_models(manifest, checkpoints, receipts)
+    # Real verification audits captured predictions; it must never replay learned inference.
+    if mode != "synthetic" or campaign is not None:
+        raise PermissionError("match_body is invented-fixture verification only")
+    models, bindings = load_models(manifest, checkpoints, receipts, mode=mode)
     sums = [[[0.0] * 3 for _ in s.STRATA] for _ in s.CELLS]
     counts = [[0] * len(s.STRATA) for _ in s.CELLS]
     ids, masks, truths = hashlib.sha256(), hashlib.sha256(), hashlib.sha256()
@@ -467,5 +711,6 @@ def match_body(
 
 
 def _file_sha(path: Path) -> str:
-    with path.open("rb") as stream:
+    with os.fdopen(paths.open_regular_fd(path), "rb") as stream:
+        paths.check_regular(os.fstat(stream.fileno()), max_bytes=MAX, require_private=False)
         return hashlib.file_digest(stream, "sha256").hexdigest()
