@@ -52,6 +52,33 @@ def table(path, rows):
         writer.writerows(rows)
 
 
+def seed_dispersion(matches):
+    rows = []
+    for regime, rep, metric in itertools.product(REGIMES, REPS, METRICS):
+        groups = [
+            [
+                r["strata"]["all"]["metrics"][metric]
+                for r in match["records"]
+                if r["cell"][:2] == [regime, rep]
+            ]
+            for match in matches
+        ]
+        rows.append(
+            {
+                "regime": regime,
+                "representation": rep,
+                "metric": metric,
+                "mean_within_match_seed_sd_m": mean(stdev(g) for g in groups),
+                "max_within_match_seed_range_m": max(max(g) - min(g) for g in groups),
+                **{
+                    match["match_id"] + "_seed_sd_m": stdev(g)
+                    for match, g in zip(matches, groups, strict=True)
+                },
+            }
+        )
+    return rows
+
+
 def markdown_table(headers, rows):
     return "\n".join(
         ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
@@ -205,6 +232,7 @@ def main():
                 }
             )
 
+    seeds = seed_dispersion(p["matches"])
     # Explicit allowlist: never serialize the private package, receipt bodies, or ledger.
     public = {
         "classification": "research-only NOT_QUALIFIED",
@@ -226,6 +254,7 @@ def main():
         "contrasts": contrasts,
         "history_baseline_comparisons": comparisons,
         "strata": strata,
+        "seed_sensitivity": seeds,
         "denominators": [
             {
                 "match": r["match"],
@@ -244,6 +273,7 @@ def main():
         ("contrasts", contrasts),
         ("history-baselines", comparisons),
         ("strata", strata),
+        ("seed-sensitivity", seeds),
     ):
         table(OUT / f"{name}.csv", data)
     labels = {"absolute_xy": "Absolute XY", "origin_relative_displacement": "Displacement"}
@@ -320,6 +350,44 @@ def main():
         "classify scenes; windows can contribute to both quality strata. "
         "They are not additive or causal quality comparisons. "
         "All stratum FDE/RMSE values are in [strata.csv](strata.csv).\n"
+    )
+    text += "\n## 5. Algorithmic seed sensitivity, separate from match dispersion\n\n"
+    text += markdown_table(
+        [
+            "Information regime",
+            "Target",
+            "Metric",
+            "Mean within-match seed SD (m)",
+            "Largest within-match seed range (m)",
+        ],
+        [
+            [
+                r["regime"],
+                labels[r["representation"]],
+                r["metric"],
+                f"{r['mean_within_match_seed_sd_m']:.4f}",
+                f"{r['max_within_match_seed_range_m']:.4f}",
+            ]
+            for r in seeds
+        ],
+    )
+    text += (
+        "\n\nSD uses the three frozen seed scores within each match, then averages "
+        "those four SDs equally. This is algorithmic sensitivity, not independent "
+        "replication or inferential uncertainty. Per-match SDs: "
+        "[seed-sensitivity.csv](seed-sensitivity.csv).\n\n"
+    )
+    text += "## 6. Evaluation denominator accounting\n\n"
+    text += markdown_table(
+        ["Match", "Windows", "Directed scenes", "Scored player-time points", "Final targets"],
+        [
+            [d[k] for k in ("match", "windows", "scenes", "scored_points", "final_targets")]
+            for d in public["denominators"]
+        ],
+    )
+    text += (
+        "\n\nCounts apply to each of the 18 cells per match, not 18 independent "
+        "populations. Truth masks and quality accounting are bound by the private receipts.\n"
     )
     (OUT / "tables.md").write_text(text)
     print("Verified 72 records / four sealed receipts / 51,713 windows; safe aggregates written.")

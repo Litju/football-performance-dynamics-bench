@@ -81,3 +81,39 @@ Baselines are means of the published four-decimal match values; each baseline me
 | with_provider_extrapolation | future_opponent_plus_ball | Displacement | 1.2965 |
 
 Early/middle/late = 0.2–1.0/1.2–2.0/2.2–3.0 s. Quality strata classify scenes; windows can contribute to both quality strata. They are not additive or causal quality comparisons. All stratum FDE/RMSE values are in [strata.csv](strata.csv).
+
+## 5. Algorithmic seed sensitivity, separate from match dispersion
+
+| Information regime | Target | Metric | Mean within-match seed SD (m) | Largest within-match seed range (m) |
+| --- | --- | --- | --- | --- |
+| history_only | Absolute XY | ade_m | 0.0657 | 0.1477 |
+| history_only | Absolute XY | fde_m | 0.1243 | 0.2813 |
+| history_only | Absolute XY | xy_rmse_m | 0.0690 | 0.1512 |
+| history_only | Displacement | ade_m | 0.0084 | 0.0212 |
+| history_only | Displacement | fde_m | 0.0172 | 0.0401 |
+| history_only | Displacement | xy_rmse_m | 0.0066 | 0.0149 |
+| future_ball | Absolute XY | ade_m | 0.0757 | 0.1501 |
+| future_ball | Absolute XY | fde_m | 0.1237 | 0.2541 |
+| future_ball | Absolute XY | xy_rmse_m | 0.0639 | 0.1294 |
+| future_ball | Displacement | ade_m | 0.0147 | 0.0337 |
+| future_ball | Displacement | fde_m | 0.0235 | 0.0547 |
+| future_ball | Displacement | xy_rmse_m | 0.0114 | 0.0235 |
+| future_opponent_plus_ball | Absolute XY | ade_m | 0.0950 | 0.1993 |
+| future_opponent_plus_ball | Absolute XY | fde_m | 0.1150 | 0.2275 |
+| future_opponent_plus_ball | Absolute XY | xy_rmse_m | 0.0625 | 0.1277 |
+| future_opponent_plus_ball | Displacement | ade_m | 0.0053 | 0.0143 |
+| future_opponent_plus_ball | Displacement | fde_m | 0.0141 | 0.0362 |
+| future_opponent_plus_ball | Displacement | xy_rmse_m | 0.0033 | 0.0089 |
+
+SD uses the three frozen seed scores within each match, then averages those four SDs equally. This is algorithmic sensitivity, not independent replication or inferential uncertainty. Per-match SDs: [seed-sensitivity.csv](seed-sensitivity.csv).
+
+## 6. Evaluation denominator accounting
+
+| Match | Windows | Directed scenes | Scored player-time points | Final targets |
+| --- | --- | --- | --- | --- |
+| 1874553 | 12363 | 24726 | 4079790 | 271986 |
+| 1925299 | 14018 | 28036 | 4625940 | 308396 |
+| 2006229 | 12501 | 25002 | 4125330 | 275022 |
+| 2010085 | 12831 | 25662 | 4234230 | 282282 |
+
+Counts apply to each of the 18 cells per match, not 18 independent populations. Truth masks and quality accounting are bound by the private receipts.

@@ -71,6 +71,8 @@ Relative to constant velocity, displacement reduced FDE by 1.3656 m (27.7%) and 
 
 History-only ADE ranged from 2.0493 to 2.1629 m for absolute XY and 1.6047 to 1.7149 m for displacement. With full context, ranges were 1.6586–1.7592 and 1.2439–1.3397 m. Match 1925299 had the lowest seed-averaged error in every combination and metric; match 2006229 had the highest. This describes four observations, not broader match variability. [1]
 
+Algorithmic sensitivity was also smaller for displacement in these fits. The mean within-match three-seed ADE SD was 0.0657 / 0.0757 / 0.0950 m for absolute XY and 0.0084 / 0.0147 / 0.0053 m for displacement, in history/ball/opponents-plus-ball order. The largest seed range within any match was 0.1993 m for absolute XY and 0.0337 m for displacement across the six cells. These describe the three frozen seeds; they are separate from between-match dispersion and do not enlarge the independent sample. Per-match SDs and all three metrics are in [seed-sensitivity.csv](seed-sensitivity.csv). [1]
+
 ![ADE across the three prespecified forecast intervals](horizon.png)
 
 **Figure 3.** Equal-match ADE in three prespecified intervals. Lines connect interval summaries, not continuous-time measurements. [PDF](horizon.pdf) · [SVG](horizon.svg). Source: [1].
@@ -86,6 +88,16 @@ Provider-extrapolated targets comprise 6,008,819 of 17,065,290 scored player-tim
 The 18 checkpoints represent one model class × six combinations × three seeds, selected using validation data. Seeds are not additional independent matches. This study completes neither the original 234-fit prospective design nor the deferred 216-fit training LOMO campaign. The interrupted RES-594 attempt entered scoring without a committed, recovered, or analyst-observed learned result. The completed study follows the separately authorized post-failure descriptive route; prior exposure precludes presenting it as an untouched confirmatory evaluation. Protected status remains `NOT_QUALIFIED`. [3]
 
 ## Methods, provenance, and reuse
+
+The deviations from the original v2 study are explicit:
+
+| Dimension | Original v2 design | Completed descriptive study |
+| --- | --- | --- |
+| Learned fits | 234 planned fits across three model classes | 18 pre-existing final-fit DeepSets checkpoints; no new fits |
+| Training LOMO | 216 planned fits | Deferred and incomplete; no training LOMO |
+| Evaluation | Original prospective route | Separately authorized post-failure descriptive route |
+| Inference | Original study ambitions | Four fixed-match descriptions; no tests, CIs, or generalization |
+| Scientific measurement | Physical XY, frozen masks and hierarchy | Preserved; no endpoint, horizon, match, or contrast changes |
 
 The completed RES-646 study supplied 72 verified records, four sealed receipts, 51,713 windows, and one attempt without continuation. Existing `verify_complete` readback re-authenticated the ledger/result and checked chained receipt seals, source/checkpoint/code/runtime provenance, independent metric-audit agreement, denominators, and the complete ordered cell inventory. This analysis independently recomputed means and contrasts from package records and reconciled them to stored aggregates. It performed no source-stream replay, model deserialization, inference, retraining, or protocol changes. [1]
 

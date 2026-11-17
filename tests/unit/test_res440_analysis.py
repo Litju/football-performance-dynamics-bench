@@ -33,6 +33,9 @@ def test_seed_then_equal_match_and_duplicate_rejection():
     rows = analysis.calculate(matches)
     assert [r["ade_m"] for r in rows[::6]] == [1, 11, 21, 31]
     assert mean(r["xy_rmse_m"] for r in rows[::6]) == 16
+    for row in analysis.seed_dispersion(matches):
+        assert row["mean_within_match_seed_sd_m"] == 1
+        assert row["max_within_match_seed_range_m"] == 2
     matches[0]["records"][0] = matches[0]["records"][1]
     with pytest.raises(AssertionError):
         analysis.calculate(matches)
