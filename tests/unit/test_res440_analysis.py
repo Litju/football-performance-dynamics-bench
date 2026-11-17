@@ -1,8 +1,8 @@
 """Aggregation is seed-first, irrespective of unequal match window counts."""
 
 import importlib.util
-import json
 import itertools
+import json
 from pathlib import Path
 from statistics import mean
 

@@ -32,7 +32,9 @@ plt.rcParams.update(
 def save(fig, name):
     for suffix in ("svg", "pdf", "png"):
         fig.savefig(
-            OUT / f"{name}.{suffix}", bbox_inches="tight", metadata={"Creator": "FPD Bench Scientific Results"}
+            OUT / f"{name}.{suffix}",
+            bbox_inches="tight",
+            metadata={"Creator": "FPD Bench Scientific Results"},
         )
     svg = OUT / f"{name}.svg"
     svg.write_text("\n".join(line.rstrip() for line in svg.read_text().splitlines()) + "\n")
