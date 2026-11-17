@@ -1,0 +1,832 @@
+{
+  "classification": "research-only NOT_QUALIFIED",
+  "independent_units": 4,
+  "records": 72,
+  "windows": 51713,
+  "attempts": 1,
+  "provenance": {
+    "execution_commit": "9cad4539543bafa07d1ee5abc1623e9651a973fe",
+    "package_sha256": "e00e2eb20446348813353c7f490ee2e1bdc1d3aa44abad731d2202abd256b9fd",
+    "scope_sha256": "fa1b6a0592a5d7d99eab03b10ddf6e57565d428c90c7e514f635d5ffc273ca0c",
+    "result_file_sha256": "82c8b31c5146523415430261936045ce4855a475dd4bbd874a4c01211d4cb6dc",
+    "protocol_sha256": "ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305",
+    "baseline_reference_sha256": "21b19a2370d5b4a45652a6ce132cb3e78a4abe2027a096a71f383b1191ea9b36",
+    "verification": "existing authenticated verify_complete; no replay"
+  },
+  "summary": [
+    {
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.1215928803079,
+      "ade_m_sd": 0.051279414913280634,
+      "ade_m_min": 2.0492764953779314,
+      "ade_m_max": 2.162888505479676,
+      "fde_m": 4.0672111107937665,
+      "fde_m_sd": 0.10467512588448287,
+      "fde_m_min": 3.9231450395845724,
+      "fde_m_max": 4.1489678484441805,
+      "xy_rmse_m": 1.9570215418535395,
+      "xy_rmse_m_sd": 0.050606163043342006,
+      "xy_rmse_m_min": 1.88643053109055,
+      "xy_rmse_m_max": 2.0003824462270803
+    },
+    {
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6680180412345766,
+      "ade_m_sd": 0.04779466335989382,
+      "ade_m_min": 1.6047392322529015,
+      "ade_m_max": 1.7149274803062706,
+      "fde_m": 3.5601233072389697,
+      "fde_m_sd": 0.09810481924062278,
+      "fde_m_min": 3.4305249593933653,
+      "fde_m_max": 3.654174529182624,
+      "xy_rmse_m": 1.6536559733683402,
+      "xy_rmse_m_sd": 0.046967003918904335,
+      "xy_rmse_m_min": 1.5913870126616145,
+      "xy_rmse_m_max": 1.7001138797130362
+    },
+    {
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.8329642618442186,
+      "ade_m_sd": 0.05060267183371489,
+      "ade_m_min": 1.7645759104998195,
+      "ade_m_max": 1.8721158757177052,
+      "fde_m": 3.3712045213476762,
+      "fde_m_sd": 0.10013874200198628,
+      "fde_m_min": 3.237686346147473,
+      "fde_m_max": 3.4507777024214996,
+      "xy_rmse_m": 1.6918414920502634,
+      "xy_rmse_m_sd": 0.04731594545966641,
+      "xy_rmse_m_min": 1.628510340472482,
+      "xy_rmse_m_max": 1.7316949047873746
+    },
+    {
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.429786333148288,
+      "ade_m_sd": 0.04131655206910523,
+      "ade_m_min": 1.3783916250225459,
+      "ade_m_max": 1.4736838212817158,
+      "fde_m": 2.857159941651265,
+      "fde_m_sd": 0.07900201669884584,
+      "fde_m_min": 2.7644746754226293,
+      "fde_m_max": 2.94574320831708,
+      "xy_rmse_m": 1.4041221361290224,
+      "xy_rmse_m_sd": 0.03959659462790611,
+      "xy_rmse_m_min": 1.353997867384772,
+      "xy_rmse_m_max": 1.4453993380866377
+    },
+    {
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7182171404372357,
+      "ade_m_sd": 0.043640495037278224,
+      "ade_m_min": 1.6586347667570638,
+      "ade_m_max": 1.7592488410956275,
+      "fde_m": 3.044720825726139,
+      "fde_m_sd": 0.0859480679663736,
+      "fde_m_min": 2.9299445950038217,
+      "fde_m_max": 3.133486840748363,
+      "xy_rmse_m": 1.5743866425211384,
+      "xy_rmse_m_sd": 0.0415567304351886,
+      "xy_rmse_m_min": 1.5183204942158028,
+      "xy_rmse_m_max": 1.6164377992048464
+    },
+    {
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.295838055906168,
+      "ade_m_sd": 0.040358519090020306,
+      "ade_m_min": 1.2439460158150457,
+      "ade_m_max": 1.3397073336721452,
+      "fde_m": 2.5438152422576423,
+      "fde_m_sd": 0.07798363383061832,
+      "fde_m_min": 2.4486566890604466,
+      "fde_m_max": 2.634793720735852,
+      "xy_rmse_m": 1.2843200822464618,
+      "xy_rmse_m_sd": 0.03774124456758747,
+      "xy_rmse_m_min": 1.2345581704331132,
+      "xy_rmse_m_max": 1.3243050568749475
+    }
+  ],
+  "match_means": [
+    {
+      "match": "1874553",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.1524753652134754,
+      "fde_m": 4.14014030562337,
+      "xy_rmse_m": 1.9856191355251949
+    },
+    {
+      "match": "1874553",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6922387522133602,
+      "fde_m": 3.6139558737906854,
+      "xy_rmse_m": 1.6766767762978703
+    },
+    {
+      "match": "1874553",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.870437414681224,
+      "fde_m": 3.445448984197016,
+      "xy_rmse_m": 1.724094560293957
+    },
+    {
+      "match": "1874553",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.4497315906845385,
+      "fde_m": 2.8929599341449594,
+      "xy_rmse_m": 1.423517074005904
+    },
+    {
+      "match": "1874553",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7398972134272312,
+      "fde_m": 3.077346801795076,
+      "xy_rmse_m": 1.5906397528079619
+    },
+    {
+      "match": "1874553",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.310734070163811,
+      "fde_m": 2.5671581750806025,
+      "xy_rmse_m": 1.2978793152461658
+    },
+    {
+      "match": "1925299",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.0492764953779314,
+      "fde_m": 3.9231450395845724,
+      "xy_rmse_m": 1.88643053109055
+    },
+    {
+      "match": "1925299",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6047392322529015,
+      "fde_m": 3.4305249593933653,
+      "xy_rmse_m": 1.5913870126616145
+    },
+    {
+      "match": "1925299",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7645759104998195,
+      "fde_m": 3.237686346147473,
+      "xy_rmse_m": 1.628510340472482
+    },
+    {
+      "match": "1925299",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.3783916250225459,
+      "fde_m": 2.7644746754226293,
+      "xy_rmse_m": 1.353997867384772
+    },
+    {
+      "match": "1925299",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.6586347667570638,
+      "fde_m": 2.9299445950038217,
+      "xy_rmse_m": 1.5183204942158028
+    },
+    {
+      "match": "1925299",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.2439460158150457,
+      "fde_m": 2.4486566890604466,
+      "xy_rmse_m": 1.2345581704331132
+    },
+    {
+      "match": "2006229",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.162888505479676,
+      "fde_m": 4.1489678484441805,
+      "xy_rmse_m": 2.0003824462270803
+    },
+    {
+      "match": "2006229",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.7149274803062706,
+      "fde_m": 3.654174529182624,
+      "xy_rmse_m": 1.7001138797130362
+    },
+    {
+      "match": "2006229",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.8721158757177052,
+      "fde_m": 3.4507777024214996,
+      "xy_rmse_m": 1.7316949047873746
+    },
+    {
+      "match": "2006229",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.4736838212817158,
+      "fde_m": 2.94574320831708,
+      "xy_rmse_m": 1.4453993380866377
+    },
+    {
+      "match": "2006229",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7592488410956275,
+      "fde_m": 3.133486840748363,
+      "xy_rmse_m": 1.6164377992048464
+    },
+    {
+      "match": "2006229",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.3397073336721452,
+      "fde_m": 2.634793720735852,
+      "xy_rmse_m": 1.3243050568749475
+    },
+    {
+      "match": "2010085",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.1217311551605174,
+      "fde_m": 4.056591249522943,
+      "xy_rmse_m": 1.9556540545713328
+    },
+    {
+      "match": "2010085",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6601667001657743,
+      "fde_m": 3.5418378665892045,
+      "xy_rmse_m": 1.6464462248008396
+    },
+    {
+      "match": "2010085",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.8247278464781258,
+      "fde_m": 3.350905052624716,
+      "xy_rmse_m": 1.6830661626472398
+    },
+    {
+      "match": "2010085",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.4173382956043523,
+      "fde_m": 2.8254619487203927,
+      "xy_rmse_m": 1.3935742650387755
+    },
+    {
+      "match": "2010085",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7150877404690201,
+      "fde_m": 3.038105065357295,
+      "xy_rmse_m": 1.572148523855942
+    },
+    {
+      "match": "2010085",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.2889648039736699,
+      "fde_m": 2.524652384153668,
+      "xy_rmse_m": 1.2805377864316208
+    }
+  ],
+  "contrasts": [
+    {
+      "contrast": "C1",
+      "representation": "absolute_xy",
+      "1874553": 0.28203795053225145,
+      "1925299": 0.2847005848781119,
+      "2006229": 0.2907726297619708,
+      "2010085": 0.29700330868239155,
+      "mean_m": 0.28862861846368143,
+      "sd_m": 0.0066732943473293465,
+      "min_m": 0.28203795053225145,
+      "max_m": 0.29700330868239155,
+      "delete_one_min_m": 0.2858370550574447,
+      "delete_one_max_m": 0.2908255077741581
+    },
+    {
+      "contrast": "C1",
+      "representation": "origin_relative_displacement",
+      "1874553": 0.24250716152882168,
+      "1925299": 0.22634760723035563,
+      "2006229": 0.2412436590245548,
+      "2010085": 0.24282840456142196,
+      "mean_m": 0.23823170808628852,
+      "sd_m": 0.007952207706716436,
+      "min_m": 0.22634760723035563,
+      "max_m": 0.24282840456142196,
+      "delete_one_min_m": 0.2366994759279107,
+      "delete_one_max_m": 0.24219307503826615
+    },
+    {
+      "contrast": "C2",
+      "representation": "absolute_xy",
+      "1874553": 0.13054020125399268,
+      "1925299": 0.10594114374275576,
+      "2006229": 0.1128670346220777,
+      "2010085": 0.10964010600910568,
+      "mean_m": 0.11474712140698295,
+      "sd_m": 0.01090233837715292,
+      "min_m": 0.10594114374275576,
+      "max_m": 0.13054020125399268,
+      "delete_one_min_m": 0.10948276145797971,
+      "delete_one_max_m": 0.11768244729505868
+    },
+    {
+      "contrast": "C2",
+      "representation": "origin_relative_displacement",
+      "1874553": 0.13899752052072745,
+      "1925299": 0.13444560920750015,
+      "2006229": 0.1339764876095706,
+      "2010085": 0.12837349163068246,
+      "mean_m": 0.13394827724212016,
+      "sd_m": 0.0043520580269061256,
+      "min_m": 0.12837349163068246,
+      "max_m": 0.13899752052072745,
+      "delete_one_min_m": 0.13226519614925106,
+      "delete_one_max_m": 0.1358065391125994
+    }
+  ],
+  "history_baseline_comparisons": [
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "absolute_xy",
+      "metric": "ade_m",
+      "baseline_mean_m": 3.52185,
+      "learned_mean_m": 2.1215928803079,
+      "baseline_minus_learned_m": 1.4002571196921,
+      "reduction_percent": 39.75913567278845,
+      "1874553": 1.5094246347865248,
+      "1925299": 1.3926235046220685,
+      "2006229": 1.330811494520324,
+      "2010085": 1.3681688448394826
+    },
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "absolute_xy",
+      "metric": "fde_m",
+      "baseline_mean_m": 6.37395,
+      "learned_mean_m": 4.0672111107937665,
+      "baseline_minus_learned_m": 2.3067388892062333,
+      "reduction_percent": 36.19010016090859,
+      "1874553": 2.4987596943766297,
+      "1925299": 2.3018549604154273,
+      "2006229": 2.1669321515558195,
+      "2010085": 2.259408750477057
+    },
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "absolute_xy",
+      "metric": "xy_rmse_m",
+      "baseline_mean_m": 3.0952,
+      "learned_mean_m": 1.9570215418535395,
+      "baseline_minus_learned_m": 1.1381784581464607,
+      "reduction_percent": 36.77237200007949,
+      "1874553": 1.2187808644748053,
+      "1925299": 1.13486946890945,
+      "2006229": 1.0856175537729196,
+      "2010085": 1.1134459454286674
+    },
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "ade_m",
+      "baseline_mean_m": 3.52185,
+      "learned_mean_m": 1.6680180412345766,
+      "baseline_minus_learned_m": 1.8538319587654235,
+      "reduction_percent": 52.63801578049671,
+      "1874553": 1.96966124778664,
+      "1925299": 1.8371607677470985,
+      "2006229": 1.7787725196937294,
+      "2010085": 1.8297332998342257
+    },
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "fde_m",
+      "baseline_mean_m": 6.37395,
+      "learned_mean_m": 3.5601233072389697,
+      "baseline_minus_learned_m": 2.81382669276103,
+      "reduction_percent": 44.14572898690812,
+      "1874553": 3.024944126209314,
+      "1925299": 2.7944750406066343,
+      "2006229": 2.661725470817376,
+      "2010085": 2.7741621334107953
+    },
+    {
+      "baseline": "origin_persistence_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "xy_rmse_m",
+      "baseline_mean_m": 3.0952,
+      "learned_mean_m": 1.6536559733683402,
+      "baseline_minus_learned_m": 1.44154402663166,
+      "reduction_percent": 46.573534073134525,
+      "1874553": 1.5277232237021299,
+      "1925299": 1.4299129873383856,
+      "2006229": 1.3858861202869637,
+      "2010085": 1.4226537751991606
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "absolute_xy",
+      "metric": "ade_m",
+      "baseline_mean_m": 2.2433,
+      "learned_mean_m": 2.1215928803079,
+      "baseline_minus_learned_m": 0.12170711969210002,
+      "reduction_percent": 5.42536083859047,
+      "1874553": 0.12462463478652452,
+      "1925299": 0.12102350462206868,
+      "2006229": 0.11871149452032403,
+      "2010085": 0.12246884483948284
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "absolute_xy",
+      "metric": "fde_m",
+      "baseline_mean_m": 4.9257,
+      "learned_mean_m": 4.0672111107937665,
+      "baseline_minus_learned_m": 0.8584888892062336,
+      "reduction_percent": 17.42876929586117,
+      "1874553": 0.8533596943766302,
+      "1925299": 0.8551549604154274,
+      "2006229": 0.8608321515558197,
+      "2010085": 0.864608750477057
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "absolute_xy",
+      "metric": "xy_rmse_m",
+      "baseline_mean_m": 2.23835,
+      "learned_mean_m": 1.9570215418535395,
+      "baseline_minus_learned_m": 0.28132845814646046,
+      "reduction_percent": 12.568564261463152,
+      "1874553": 0.2816808644748052,
+      "1925299": 0.2782694689094498,
+      "2006229": 0.28161755377291975,
+      "2010085": 0.28374594542866705
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "ade_m",
+      "baseline_mean_m": 2.2433,
+      "learned_mean_m": 1.6680180412345766,
+      "baseline_minus_learned_m": 0.5752819587654234,
+      "reduction_percent": 25.64445053115604,
+      "1874553": 0.5848612477866397,
+      "1925299": 0.5655607677470986,
+      "2006229": 0.5666725196937294,
+      "2010085": 0.5840332998342259
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "fde_m",
+      "baseline_mean_m": 4.9257,
+      "learned_mean_m": 3.5601233072389697,
+      "baseline_minus_learned_m": 1.3655766927610302,
+      "reduction_percent": 27.723505141625154,
+      "1874553": 1.3795441262093147,
+      "1925299": 1.3477750406066344,
+      "2006229": 1.355625470817376,
+      "2010085": 1.3793621334107953
+    },
+    {
+      "baseline": "constant_velocity_1s_v1",
+      "representation": "origin_relative_displacement",
+      "metric": "xy_rmse_m",
+      "baseline_mean_m": 2.23835,
+      "learned_mean_m": 1.6536559733683402,
+      "baseline_minus_learned_m": 0.5846940266316598,
+      "reduction_percent": 26.121653299602823,
+      "1874553": 0.5906232237021298,
+      "1925299": 0.5733129873383853,
+      "2006229": 0.5818861202869638,
+      "2010085": 0.5929537751991603
+    }
+  ],
+  "strata": [
+    {
+      "stratum": "early",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 0.9466064432595258,
+      "fde_m": 1.2396728108361554,
+      "xy_rmse_m": 0.7791980481787908
+    },
+    {
+      "stratum": "early",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 0.4744243091950344,
+      "fde_m": 0.84915061515906,
+      "xy_rmse_m": 0.4553588412970873
+    },
+    {
+      "stratum": "early",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 0.8501071041998272,
+      "fde_m": 1.1151176168656691,
+      "xy_rmse_m": 0.7014555248094766
+    },
+    {
+      "stratum": "early",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 0.4545005763999226,
+      "fde_m": 0.8015511128776971,
+      "xy_rmse_m": 0.43326748234175844
+    },
+    {
+      "stratum": "early",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 0.8810310311501066,
+      "fde_m": 1.1009623757465028,
+      "xy_rmse_m": 0.717604144560713
+    },
+    {
+      "stratum": "early",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 0.42908755717463287,
+      "fde_m": 0.7505757820610146,
+      "xy_rmse_m": 0.41236616902266104
+    },
+    {
+      "stratum": "middle",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 1.9782082846528029,
+      "fde_m": 2.5266317308112196,
+      "xy_rmse_m": 1.6611823746247125
+    },
+    {
+      "stratum": "middle",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.5688900068056792,
+      "fde_m": 2.090583559414452,
+      "xy_rmse_m": 1.3551495907134072
+    },
+    {
+      "stratum": "middle",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7527763908533789,
+      "fde_m": 2.1980064974926337,
+      "xy_rmse_m": 1.4786936965960602
+    },
+    {
+      "stratum": "middle",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.3989456075248299,
+      "fde_m": 1.8087073637406466,
+      "xy_rmse_m": 1.2082295138870252
+    },
+    {
+      "stratum": "middle",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.6467660128680095,
+      "fde_m": 2.0260551300095377,
+      "xy_rmse_m": 1.3926612632591335
+    },
+    {
+      "stratum": "middle",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.2804242765727076,
+      "fde_m": 1.6375046606314447,
+      "xy_rmse_m": 1.120163427916085
+    },
+    {
+      "stratum": "late",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 3.4399639130113746,
+      "fde_m": 4.0672111107937665,
+      "xy_rmse_m": 2.8375613889542777
+    },
+    {
+      "stratum": "late",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 2.960739807703015,
+      "fde_m": 3.5601233072389697,
+      "xy_rmse_m": 2.475665293913307
+    },
+    {
+      "stratum": "late",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 2.8960092904794608,
+      "fde_m": 3.3712045213476762,
+      "xy_rmse_m": 2.4211116370386283
+    },
+    {
+      "stratum": "late",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 2.435912815520113,
+      "fde_m": 2.857159941651265,
+      "xy_rmse_m": 2.060244563097588
+    },
+    {
+      "stratum": "late",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 2.626854377293594,
+      "fde_m": 3.044720825726139,
+      "xy_rmse_m": 2.222038661717869
+    },
+    {
+      "stratum": "late",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 2.178002333971164,
+      "fde_m": 2.5438152422576423,
+      "xy_rmse_m": 1.8720331829237353
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.1481546848596786,
+      "fde_m": 3.837369854074791,
+      "xy_rmse_m": 1.9193644976690167
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6948760748512637,
+      "fde_m": 3.4313019151806934,
+      "xy_rmse_m": 1.6353027219263148
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.83123171499292,
+      "fde_m": 3.2133410022585944,
+      "xy_rmse_m": 1.655757702455198
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.4311177424952157,
+      "fde_m": 2.685410368858499,
+      "xy_rmse_m": 1.3608415123475555
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7287080660744267,
+      "fde_m": 2.928827228908877,
+      "xy_rmse_m": 1.558184581634171
+    },
+    {
+      "stratum": "detected_only",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.3047106805852884,
+      "fde_m": 2.395712350622523,
+      "xy_rmse_m": 1.247236770908555
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "history_only",
+      "representation": "absolute_xy",
+      "ade_m": 2.120074137082721,
+      "fde_m": 4.064197997907947,
+      "xy_rmse_m": 1.956357108399854
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "history_only",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.6664780107874555,
+      "fde_m": 3.557031463418638,
+      "xy_rmse_m": 1.65292164737594
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "future_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.832787195531263,
+      "fde_m": 3.3709277945366263,
+      "xy_rmse_m": 1.6922468200759928
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "future_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.4303575086139726,
+      "fde_m": 2.859643750997597,
+      "xy_rmse_m": 1.4054363432871508
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "future_opponent_plus_ball",
+      "representation": "absolute_xy",
+      "ade_m": 1.7183250185647372,
+      "fde_m": 3.0450798322064583,
+      "xy_rmse_m": 1.5749746831261793
+    },
+    {
+      "stratum": "with_provider_extrapolation",
+      "regime": "future_opponent_plus_ball",
+      "representation": "origin_relative_displacement",
+      "ade_m": 1.2964934925645064,
+      "fde_m": 2.546521314770044,
+      "xy_rmse_m": 1.2858260685134946
+    }
+  ],
+  "denominators": [
+    {
+      "match": "1874553",
+      "windows": 12363,
+      "scenes": 24726,
+      "scored_points": 4079790,
+      "final_targets": 271986,
+      "flag_missing": 0,
+      "missing_xy": 0,
+      "observed_detected": 2689161,
+      "provider_extrapolated": 1390629,
+      "scene_quality": {
+        "detected_only": 242,
+        "unclassified": 0,
+        "with_provider_extrapolation": 24484
+      }
+    },
+    {
+      "match": "1925299",
+      "windows": 14018,
+      "scenes": 28036,
+      "scored_points": 4625940,
+      "final_targets": 308396,
+      "flag_missing": 0,
+      "missing_xy": 0,
+      "observed_detected": 2885222,
+      "provider_extrapolated": 1740718,
+      "scene_quality": {
+        "detected_only": 550,
+        "unclassified": 0,
+        "with_provider_extrapolation": 27486
+      }
+    },
+    {
+      "match": "2006229",
+      "windows": 12501,
+      "scenes": 25002,
+      "scored_points": 4125330,
+      "final_targets": 275022,
+      "flag_missing": 0,
+      "missing_xy": 0,
+      "observed_detected": 3002313,
+      "provider_extrapolated": 1123017,
+      "scene_quality": {
+        "detected_only": 485,
+        "unclassified": 0,
+        "with_provider_extrapolation": 24517
+      }
+    },
+    {
+      "match": "2010085",
+      "windows": 12831,
+      "scenes": 25662,
+      "scored_points": 4234230,
+      "final_targets": 282282,
+      "flag_missing": 0,
+      "missing_xy": 0,
+      "observed_detected": 2479775,
+      "provider_extrapolated": 1754455,
+      "scene_quality": {
+        "detected_only": 66,
+        "unclassified": 0,
+        "with_provider_extrapolation": 25596
+      }
+    }
+  ]
+}
