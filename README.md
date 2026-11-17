@@ -33,6 +33,11 @@ Original FPD Bench code and project-written documentation are licensed under [Ap
 
 ## Data source and rights
 
+The [football-motion results](docs/res440/results.md) report the completed
+four-match descriptive study: physical trajectory errors, paired realized-context contrasts,
+comparable history-only baselines, and scientific figures. These are research-only
+descriptive findings; protected population status remains `NOT_QUALIFIED`.
+
 The prospective [SkillCorner source card](docs/skillcorner-source-card.md), [FPD data card](docs/skillcorner-data-card.md), [Croissant/RAI JSON-LD draft](src/fpdbench/data_sources/skillcorner_croissant_rai_draft.json), and [machine-readable metadata status](src/fpdbench/data_sources/skillcorner_croissant_rai_status.json) document the source, measurement and eligibility contracts, RAI considerations, and current publication blockers. These cards describe a prospective research dataset; they do not announce a downloadable row-level release.
 
 SkillCorner Open Data is an external prospective source; no SkillCorner data bytes are included here. The immutable upstream commit, selected source matches, file identities, acquisition contract, and drift checks are recorded in the [SkillCorner source authority](docs/skillcorner-source-authority.md). The rights boundary and attribution rules are in [the SkillCorner Open Data rights audit](docs/data-rights.md). Future studies must pin an upstream revision and explicit match list rather than identify the source as “whatever is currently published.”
