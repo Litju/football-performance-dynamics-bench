@@ -4,7 +4,6 @@ Run with the existing research environment. No model or source-data loading occu
 """
 
 import argparse
-import csv
 import hashlib
 import itertools
 import json
@@ -43,13 +42,6 @@ def calculate(matches, stratum="all"):
                 {"match": match["match_id"], "regime": regime, "representation": rep, **values}
             )
     return rows
-
-
-def table(path, rows):
-    with path.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def seed_dispersion(matches):
@@ -267,16 +259,6 @@ def main():
     }
     OUT.mkdir(exist_ok=True)
     (OUT / "findings.json").write_text(json.dumps(public, indent=2, allow_nan=False) + "\n")
-    for name, data in (
-        ("summary", summary),
-        ("match-means", rows),
-        ("contrasts", contrasts),
-        ("history-baselines", comparisons),
-        ("strata", strata),
-        ("seed-sensitivity", seeds),
-    ):
-        table(OUT / f"{name}.csv", data)
-    labels = {"absolute_xy": "Absolute XY", "origin_relative_displacement": "Displacement"}
     text = "# RES-440 scientific tables\n\n"
     text += (
         "All errors are metres. Four independent matches; three seeds averaged within each "
@@ -349,7 +331,7 @@ def main():
         "\n\nEarly/middle/late = 0.2–1.0/1.2–2.0/2.2–3.0 s. Quality strata "
         "classify scenes; windows can contribute to both quality strata. "
         "They are not additive or causal quality comparisons. "
-        "All stratum FDE/RMSE values are in [strata.csv](strata.csv).\n"
+        "All stratum FDE/RMSE values are in [findings.json](findings.json).\n"
     )
     text += "\n## 5. Algorithmic seed sensitivity, separate from match dispersion\n\n"
     text += markdown_table(
@@ -375,7 +357,7 @@ def main():
         "\n\nSD uses the three frozen seed scores within each match, then averages "
         "those four SDs equally. This is algorithmic sensitivity, not independent "
         "replication or inferential uncertainty. Per-match SDs: "
-        "[seed-sensitivity.csv](seed-sensitivity.csv).\n\n"
+        "[findings.json](findings.json).\n\n"
     )
     text += "## 6. Evaluation denominator accounting\n\n"
     text += markdown_table(

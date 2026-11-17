@@ -80,7 +80,7 @@ Baselines are means of the published four-decimal match values; each baseline me
 | with_provider_extrapolation | future_opponent_plus_ball | Absolute XY | 1.7183 |
 | with_provider_extrapolation | future_opponent_plus_ball | Displacement | 1.2965 |
 
-Early/middle/late = 0.2–1.0/1.2–2.0/2.2–3.0 s. Quality strata classify scenes; windows can contribute to both quality strata. They are not additive or causal quality comparisons. All stratum FDE/RMSE values are in [strata.csv](strata.csv).
+Early/middle/late = 0.2–1.0/1.2–2.0/2.2–3.0 s. Quality strata classify scenes; windows can contribute to both quality strata. They are not additive or causal quality comparisons. All stratum FDE/RMSE values are in [findings.json](findings.json).
 
 ## 5. Algorithmic seed sensitivity, separate from match dispersion
 
@@ -105,7 +105,7 @@ Early/middle/late = 0.2–1.0/1.2–2.0/2.2–3.0 s. Quality strata classify sce
 | future_opponent_plus_ball | Displacement | fde_m | 0.0141 | 0.0362 |
 | future_opponent_plus_ball | Displacement | xy_rmse_m | 0.0033 | 0.0089 |
 
-SD uses the three frozen seed scores within each match, then averages those four SDs equally. This is algorithmic sensitivity, not independent replication or inferential uncertainty. Per-match SDs: [seed-sensitivity.csv](seed-sensitivity.csv).
+SD uses the three frozen seed scores within each match, then averages those four SDs equally. This is algorithmic sensitivity, not independent replication or inferential uncertainty. Per-match SDs: [findings.json](findings.json).
 
 ## 6. Evaluation denominator accounting
 

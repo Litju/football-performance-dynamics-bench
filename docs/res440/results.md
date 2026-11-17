@@ -21,7 +21,7 @@ The independent unit remains **four matches**, despite 51,713 overlapping window
 | History + realized future opponents and ball | Absolute XY | 1.7182 | 3.0447 | 1.5744 |
 | History + realized future opponents and ball | Displacement | 1.2958 | 2.5438 | 1.2843 |
 
-Each entry averages three seeds within match, then matches equally. Both target encodings are scored in physical absolute XY after displacement reconstruction. Source: [1]; descriptive SDs: [tables](tables.md#1-physical-trajectory-error); full precision: [CSV](summary.csv).
+Each entry averages three seeds within match, then matches equally. Both target encodings are scored in physical absolute XY after displacement reconstruction. Source: [1]; descriptive SDs: [tables](tables.md#1-physical-trajectory-error); full precision: [machine-readable results](findings.json).
 
 The absolute-minus-displacement ADE gaps were 0.4536 m (21.4%) for history only, 0.4032 m (22.0%) for future ball, and 0.4224 m (24.6%) for future opponents plus ball; percentages use absolute-XY ADE as denominator. Corresponding FDE gaps were 0.5071, 0.5140, and 0.5009 m. The displacement ordering held in every match for all three metrics after seed averaging. [1]
 
@@ -42,7 +42,7 @@ C1 = history-only ADE − future-ball ADE. C2 = future-ball ADE − future-oppon
 | C2 | Absolute XY | 0.1305 | 0.1059 | 0.1129 | 0.1096 | 0.1147 |
 | C2 | Displacement | 0.1390 | 0.1344 | 0.1340 | 0.1284 | 0.1339 |
 
-All values are metres. Source: [1]; full precision: [contrasts.csv](contrasts.csv).
+All values are metres. Source: [1]; full precision: [full-precision findings](findings.json).
 
 C1 reductions were 13.6% of history-only ADE for absolute XY and 14.3% for displacement. C2 reductions were 6.3% and 9.4% of future-ball ADE. Descriptive SDs across the paired differences were 0.0067, 0.0080, 0.0109, and 0.0044 m in table order. Deleting one match at a time yielded mean ranges of 0.2858–0.2908, 0.2367–0.2422, 0.1095–0.1177, and 0.1323–0.1358 m. These are descriptive deletion sensitivities, neither retrained LOMO evaluations nor confidence intervals. [1]
 
@@ -71,7 +71,7 @@ Relative to constant velocity, displacement reduced FDE by 1.3656 m (27.7%) and 
 
 History-only ADE ranged from 2.0493 to 2.1629 m for absolute XY and 1.6047 to 1.7149 m for displacement. With full context, ranges were 1.6586–1.7592 and 1.2439–1.3397 m. Match 1925299 had the lowest seed-averaged error in every combination and metric; match 2006229 had the highest. This describes four observations, not broader match variability. [1]
 
-Algorithmic sensitivity was also smaller for displacement in these fits. The mean within-match three-seed ADE SD was 0.0657 / 0.0757 / 0.0950 m for absolute XY and 0.0084 / 0.0147 / 0.0053 m for displacement, in history/ball/opponents-plus-ball order. The largest seed range within any match was 0.1993 m for absolute XY and 0.0337 m for displacement across the six cells. These describe the three frozen seeds; they are separate from between-match dispersion and do not enlarge the independent sample. Per-match SDs and all three metrics are in [seed-sensitivity.csv](seed-sensitivity.csv). [1]
+Algorithmic sensitivity was also smaller for displacement in these fits. The mean within-match three-seed ADE SD was 0.0657 / 0.0757 / 0.0950 m for absolute XY and 0.0084 / 0.0147 / 0.0053 m for displacement, in history/ball/opponents-plus-ball order. The largest seed range within any match was 0.1993 m for absolute XY and 0.0337 m for displacement across the six cells. These describe the three frozen seeds; they are separate from between-match dispersion and do not enlarge the independent sample. Per-match SDs and all three metrics are in [machine-readable findings](findings.json). [1]
 
 ![ADE across the three prespecified forecast intervals](horizon.png)
 
@@ -105,7 +105,7 @@ The frozen scorer averages directed-scene metrics within window, then windows wi
 
 SkillCorner Open Data is the research source. Under the repository's [aggregate publication policy](../data-rights.md), this release includes only match/configuration aggregates, non-reconstructive figures, and provenance hashes. Raw packages, receipt bodies, source rows, masks, player identities, predictions, checkpoints, and ledger material remain owner-private.
 
-1. **Analysis evidence:** [findings.json](findings.json), [scientific tables](tables.md), [match means](match-means.csv), [paired baseline differences](history-baselines.csv), [strata](strata.csv). Public provenance records the private input's SHA-256 and execution/result/protocol identities without private paths or receipt bodies.
+1. **Analysis evidence:** [findings.json](findings.json) (including match means, paired baseline differences, and strata) and [scientific tables](tables.md). Public provenance records the private input's SHA-256 and execution/result/protocol identities without private paths or receipt bodies.
 2. **Deterministic evidence:** [frozen baseline reference](../../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json), [published baseline results](../res337-deterministic-research-results.md).
 3. **Scientific contract:** [machine-readable descriptive protocol](../../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res635_post_failure_descriptive_protocol_v1.json), [RES-646 execution boundary](../res646-execution-boundary.md). Historical proposal-status prose is not the completed execution authority; the authenticated RES-646 completion is.
 
