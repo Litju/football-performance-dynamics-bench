@@ -33,8 +33,8 @@ Original FPD Bench code and project-written documentation are licensed under [Ap
 
 ## Data source and rights
 
-The [RES-440 football-motion results](docs/res440/results.md) report the completed
-four-match RES-646 study: physical trajectory errors, paired realized-context contrasts,
+The [football-motion results](docs/res440/results.md) report the completed
+four-match descriptive study: physical trajectory errors, paired realized-context contrasts,
 comparable history-only baselines, and scientific figures. These are research-only
 descriptive findings; protected population status remains `NOT_QUALIFIED`.
 

@@ -259,7 +259,7 @@ def main():
     }
     OUT.mkdir(exist_ok=True)
     (OUT / "findings.json").write_text(json.dumps(public, indent=2, allow_nan=False) + "\n")
-    text = "# RES-440 scientific tables\n\n"
+    text = "# Scientific results tables\n\n"
     text += (
         "All errors are metres. Four independent matches; three seeds averaged within each "
         "match. SD is descriptive sample SD across four match means, not uncertainty. "

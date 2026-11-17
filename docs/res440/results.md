@@ -1,6 +1,6 @@
 # Football-motion prediction with history and realized future context
 
-RES-440 · 17 November 2026 · **Research-only; `NOT_QUALIFIED`**
+Scientific results · 17 November 2026 · **Research-only; `NOT_QUALIFIED`**
 
 ## Executive summary
 
@@ -85,7 +85,7 @@ The supported conclusions are bounded: displacement targets and realized future 
 
 Provider-extrapolated targets comprise 6,008,819 of 17,065,290 scored player-time points (35.2%, including repeated observations in overlapping windows). Only 1,343 of 103,426 directed scenes were detected-only; every evaluation window contributed an extrapolation-containing scene. Quality-stratum ADE preserves the six-cell ordering, but detected-only scenes are a small selected subset, with only 66 in match 2010085. These scores do not measure accuracy against independent ground truth. Missing physical targets and quality flags were zero among scored future targets, which does not characterize excluded candidate windows. Quality-stratum windows overlap and are not additive. [1]
 
-The 18 checkpoints represent one model class × six combinations × three seeds, selected using validation data. Seeds are not additional independent matches. This study completes neither the original 234-fit prospective design nor the deferred 216-fit training LOMO campaign. The interrupted RES-594 attempt entered scoring without a committed, recovered, or analyst-observed learned result. The completed study follows the separately authorized post-failure descriptive route; prior exposure precludes presenting it as an untouched confirmatory evaluation. Protected status remains `NOT_QUALIFIED`. [3]
+The 18 checkpoints represent one model class × six combinations × three seeds, selected using validation data. Seeds are not additional independent matches. This study completes neither the original 234-fit prospective design nor the deferred 216-fit training LOMO campaign. The interrupted initial scoring attempt entered scoring without a committed, recovered, or analyst-observed learned result. The completed study follows the separately authorized post-failure descriptive route; prior exposure precludes presenting it as an untouched confirmatory evaluation. Protected status remains `NOT_QUALIFIED`. [3]
 
 ## Methods, provenance, and reuse
 
@@ -99,7 +99,7 @@ The deviations from the original v2 study are explicit:
 | Inference | Original study ambitions | Four fixed-match descriptions; no tests, CIs, or generalization |
 | Scientific measurement | Physical XY, frozen masks and hierarchy | Preserved; no endpoint, horizon, match, or contrast changes |
 
-The completed RES-646 study supplied 72 verified records, four sealed receipts, 51,713 windows, and one attempt without continuation. Existing `verify_complete` readback re-authenticated the ledger/result and checked chained receipt seals, source/checkpoint/code/runtime provenance, independent metric-audit agreement, denominators, and the complete ordered cell inventory. This analysis independently recomputed means and contrasts from package records and reconciled them to stored aggregates. It performed no source-stream replay, model deserialization, inference, retraining, or protocol changes. [1]
+The completed authorized study supplied 72 verified records, four sealed receipts, 51,713 windows, and one attempt without continuation. Existing `verify_complete` readback re-authenticated the ledger/result and checked chained receipt seals, source/checkpoint/code/runtime provenance, independent metric-audit agreement, denominators, and the complete ordered cell inventory. This analysis independently recomputed means and contrasts from package records and reconciled them to stored aggregates. It performed no source-stream replay, model deserialization, inference, retraining, or protocol changes. [1]
 
 The frozen scorer averages directed-scene metrics within window, then windows within match. This analysis averages three seed metrics within match and then the four matches equally: configuration score = (1/4) Σ_match [(1/3) Σ_seed score(match, seed)]. Match window counts are 12,363 / 14,018 / 12,501 / 12,831 in contrast-table order; they do not set cross-match weights. ADE is mean Euclidean error; FDE uses the final target at 3 s. Scene XY RMSE is √[Σ(dx²+dy²)/(2N)], then averaged under the same hierarchy. Reported RMSE is not pooled coordinate RMSE or root-mean-squared Euclidean displacement. [1, 3]
 
@@ -107,7 +107,7 @@ SkillCorner Open Data is the research source. Under the repository's [aggregate 
 
 1. **Analysis evidence:** [findings.json](findings.json) (including match means, paired baseline differences, and strata) and [scientific tables](tables.md). Public provenance records the private input's SHA-256 and execution/result/protocol identities without private paths or receipt bodies.
 2. **Deterministic evidence:** [frozen baseline reference](../../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res593_baseline_reference_v1.json), [published baseline results](../res337-deterministic-research-results.md).
-3. **Scientific contract:** [machine-readable descriptive protocol](../../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res635_post_failure_descriptive_protocol_v1.json), [RES-646 execution boundary](../res646-execution-boundary.md). Historical proposal-status prose is not the completed execution authority; the authenticated RES-646 completion is.
+3. **Scientific contract:** [machine-readable descriptive protocol](../../src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/res635_post_failure_descriptive_protocol_v1.json), [execution boundary](../res646-execution-boundary.md). Historical proposal-status prose is not the completed execution authority; the authenticated completed study is.
 
 Reproduce aggregate analysis in the existing frozen research environment:
 

@@ -1,4 +1,4 @@
-# RES-440 scientific tables
+# Scientific results tables
 
 All errors are metres. Four independent matches; three seeds averaged within each match. SD is descriptive sample SD across four match means, not uncertainty. Research-only `NOT_QUALIFIED`. Source: [safe findings](findings.json).
 
