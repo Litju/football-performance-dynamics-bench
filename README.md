@@ -15,6 +15,9 @@ Conditional multi-agent response uses realized future opponent and ball context 
 
 See [the benchmark transition record](docs/benchmark-transitions.md) for the final R2 parity and lineage decisions.
 See [the scientific evaluation library](docs/evaluation.md) for formulas, units, population semantics, zero-variance handling, and calibration limits.
+See [Paper A's related-work and claim-evidence matrix](docs/paper-a-related-work-and-claims.md) for contribution scope, verified research references, and remaining scientific gaps.
+See [Paper A's methods draft](docs/paper-a-methods.md) for the benchmark/evaluation framework and prospective study methodology.
+See [Paper A's evidence package](docs/paper-a-evidence.md) for the benchmark/task and reproducibility matrices, genealogy, information-boundary and evaluation-design schematics, and the bounded four-match empirical demonstration.
 
 Reproducibility binds benchmark definition, data state and membership, split protocol, evaluator, schema, fixtures, and scientific provenance in a deterministic scientific lock. Governance and hosting state live separately. Population semantics are independent of the dataset membership used in one study.
 
