@@ -8,7 +8,7 @@
 | Reproducibility and supporting assets | [Canonical supplement](supplement.md), including the three methodological schematics, release policy and public verification commands |
 | Scientific and originality review | [Claim and A/B audit](scientific-audit.md), including result-level ownership and the evidence for the limited example |
 | Submission text | [Cover letter and contribution statement](submission-text.md) |
-| Venue decision | [Recovered RES-442 record](../paper-a-venue-and-submission-strategy.md). Its October readiness assessment reflects the earlier evidence. This review uses the subsequently completed descriptive study and leaves protected status unchanged. |
+| Venue decision | [Recovered venue strategy](../paper-a-venue-and-submission-strategy.md). Its October readiness assessment reflects the earlier evidence. This review uses the subsequently completed descriptive study and leaves protected status unchanged. |
 
 ## Format and build
 
