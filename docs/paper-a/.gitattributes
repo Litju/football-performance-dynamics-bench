@@ -1,0 +1,3 @@
+# Preserve the pinned upstream style files byte for byte, including comment whitespace.
+/tmlr.sty whitespace=-blank-at-eol
+/tmlr.bst whitespace=-blank-at-eol
