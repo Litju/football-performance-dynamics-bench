@@ -522,7 +522,7 @@ ax.text(
     va="top",
 )
 steps = (
-    "directed scene: mean over valid player-steps",
+    "directed scene: mask-aware ADE\nfinal-step FDE / XY RMSE",
     "window: equal mean over scoreable scenes",
     "match: equal mean over windows (per seed)",
     f"match: mean of {len(SEEDS)} seeds",

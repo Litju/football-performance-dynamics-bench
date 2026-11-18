@@ -507,7 +507,8 @@ L 639 320.924272
     <text style="font-style: italic; font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b6b6b" x="414.36" y="388.988032" transform="rotate(-0 414.36 388.988032)">evaluation matches reach only the frozen checkpoints</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle" x="798.12" y="170.598283" transform="rotate(-0 798.12 170.598283)">directed scene: mean over valid player-steps</text>
+    <text style="font-size: 7.4px; font-family: 'DejaVu Sans'" transform="translate(737.011031 166.157271)">directed scene: mask-aware ADE</text>
+    <text style="font-size: 7.4px; font-family: 'DejaVu Sans'" transform="translate(752.301281 175.039295)">final-step FDE / XY RMSE</text>
    </g>
    <g id="text_20">
     <text style="font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle" x="798.12" y="211.197894" transform="rotate(-0 798.12 211.197894)">window: equal mean over scoreable scenes</text>
