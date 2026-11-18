@@ -1,0 +1,74 @@
+\section{Benchmark cards and reconstruction evidence}
+\label{app:cards}
+
+\paragraph{Historical conditional absolute position.}
+The directed scene contains 11 target players, 11 opponents and a ball. Fixed arrays contain 25 history samples and 15 future samples on the 5 Hz model grid. The conditioning fields contain realized future opponent and ball trajectories. The target is normalized pitch XY. The public evaluator exposes population-standardized relative error (SRE), an absolute-position calibration, and separately bound physical diagnostics. Original and repaired measurements have distinct memberships, with no recovered row-level crosswalk.
+
+\paragraph{Historical conditional displacement.}
+The task retains the fixed-array conditional setting and substitutes normalized offsets from each player's observed origin. The displacement inverse and raw population SRE are executable. The generated displacement calibration and complete historical training/selection parity are unavailable. The corrected aggregation combines preserved fold results. The originally reported displacement aggregate is invalid.
+
+\paragraph{Version 2 SkillCorner tasks.}
+Both target encodings use 26 history samples including the origin, 15 future samples, and a variable panel selected from finite-XY origin players. History, history plus realized future ball, and history plus realized future ball and opponents define the three information regimes. A future missing target coordinate invalidates that XY pair. A scoreable directed scene needs a valid final pair. Physical metrics evaluate the same windows, panels and truth masks across configurations. Intended use is research on this specific admissible population. Protected-population status is \texttt{NOT\_QUALIFIED}.
+
+\paragraph{Other historical research objects.}
+The whole-session workload study is unrecoverable as an executable experiment. The synthetic signed tangential acceleration formulation is invalidated, and its exact invalidation trigger remains unknown. The native-rate synthetic sensor pilot selected no candidate target within its gate. Future response forecasting has no recovered target, population or scorer. These records constrain the genealogy in Figure~\ref{fig:genealogy}.
+
+\section{Source, protocol and result provenance}
+\label{app:provenance}
+
+The study uses the pinned SkillCorner public source revision given in Section~\ref{sec:design}. The source authority specifies the match inventory, upstream paths and source checksums. The measurement and eligibility authorities specify the 10-to-5 Hz mapping and distinguish positional presence, detection attribution and missing support. Data acquisition is from the provider. The four evaluation matches are 1874553, 1925299, 2006229 and 2010085, with 12,363, 14,018, 12,501 and 12,831 eligible windows respectively. Each eligible window contributes two directed scenes in the completed study. Their counts apply to the common evaluated population for the 18 cells.
+
+\begin{table}[h]
+\centering
+\caption{Protocol and result identifiers. The first two values are scientific-state digests. The remaining values are file digests.}
+\label{tab:digests}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Authority & SHA-256 \\
+\midrule
+Prospective protocol v2 & \texttt{\scriptsize 3d7bdc46300b966a4da274579d21ac4c8219e1ef897719d6b7a308596e9f1d9f} \\
+Original experiment plan v2 & \texttt{\scriptsize a59fee6ee8e9fb03f4f0ccdae1933458af2bbf2375db7e6cd2bdf10962e42b62} \\
+Frozen checkpoint manifest & \texttt{\scriptsize 770f1d9bbca3020237992181a56e4f5be4adaae7aab07f5f1313aa699d8693e0} \\
+Post-failure descriptive protocol & \texttt{\scriptsize ac931391ecb0afcb68974e1765f65fbff17071ade2bcaab93bdadd22f84a0305} \\
+Frozen deterministic reference & \texttt{\scriptsize 21b19a2370d5b4a45652a6ce132cb3e78a4abe2027a096a71f383b1191ea9b36} \\
+Completed private result file & \texttt{\scriptsize 82c8b31c5146523415430261936045ce4855a475dd4bbd874a4c01211d4cb6dc} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The post-validation amendment bound the 18 already fitted checkpoints before learned evaluation results were observed. The first attempt entered scoring and yielded no committed, recovered or analyst-observed learned result. The completed descriptive study used a distinct execution scope. Its authenticated readback checked the four sealed receipts, source/checkpoint/code/runtime provenance, the ordered record inventory, denominators and independent metric-audit agreement. Aggregates were reconciled to the bound records without replay. Deterministic evaluation controls predate the completed execution.
+
+\section{Reproduction capabilities and evidence index}
+
+The public Python 3.12 checkout contains executable synthetic and analytic checks. These exercise target and information contracts, evaluator behavior, and the hashing and metadata chain. From a copy of that checkout, run the following with \texttt{uv}. The commands use tracked public artifacts and do not run the learned campaign.
+
+\begin{verbatim}
+uv sync --locked --all-groups
+uv run --locked fpdbench validate
+uv run --locked fpdbench evidence validate
+uv run --locked fpdbench reproducibility check
+uv run --locked fpdbench data-states verify skillcorner_5hz_v2
+uv run --locked fpdbench eligibility verify skillcorner_window_v2
+uv run --locked pytest -q tests/unit/test_benchmark_contracts.py
+uv run --locked pytest -q tests/unit/test_prospective_trajectory_metrics.py
+uv run --locked pytest -q tests/unit/test_paper_a_evidence.py
+uv run --locked pytest -q tests/unit/test_res440_analysis.py
+\end{verbatim}
+
+\begin{table}[h]
+\centering
+\caption{Evidence supporting the paper's main claims.}
+\label{tab:evidence}
+\begin{tabular}{@{}p{0.28\linewidth}p{0.67\linewidth}@{}}
+\toprule
+Claim & Evidence and check \\
+\midrule
+Task identity and historical scope & Research-object registry, transition graph, archived result bindings and validity decisions. Public validation checks the contracts and reference inventory. \\
+Boundary and target semantics & Frozen protocol, forecast-origin, feature-boundary and target contracts. Synthetic cases exercise rejected fields, origin inversion and metric denominators. \\
+Scoring and match-first aggregation & Physical evaluator and mask tests, study protocol, published aggregate records and deterministic reference. Section~\ref{sec:demo} reports the shared-scope example. \\
+Study provenance and availability & Table~\ref{tab:digests}, public aggregate account and authenticated readback. Public checks establish identity and consistency of the published metadata. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The public package permits verification of recorded identities, counts and aggregate results. Strict resolution of historical evidence requires the canonical local registry. Recomputing learned aggregates from individual match/seed records requires the owner-private result bundle. Checkpoint bytes, receipt bodies, private ledger material, truth masks and individual predictions are withheld. Historical private qualification truth is forbidden and historical full fixture/inference replay is unavailable. Source rows and row-level derivatives remain outside the release, as do weights pending rights clearance. The empirical report is limited to the completed descriptive execution. The planned 216 training LOMO fits were unexecuted.
