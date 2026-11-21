@@ -2,6 +2,8 @@
 
 Reproducible benchmarks for performance-state estimation, multimodal state reconstruction, response forecasting, and conditional multi-agent motion in association football.
 
+**Interactive research story:** [fpd-bench-showcase.vercel.app](https://fpd-bench-showcase.vercel.app) — a 3D, scroll-driven companion to Paper A showing what each information regime may see at the forecast origin and the four-match descriptive results. It is non-archival research communication built only from the public aggregate [findings](docs/res440/findings.json); pitch motion is schematic. Source and checks: [`site/`](site/README.md).
+
 ## Research families
 
 - `workload_performance_state`: a partial, non-executable whole-session historical study and an invalidated signed-acceleration formulation with a recovered diagnostic RMSE evaluator.

@@ -38,7 +38,7 @@ async function run(name, viewport, opts = {}) {
       const r = el.getBoundingClientRect();
       // Phones read below the pinned pitch; desktop reads mid-screen.
       const y = window.innerWidth < 1000 ? r.top - 0.66 * window.innerHeight : r.top + r.height / 2 - window.innerHeight / 2;
-      window.scrollTo(0, window.scrollY + y);
+      window.scrollTo({ top: window.scrollY + y, behavior: "instant" });
     });
     await page.waitForTimeout(opts.reducedMotion ? 300 : 1600);
     await page.screenshot({ path: `${OUT}${name}-ch${i}.png` });
@@ -47,7 +47,7 @@ async function run(name, viewport, opts = {}) {
   await page.$eval('[data-chapter="3"]', (el) => {
     const r = el.getBoundingClientRect();
     const y = window.innerWidth < 1000 ? r.top - 0.66 * window.innerHeight : r.top + r.height / 2 - window.innerHeight / 2;
-    window.scrollTo(0, window.scrollY + y);
+    window.scrollTo({ top: window.scrollY + y, behavior: "instant" });
   });
   await page.waitForTimeout(600);
   const checked = () => page.$eval('[aria-label="Information available to the model"] [aria-checked="true"]', (b) => b.textContent);

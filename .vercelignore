@@ -1,0 +1,12 @@
+# The showcase is built from site/ plus the public aggregate results it reads.
+/*
+!/site
+!/docs
+!/vercel.json
+/docs/*
+!/docs/res440
+/docs/res440/*
+!/docs/res440/findings.json
+/site/node_modules
+/site/dist
+/site/qa
