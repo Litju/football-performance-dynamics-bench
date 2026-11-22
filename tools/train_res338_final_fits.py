@@ -107,6 +107,8 @@ MAX_WORKER_RSS_BYTES = 16 * 1024**3
 GPU_FIT_WALL_BUDGET_SECONDS = 3600.0
 GPU_RETRY_WALL_BUDGET_SECONDS = 0.25 * 3600
 GPU_CAMPAIGN_BUDGET_SECONDS = 22.5 * 3600
+RES340_GPU_CAMPAIGN_BUDGET_SECONDS = 270 * 3600
+RES340_COMPUTE_UNIT_SPEND_CAP = 2400.0
 MAX_GPU_ALLOCATED_BYTES = 8 * 1024**3
 DEFAULT_PRIVATE_DISK_RESERVE_BYTES = 1024**3
 GPU_PRIVATE_DISK_RESERVE_BYTES = 8 * 1024**3
@@ -120,6 +122,8 @@ TOY_PREFLIGHT_PATH = Path(
 )
 GPU_EXECUTION_AMENDMENT = REPO / "docs/res338-colab-gpu-execution-amendment.md"
 PRIVATE_CLOUD_AMENDMENT = REPO / "docs/res338-private-cloud-research-amendment.md"
+RES340_GPU_EXECUTION_AMENDMENT = REPO / "docs/res340-lomo-gpu-execution-amendment.md"
+RES340_PRIVATE_CLOUD_AMENDMENT = REPO / "docs/res340-private-cloud-research-amendment.md"
 
 _FEATURE_ARRAYS = (
     "target_history",
@@ -1303,9 +1307,29 @@ def _fit_one(
     fit_cpu_budget_seconds: float = FIT_CPU_BUDGET_SECONDS,
     fit_gpu_wall_budget_seconds: float = GPU_FIT_WALL_BUDGET_SECONDS,
     worker_memory_limit_bytes: int = MAX_WORKER_RSS_BYTES,
+    fit_role: str = "final_train",
+    fold_id: str | None = None,
+    held_out_match_id: str | None = None,
+    campaign_gpu_budget_seconds: float = GPU_CAMPAIGN_BUDGET_SECONDS,
+    forbidden_checkpoint_sha256s: Sequence[str] = (),
 ) -> dict[str, object]:
     cell_id = f"{MODEL_ID}|{regime}|{representation}"
-    run_id = f"{cell_id}|final_train|final|{seed}"
+    if fit_role == "final_train":
+        if fold_id is not None or held_out_match_id is not None:
+            raise ValueError("final-role fits cannot include LOMO fold identities")
+        run_id = f"{cell_id}|final_train|final|{seed}"
+    elif fit_role == "lomo":
+        if not fold_id or not held_out_match_id:
+            raise ValueError("LOMO fits require one explicit held-out fold identity")
+        if held_out_match_id in train_matches or held_out_match_id in validation_matches:
+            raise ValueError("the LOMO held-out match cannot enter fit or validation roles")
+        if held_out_match_id in cache_by_match:
+            raise ValueError("the LOMO held-out cache cannot enter the optimization worker")
+        if any(cache.role == "evaluation" for cache in cache_by_match.values()):
+            raise ValueError("evaluation-role feature caches are outside the LOMO runtime")
+        run_id = f"{cell_id}|lomo|{fold_id}|{seed}"
+    else:
+        raise ValueError("unknown learned fit role")
     slug = run_id.replace("|", "--")
     partial = run_root / "runs" / f".{slug}.{uuid.uuid4().hex}.partial"
     partial.mkdir(mode=0o700)
@@ -1320,6 +1344,12 @@ def _fit_one(
         protocol_sha256,
         device,
     )
+    if fit_role == "lomo":
+        config.update(
+            fit_role="lomo",
+            lomo_fold_id=fold_id,
+            lomo_held_out_match_id=held_out_match_id,
+        )
     config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
     rng = np.random.default_rng(seed)
     scoreable_by_match = [
@@ -1341,7 +1371,7 @@ def _fit_one(
     campaign_wall_deadline = campaign_wall_start + CAMPAIGN_WALL_BUDGET_SECONDS
     campaign_gpu_wall_deadline = (
         campaign_gpu_start if campaign_gpu_start is not None else campaign_wall_start
-    ) + GPU_CAMPAIGN_BUDGET_SECONDS
+    ) + campaign_gpu_budget_seconds
     fit_peak_rss_bytes = _current_rss_bytes()
     fit_peak_gpu_bytes = 0
     failure: str | None = None
@@ -1496,6 +1526,8 @@ def _fit_one(
             or not checkpoint_sha256
         ):
             raise RuntimeError("no valid validation checkpoint was selected")
+        if checkpoint_sha256 in set(forbidden_checkpoint_sha256s):
+            raise ValueError("LOMO fit produced a checkpoint identity used by a final fit")
         selected = load_checkpoint_verified(partial / "checkpoint.pt", checkpoint_sha256)
         if (
             cast(dict[str, object], selected["metadata"]).get("selected_step")
@@ -1512,7 +1544,11 @@ def _fit_one(
             raise FloatingPointError("selected checkpoint contains non-finite parameters")
         PerTargetContextDeepSetsMLP(regime).load_state_dict(selected_state, strict=True)
         receipt: dict[str, object] = {
-            "schema_id": "fpdbench.res338-research-final-fit",
+            "schema_id": (
+                "fpdbench.res340.research-lomo-fit"
+                if fit_role == "lomo"
+                else "fpdbench.res338-research-final-fit"
+            ),
             "schema_version": "1.0.0",
             "run_id": run_id,
             "cell_id": cell_id,
@@ -1525,7 +1561,7 @@ def _fit_one(
             "session_identity": _colab_session_identity(),
             "accelerator": dict(accelerator) if accelerator is not None else None,
             "status": "completed",
-            "fit_role": "final_train",
+            "fit_role": fit_role,
             "train_match_ids": list(train_matches),
             "validation_match_ids": list(validation_matches),
             "population_manifest_sha256": population_sha256,
@@ -1555,6 +1591,9 @@ def _fit_one(
             else None,
             "peak_gpu_memory_allocated_bytes": fit_peak_gpu_bytes if device == "cuda" else None,
         }
+        if fit_role == "lomo":
+            receipt["lomo_fold_id"] = fold_id
+            receipt["lomo_held_out_match_id"] = held_out_match_id
         _atomic_json(partial / "receipt.json", receipt)
         if final_dir.exists():
             raise FileExistsError("fit output already committed")
@@ -1570,7 +1609,11 @@ def _fit_one(
         if checkpoint.exists():
             checkpoint.unlink()
         failed = {
-            "schema_id": "fpdbench.res338-research-final-fit",
+            "schema_id": (
+                "fpdbench.res340.research-lomo-fit"
+                if fit_role == "lomo"
+                else "fpdbench.res338-research-final-fit"
+            ),
             "schema_version": "1.0.0",
             "run_id": run_id,
             "cell_id": cell_id,
@@ -1583,7 +1626,7 @@ def _fit_one(
             "session_identity": _colab_session_identity(),
             "accelerator": dict(accelerator) if accelerator is not None else None,
             "status": "failed",
-            "fit_role": "final_train",
+            "fit_role": fit_role,
             "train_match_ids": list(train_matches),
             "validation_match_ids": list(validation_matches),
             "population_manifest_sha256": population_sha256,
@@ -1611,6 +1654,9 @@ def _fit_one(
             else None,
             "peak_gpu_memory_allocated_bytes": fit_peak_gpu_bytes if device == "cuda" else None,
         }
+        if fit_role == "lomo":
+            failed["lomo_fold_id"] = fold_id
+            failed["lomo_held_out_match_id"] = held_out_match_id
         if not final_dir.exists():
             _atomic_json(partial / "receipt.json", failed)
             os.rename(partial, final_dir)
@@ -1661,7 +1707,7 @@ def _six_frozen_configurations(plan_sha256: str, protocol_sha256: str) -> list[d
     ]
 
 
-def _implementation_fingerprint() -> dict[str, str]:
+def _implementation_fingerprint(fit_role: str = "final_train") -> dict[str, str]:
     paths = (
         REPO
         / "src/fpdbench/benchmarks/conditional_multi_agent_motion_prediction/learned_deepsets.py",
@@ -1685,13 +1731,63 @@ def _implementation_fingerprint() -> dict[str, str]:
         GPU_EXECUTION_AMENDMENT,
         PRIVATE_CLOUD_AMENDMENT,
     )
+    if fit_role == "lomo":
+        paths = (
+            *paths,
+            REPO / "tools/res338_colab_job.py",
+            REPO / "tools/res338_colab_progress.py",
+            REPO / "tools/res338_colab_worker.py",
+            REPO / "tools/res340_lomo.py",
+            REPO / "tools/res340_colab_gate.py",
+            REPO / "tools/score_res340_lomo.py",
+            REPO / "tools/aggregate_res340_lomo.py",
+            REPO / "docs/res340-lomo-fit-matrix.json",
+            RES340_GPU_EXECUTION_AMENDMENT,
+            RES340_PRIVATE_CLOUD_AMENDMENT,
+        )
     return {path.relative_to(REPO).as_posix(): _sha256_file(path) for path in paths}
 
 
 def _fit_run_id(fit: Mapping[str, object]) -> str:
+    if "fold_id" in fit:
+        return (
+            f"{MODEL_ID}|{fit['information_regime']}|{fit['target_representation']}"
+            f"|lomo|{fit['fold_id']}|{fit['seed']}"
+        )
     return (
         f"{MODEL_ID}|{fit['information_regime']}|{fit['target_representation']}"
         f"|final_train|final|{fit['seed']}"
+    )
+
+
+def _scheduled_fit_config(
+    fit: Mapping[str, object],
+    *,
+    fit_role: str,
+    train_matches: Sequence[str],
+    validation_matches: Sequence[str],
+    plan_sha256: str,
+    protocol_sha256: str,
+    device: str,
+) -> dict[str, object]:
+    if fit_role == "lomo":
+        import res340_lomo
+
+        return res340_lomo.fit_configuration(
+            fit,
+            plan_sha256=plan_sha256,
+            protocol_sha256=protocol_sha256,
+            device=device,
+        )
+    return _per_fit_config(
+        cast(InformationRegime, fit["information_regime"]),
+        cast(TargetRepresentation, fit["target_representation"]),
+        int(fit["seed"]),
+        train_matches,
+        validation_matches,
+        plan_sha256,
+        protocol_sha256,
+        device,
     )
 
 
@@ -1736,26 +1832,45 @@ def _verified_preloaded_cache(
     return {**cache, "cache_metadata_sha256": expected_metadata_sha}
 
 
-def _has_staged_preloaded_caches(cache_root: Path | None, expected_matches: set[str]) -> bool:
+def _has_staged_preloaded_caches(
+    cache_root: Path | None,
+    expected_matches: set[str],
+    expected_roles: Mapping[str, str] | None = None,
+) -> bool:
     if cache_root is None or (not cache_root.exists() and not cache_root.is_symlink()):
         return False
     with source.private_directory(cache_root):
         pass
+    role_matches = dict(expected_roles or {match_id: "training" for match_id in expected_matches})
+    if set(role_matches) != expected_matches or set(role_matches.values()) - {
+        "training",
+        "validation",
+    }:
+        raise ValueError("staged cache role map differs from its frozen match set")
+    expected_by_role = {
+        role: {match_id for match_id, actual_role in role_matches.items() if actual_role == role}
+        for role in {"training", "validation"}
+    }
+    expected_directories = {role for role, matches in expected_by_role.items() if matches}
     roles = {item.name for item in cache_root.iterdir()}
     if not roles:
         return False
-    if roles != {"training"}:
-        raise ValueError("staged cache root contains a nontraining cache role")
-    training_root = cache_root / "training"
-    if training_root.is_symlink() or not training_root.is_dir():
-        raise ValueError("staged training cache root is not a private directory")
-    matches = list(training_root.iterdir())
-    if not matches:
+    if roles - expected_directories:
+        raise ValueError("staged cache root contains missing or out-of-scope roles")
+    if roles != expected_directories:
         return False
-    if {item.name for item in matches} != expected_matches or any(
-        item.is_symlink() or not item.is_dir() for item in matches
-    ):
-        raise ValueError("staged cache set differs from the six frozen training caches")
+    for role in sorted(expected_directories):
+        role_root = cache_root / role
+        if role_root.is_symlink() or not role_root.is_dir():
+            raise ValueError("staged cache role is not a private directory")
+        matches = list(role_root.iterdir())
+        actual_matches = {item.name for item in matches}
+        if actual_matches - expected_by_role[role] or any(
+            item.is_symlink() or not item.is_dir() for item in matches
+        ):
+            raise ValueError("staged cache set differs from its frozen role assignments")
+        if actual_matches != expected_by_role[role]:
+            return False
     return True
 
 
@@ -1860,6 +1975,7 @@ def _verify_committed_run(
     plan_sha256: str,
     protocol_sha256: str,
     device: str = "cpu",
+    forbidden_checkpoint_sha256s: Sequence[str] = (),
 ) -> None:
     run_id = _fit_run_id(fit)
     if ledger_item.get("run_id") != run_id or ledger_item.get("status") != "completed":
@@ -1869,15 +1985,15 @@ def _verify_committed_run(
     receipt = cast(
         dict[str, object], json.loads(receipt_bytes, object_pairs_hook=_unique_json_object)
     )
-    config = _per_fit_config(
-        cast(InformationRegime, fit["information_regime"]),
-        cast(TargetRepresentation, fit["target_representation"]),
-        int(fit["seed"]),
-        train_matches,
-        validation_matches,
-        plan_sha256,
-        protocol_sha256,
-        device,
+    fit_role = "lomo" if "fold_id" in fit else "final_train"
+    config = _scheduled_fit_config(
+        fit,
+        fit_role=fit_role,
+        train_matches=train_matches,
+        validation_matches=validation_matches,
+        plan_sha256=plan_sha256,
+        protocol_sha256=protocol_sha256,
+        device=device,
     )
     expected_config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
     if (
@@ -1886,7 +2002,15 @@ def _verify_committed_run(
         or receipt.get("configuration_sha256") != expected_config_sha256
         or receipt.get("environment_sha256") != environment_sha256
         or receipt.get("execution_device") != device
+        or receipt.get("fit_role") != fit_role
         or receipt.get("checkpoint_sha256") != ledger_item.get("checkpoint_sha256")
+        or (
+            fit_role == "lomo"
+            and (
+                receipt.get("lomo_fold_id") != fit.get("fold_id")
+                or receipt.get("lomo_held_out_match_id") != fit.get("held_out_match_id")
+            )
+        )
     ):
         raise ValueError("committed run receipt differs from the frozen configuration")
     if device == "cuda":
@@ -1904,6 +2028,8 @@ def _verify_committed_run(
             raise ValueError("GPU runtime identity or memory receipt is incomplete")
     checkpoint = run_dir / "checkpoint.pt"
     loaded = load_checkpoint_verified(checkpoint, str(receipt["checkpoint_sha256"]))
+    if str(receipt["checkpoint_sha256"]) in set(forbidden_checkpoint_sha256s):
+        raise ValueError("LOMO checkpoint identity was already used by a final fit")
     metadata = cast(dict[str, object], loaded["metadata"])
     if (
         metadata.get("run_id") != run_id
@@ -1935,6 +2061,9 @@ def run_campaign(
     *,
     resume: bool = False,
     retry_interrupted_run: str | None = None,
+    retry_infrastructure_confirmed: bool = False,
+    retry_oom_excluded: bool = False,
+    retry_reason: str | None = None,
     device: str = "cpu",
     research_scope: str = "full",
     reference_manifest_path: Path | None = None,
@@ -1943,14 +2072,47 @@ def run_campaign(
     toy_preflight_path: Path | None = None,
     max_new_fits: int | None = None,
     prepare_only: bool = False,
+    fit_role: str = "final_train",
+    owner_approval_path: Path | None = None,
+    compute_unit_balance: float | None = None,
+    compute_unit_rate_per_hour: float | None = None,
+    lomo_cache_manifest_path: Path | None = None,
+    lomo_cache_manifest_sha256: str | None = None,
+    lomo_cache_ledger_path: Path | None = None,
+    lomo_cache_ledger_sha256: str | None = None,
+    campaign_started_at_utc: str | None = None,
 ) -> dict[str, object]:
     os.umask(0o077)
+    if fit_role not in {"final_train", "lomo"}:
+        raise ValueError("unknown learned fit role")
     if device not in {"cpu", "cuda"}:
         raise ValueError("device must be cpu or cuda")
     if research_scope not in {"full", "training-validation"}:
         raise ValueError("unknown research scope")
     if device == "cuda" and research_scope != "training-validation":
         raise ValueError("GPU final fits must use the training/validation-only scope")
+    if fit_role == "lomo" and (device != "cuda" or research_scope != "training-validation"):
+        raise ValueError("RES340 LOMO fits require the pinned A100 training/validation runtime")
+    if fit_role == "lomo" and max_new_fits not in ({None} if prepare_only else {1}):
+        raise ValueError("RES340 LOMO execution advances exactly one fit per worker job")
+    if fit_role == "lomo" and owner_approval_path is None:
+        raise PermissionError(
+            "RES340 real-data work requires the separate owner execution approval"
+        )
+    if fit_role == "lomo" and (compute_unit_balance is None or compute_unit_rate_per_hour is None):
+        raise ValueError("RES340 requires fresh host Colab balance and A100 rate readings")
+    if fit_role == "lomo" and any(
+        value is None
+        for value in (
+            lomo_cache_manifest_path,
+            lomo_cache_manifest_sha256,
+            lomo_cache_ledger_path,
+            lomo_cache_ledger_sha256,
+        )
+    ):
+        raise ValueError("RES340 requires the verified completed RES338 cache and campaign records")
+    if fit_role == "lomo" and not campaign_started_at_utc:
+        raise ValueError("RES340 requires the durable progress-index campaign start time")
     if research_scope == "training-validation" and reference_manifest_path is None:
         raise ValueError("training-validation scope requires its projected reference manifest")
     if preloaded_cache_root is not None and research_scope != "training-validation":
@@ -1961,13 +2123,19 @@ def run_campaign(
         raise ValueError(
             "prepare-only mode is fresh and cannot be combined with resume or fit limits"
         )
+    gpu_amendment_path = (
+        RES340_GPU_EXECUTION_AMENDMENT if fit_role == "lomo" else GPU_EXECUTION_AMENDMENT
+    )
+    cloud_amendment_path = (
+        RES340_PRIVATE_CLOUD_AMENDMENT if fit_role == "lomo" else PRIVATE_CLOUD_AMENDMENT
+    )
     if device == "cuda":
         affinity = os.sched_getaffinity(0)
         if not affinity:
             raise RuntimeError("the GPU worker has no CPU affinity")
         os.sched_setaffinity(0, {min(affinity)})
-        if not GPU_EXECUTION_AMENDMENT.is_file() or not PRIVATE_CLOUD_AMENDMENT.is_file():
-            raise FileNotFoundError("the frozen GPU and private-cloud amendments are required")
+        if not gpu_amendment_path.is_file() or not cloud_amendment_path.is_file():
+            raise FileNotFoundError("the prospective GPU and private-cloud amendments are required")
     required_disk_reserve_bytes = (
         GPU_PRIVATE_DISK_RESERVE_BYTES if device == "cuda" else DEFAULT_PRIVATE_DISK_RESERVE_BYTES
     )
@@ -1977,11 +2145,26 @@ def run_campaign(
         ):
             raise ValueError("training-validation reference hash differs")
     toy_preflight_path = toy_preflight_path or TOY_PREFLIGHT_PATH
-    gpu_amendment_sha256 = _sha256_file(GPU_EXECUTION_AMENDMENT) if device == "cuda" else None
-    cloud_amendment_sha256 = _sha256_file(PRIVATE_CLOUD_AMENDMENT) if device == "cuda" else None
+    gpu_amendment_sha256 = _sha256_file(gpu_amendment_path) if device == "cuda" else None
+    cloud_amendment_sha256 = _sha256_file(cloud_amendment_path) if device == "cuda" else None
+    if fit_role == "lomo" and "res340" not in output_root.parts:
+        raise ValueError("RES340 evidence must use its separate private campaign root")
     if not output_root.is_absolute():
         raise ValueError("private evidence output must use an absolute path")
-    fresh = not output_root.exists()
+    campaign_marker = output_root / "campaign.json"
+    if fit_role == "lomo":
+        fresh = not campaign_marker.exists()
+        if (
+            fresh
+            and output_root.exists()
+            and (
+                output_root.is_symlink()
+                or {item.name for item in output_root.iterdir()} != {"feature-cache"}
+            )
+        ):
+            raise FileExistsError("uncommitted RES340 cache root contains unexpected evidence")
+    else:
+        fresh = not output_root.exists()
     if fresh and (resume or retry_interrupted_run is not None):
         raise ValueError("an interrupted campaign can only resume from its existing private root")
     if not fresh and not resume:
@@ -1989,8 +2172,8 @@ def run_campaign(
     with source.private_directory(output_root.parent):
         pass
     if fresh:
-        output_root.mkdir(mode=0o700)
-        (output_root / "feature-cache").mkdir(mode=0o700)
+        output_root.mkdir(mode=0o700, exist_ok=True)
+        (output_root / "feature-cache").mkdir(mode=0o700, exist_ok=fit_role == "lomo")
         (output_root / "runs").mkdir(mode=0o700)
     with source.private_directory(output_root):
         pass
@@ -2011,9 +2194,20 @@ def run_campaign(
     try:
         prior_ledger: dict[str, object] | None = None
         freeze: dict[str, object] | None = None
+        lomo_cache_freeze: dict[str, object] | None = None
+        final_checkpoint_sha256s: list[str] = []
         if fresh:
-            campaign_wall_start = time.monotonic()
-            campaign_started_at = datetime.now(UTC).isoformat()
+            if fit_role == "lomo":
+                assert campaign_started_at_utc is not None
+                started_at = datetime.fromisoformat(campaign_started_at_utc)
+                if started_at.tzinfo is None:
+                    raise ValueError("RES340 campaign start must include a UTC offset")
+                elapsed_wall = max(0.0, (datetime.now(UTC) - started_at).total_seconds())
+                campaign_wall_start = time.monotonic() - elapsed_wall
+                campaign_started_at = started_at.astimezone(UTC).isoformat()
+            else:
+                campaign_wall_start = time.monotonic()
+                campaign_started_at = datetime.now(UTC).isoformat()
             preparation_cpu_start = time.process_time()
         else:
             prior_ledger = _read_private_json(output_root / "campaign.json")
@@ -2029,11 +2223,191 @@ def run_campaign(
             elapsed_wall = max(0.0, (datetime.now(UTC) - started_at).total_seconds())
             campaign_wall_start = time.monotonic() - elapsed_wall
             campaign_started_at = str(freeze["campaign_started_at_utc"])
+            if fit_role == "lomo" and campaign_started_at != campaign_started_at_utc:
+                raise ValueError("RES340 resume campaign start differs from its progress index")
             preparation_cpu_start = time.process_time()
 
         runtime = _validate_training_runtime(device)
         plan, protocol, roles = _frozen_split_and_authorities()
-        if research_scope == "full":
+        code_sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO, text=True
+        ).strip()
+        lomo_matrix: dict[str, object] | None = None
+        lomo_matrix_sha256: str | None = None
+        lomo_approval_sha256: str | None = None
+        if fit_role == "lomo":
+            import res340_lomo
+
+            assert lomo_cache_manifest_path is not None
+            assert lomo_cache_manifest_sha256 is not None
+            assert lomo_cache_ledger_path is not None
+            assert lomo_cache_ledger_sha256 is not None
+            if (
+                _sha256_file(lomo_cache_manifest_path) != lomo_cache_manifest_sha256
+                or _sha256_file(lomo_cache_ledger_path) != lomo_cache_ledger_sha256
+            ):
+                raise ValueError("RES338 cache freeze or completed campaign ledger hash differs")
+            lomo_cache_freeze = cast(
+                dict[str, object],
+                json.loads(
+                    read_private_file(lomo_cache_manifest_path, lomo_cache_manifest_sha256),
+                    object_pairs_hook=_unique_json_object,
+                ),
+            )
+            reuse_ledger = _read_private_json(lomo_cache_ledger_path)
+            expected_roles = {
+                "training": roles["training"],
+                "validation": roles["validation"],
+            }
+            progress_fits = cast(list[dict[str, object]], reuse_ledger.get("fits", []))
+            cache_identities = cast(
+                dict[str, dict[str, object]], lomo_cache_freeze.get("feature_cache", {})
+            )
+            if (
+                lomo_cache_freeze.get("schema_id") != "fpdbench.res338-research-final-fit-campaign"
+                or lomo_cache_freeze.get("research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+                or lomo_cache_freeze.get("plan_sha256") != plan.get("plan_sha256")
+                or lomo_cache_freeze.get("protocol_sha256") != protocol.get("protocol_sha256")
+                or lomo_cache_freeze.get("reference_manifest_sha256") != reference_manifest_sha256
+                or lomo_cache_freeze.get("research_roles") != expected_roles
+                or lomo_cache_freeze.get("protected_status") != "NOT_QUALIFIED"
+                or set(cache_identities) != set(roles["training"]) | set(roles["validation"])
+                or len(cache_identities) != 16
+                or reuse_ledger.get("schema_id") != "fpdbench.res338.colab-progress"
+                or reuse_ledger.get("required_fit_count") != 18
+                or reuse_ledger.get("completed_fit_count") != 18
+                or len(progress_fits) != 18
+                or reuse_ledger.get("parent_research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
+                or reuse_ledger.get("plan_sha256") != plan.get("plan_sha256")
+                or reuse_ledger.get("protocol_sha256") != protocol.get("protocol_sha256")
+                or reuse_ledger.get("research_reference_sha256") != reference_manifest_sha256
+                or {str(item.get("run_id")) for item in progress_fits}
+                != {_fit_run_id(fit) for fit in _fit_order(roles["training"], roles["validation"])}
+                or any(item.get("status") != "COMPLETED_AND_VERIFIED" for item in progress_fits)
+            ):
+                raise ValueError("RES340 cache reuse requires the completed 12/4 RES338 freeze")
+            expected_final_fits = {
+                _fit_run_id(fit): fit for fit in _fit_order(roles["training"], roles["validation"])
+            }
+            for item in progress_fits:
+                final_fit = expected_final_fits[str(item["run_id"])]
+                final_config = _per_fit_config(
+                    cast(InformationRegime, final_fit["information_regime"]),
+                    cast(TargetRepresentation, final_fit["target_representation"]),
+                    int(final_fit["seed"]),
+                    roles["training"],
+                    roles["validation"],
+                    str(plan["plan_sha256"]),
+                    str(protocol["protocol_sha256"]),
+                    "cuda",
+                )
+                if hashlib.sha256(_canonical(final_config)).hexdigest() != item.get(
+                    "configuration_sha256"
+                ):
+                    raise ValueError("RES338 fit configuration differs from the frozen model")
+            final_checkpoint_sha256s = []
+            for item in progress_fits:
+                attempts = cast(list[dict[str, object]], item.get("attempts", []))
+                verified_attempt = next(
+                    (
+                        attempt
+                        for attempt in reversed(attempts)
+                        if attempt.get("status") == "COMPLETED_AND_VERIFIED"
+                    ),
+                    None,
+                )
+                if (
+                    verified_attempt is None
+                    or verified_attempt.get("readback_verified") is not True
+                    or not verified_attempt.get("checkpoint_drive_file_id")
+                    or not verified_attempt.get("receipt_drive_file_id")
+                ):
+                    raise ValueError("RES340 final fit identities need verified Drive readbacks")
+                final_checkpoint_sha256s.append(str(verified_attempt.get("checkpoint_sha256")))
+            if (
+                len(final_checkpoint_sha256s) != 18
+                or len(set(final_checkpoint_sha256s)) != 18
+                or any(
+                    len(value) != 64 or any(char not in "0123456789abcdef" for char in value)
+                    for value in final_checkpoint_sha256s
+                )
+            ):
+                raise ValueError("RES340 must bind all 18 verified final checkpoint identities")
+            population_authority = cast(dict[str, object], plan["population_authority"])
+            if (
+                lomo_cache_freeze.get("source_release_hash")
+                != population_authority["source_release_hash"]
+                or lomo_cache_freeze.get("source_population_hash")
+                != population_authority["source_population_hash"]
+            ):
+                raise ValueError("RES338 caches do not bind the frozen research source identity")
+            for match_id, cache_identity in cache_identities.items():
+                expected_role = "training" if match_id in roles["training"] else "validation"
+                if (
+                    cache_identity.get("match_id") != match_id
+                    or cache_identity.get("role") != expected_role
+                ):
+                    raise ValueError("RES338 cache identity has a wrong match role")
+            completed_before = (
+                int(prior_ledger.get("completed_fit_count", 0)) if prior_ledger else 0
+            )
+            remaining_fit_count = res340_lomo.FIT_COUNT - completed_before
+            if remaining_fit_count < 0:
+                raise ValueError("campaign ledger exceeds the frozen 216-fit schedule")
+            lomo_matrix = res340_lomo.build_fit_matrix(plan, protocol, roles)
+            lomo_matrix_sha256 = res340_lomo.matrix_sha256(lomo_matrix)
+            matrix_path = REPO / "docs/res340-lomo-fit-matrix.json"
+            if not matrix_path.is_file() or json.loads(matrix_path.read_bytes()) != lomo_matrix:
+                raise ValueError("committed RES340 matrix differs from the frozen plan/protocol")
+            assert owner_approval_path is not None and gpu_amendment_sha256 is not None
+            approval = _read_private_json(owner_approval_path)
+            res340_lomo.verify_execution_approval(
+                approval,
+                amendment_sha256=gpu_amendment_sha256,
+                private_cloud_amendment_sha256=cloud_amendment_sha256,
+                fit_matrix_sha256=lomo_matrix_sha256,
+                cache_manifest_sha256=lomo_cache_manifest_sha256,
+                cache_ledger_sha256=lomo_cache_ledger_sha256,
+                code_sha=code_sha,
+                compute_unit_spend_cap=RES340_COMPUTE_UNIT_SPEND_CAP,
+            )
+            approved_rate = float(approval["a100_compute_unit_rate_per_hour"])
+            if float(compute_unit_rate_per_hour) != approved_rate:
+                raise ValueError("live A100 rate differs from the owner-approved compute contract")
+            starting_balance = (
+                float(freeze["compute_unit_balance_at_start"])
+                if freeze is not None
+                else float(approval["compute_unit_balance_at_start"])
+            )
+            res340_lomo.require_compute_unit_budget(
+                current_balance=float(compute_unit_balance),
+                current_rate_per_hour=float(compute_unit_rate_per_hour),
+                spend_cap=RES340_COMPUTE_UNIT_SPEND_CAP,
+                starting_balance=starting_balance,
+                remaining_work_units=(
+                    remaining_fit_count
+                    * (GPU_FIT_WALL_BUDGET_SECONDS + GPU_RETRY_WALL_BUDGET_SECONDS)
+                    / 3600
+                    * float(compute_unit_rate_per_hour)
+                ),
+            )
+            lomo_approval_sha256 = hashlib.sha256(_canonical(approval)).hexdigest()
+        if fit_role == "lomo":
+            assert lomo_cache_freeze is not None
+            assert reference_manifest_path is not None
+            assert reference_manifest_sha256 is not None
+            research_manifest, population_rehash, roles = (
+                _frozen_training_validation_resume_authority(
+                    lomo_cache_freeze,
+                    reference_manifest_path,
+                    reference_manifest_sha256,
+                    plan,
+                    roles,
+                )
+            )
+            research_manifest = dict(research_manifest)
+            research_manifest["preloaded_cache_identities"] = lomo_cache_freeze["feature_cache"]
+        elif research_scope == "full":
             research_manifest, population_rehash = verify_research_population(
                 research_root, source_root, plan, roles
             )
@@ -2064,15 +2438,33 @@ def run_campaign(
         train_matches, validation_matches = roles["training"], roles["validation"]
         if set(train_matches) & set(validation_matches):
             raise ValueError("training and validation match roles must be disjoint")
-        configs = _fit_order(train_matches, validation_matches)
+        if fit_role == "lomo":
+            assert lomo_matrix is not None
+            import res340_lomo
+
+            configs = res340_lomo.expand_fit_matrix(lomo_matrix)
+            expected_fit_count = 216
+            freeze_schema = "fpdbench.res340.lomo-campaign"
+            ledger_schema = "fpdbench.res340.lomo-campaign-ledger"
+            complete_status = "RES340_RESEARCH_LOMO_FITS_COMPLETE"
+            campaign_gpu_budget_seconds = RES340_GPU_CAMPAIGN_BUDGET_SECONDS
+        else:
+            configs = _fit_order(train_matches, validation_matches)
+            expected_fit_count = 18
+            freeze_schema = "fpdbench.res338-research-final-fit-campaign"
+            ledger_schema = "fpdbench.res338-research-final-fit-ledger"
+            complete_status = "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+            campaign_gpu_budget_seconds = GPU_CAMPAIGN_BUDGET_SECONDS
+        if (
+            len(configs) != expected_fit_count
+            or len({_fit_run_id(fit) for fit in configs}) != expected_fit_count
+        ):
+            raise ValueError("campaign fit schedule has missing or duplicate identities")
         plan_sha256 = str(plan["plan_sha256"])
         protocol_sha256 = str(protocol["protocol_sha256"])
         six_configs = _six_frozen_configurations(plan_sha256, protocol_sha256)
         runtime_sha256 = _training_environment_sha256(runtime)
-        implementation = _implementation_fingerprint()
-        code_sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=REPO, text=True
-        ).strip()
+        implementation = _implementation_fingerprint(fit_role)
         toy_payload, toy_report, toy_preflight_sha256 = _verify_toy_preflight(
             toy_preflight_path,
             plan_sha256=plan_sha256,
@@ -2092,11 +2484,22 @@ def run_campaign(
                 research_manifest.get("preloaded_cache_identities", {}),
             )
             preloaded_matches = set(preloaded_identities)
-            if device == "cuda" and len(preloaded_matches) != 6:
-                raise ValueError("the GPU preparation reference must bind all six completed caches")
+            expected_preloaded_count = 16 if fit_role == "lomo" else 6
+            if device == "cuda" and len(preloaded_matches) != expected_preloaded_count:
+                raise ValueError("the GPU cache reference has the wrong frozen match coverage")
+            preloaded_roles = {
+                match_id: str(cache_identity["role"])
+                for match_id, cache_identity in preloaded_identities.items()
+            }
             staged_preloaded_caches = _has_staged_preloaded_caches(
-                preloaded_cache_root, preloaded_matches
+                preloaded_cache_root,
+                preloaded_matches,
+                preloaded_roles if fit_role == "lomo" else None,
             )
+            if fit_role == "lomo" and not staged_preloaded_caches:
+                raise ValueError(
+                    "RES340 requires all 16 verified RES338 caches; regeneration is disabled"
+                )
             for role, matches in (("training", train_matches), ("validation", validation_matches)):
                 for match_id in matches:
                     if time.process_time() - preparation_cpu_start >= (
@@ -2114,8 +2517,10 @@ def run_campaign(
                                 role,
                                 preloaded_identities[match_id],
                             )
-                            target.parent.mkdir(mode=0o700, exist_ok=True)
-                            shutil.copytree(preloaded_cache_root / role / match_id, target)
+                            preloaded_directory = preloaded_cache_root / role / match_id
+                            if preloaded_directory.resolve() != target.resolve():
+                                target.parent.mkdir(mode=0o700, exist_ok=True)
+                                shutil.copytree(preloaded_directory, target)
                         else:
                             identity = _build_match_cache(
                                 research_root,
@@ -2170,18 +2575,25 @@ def run_campaign(
             )
             population_authority = cast(dict[str, object], plan["population_authority"])
             freeze = {
-                "schema_id": "fpdbench.res338-research-final-fit-campaign",
+                "schema_id": freeze_schema,
                 "schema_version": "1.0.0",
                 "status": "FROZEN",
                 "campaign_started_at_utc": campaign_started_at,
-                "owner_authorization": {
-                    "scope_comment_id": "8021405d-5508-46a2-accd-66095869ea85",
-                    "manifest_sha256": RESEARCH_MANIFEST_SHA256,
-                    "scope": (
-                        "owner-authorized 18 research-only final-role fits; no evaluation "
-                        "scoring or learned LOMO"
-                    ),
-                },
+                "owner_authorization": (
+                    {
+                        "authorization_sha256": lomo_approval_sha256,
+                        "scope": "owner-approved RES340 research-only 216-fit LOMO",
+                    }
+                    if fit_role == "lomo"
+                    else {
+                        "scope_comment_id": "8021405d-5508-46a2-accd-66095869ea85",
+                        "manifest_sha256": RESEARCH_MANIFEST_SHA256,
+                        "scope": (
+                            "owner-authorized 18 research-only final-role fits; no evaluation "
+                            "scoring or learned LOMO"
+                        ),
+                    }
+                ),
                 "research_contract": f"{RESEARCH_SCHEMA}/{RESEARCH_VERSION}",
                 "research_manifest_sha256": RESEARCH_MANIFEST_SHA256,
                 "research_scope": research_scope,
@@ -2202,6 +2614,7 @@ def run_campaign(
                 "measurement_state_hash": population_authority["measurement_state_hash"],
                 "eligibility_policy_hash": population_authority["eligibility_policy_hash"],
                 "model_id": MODEL_ID,
+                "fit_role": fit_role,
                 "training_device": device,
                 "gpu_execution_amendment_sha256": gpu_amendment_sha256,
                 "private_cloud_amendment_sha256": cloud_amendment_sha256,
@@ -2248,7 +2661,21 @@ def run_campaign(
                 },
                 "seeds": list(SEEDS),
                 "fit_order": configs,
-                "fit_count_required": 18,
+                "fit_count_required": expected_fit_count,
+                "lomo_fit_matrix_sha256": lomo_matrix_sha256,
+                "lomo_source_cache_manifest_sha256": lomo_cache_manifest_sha256,
+                "lomo_source_cache_campaign_ledger_sha256": lomo_cache_ledger_sha256,
+                "lomo_execution_approval_sha256": lomo_approval_sha256,
+                "final_checkpoint_sha256s": final_checkpoint_sha256s,
+                "compute_unit_spend_cap": (
+                    RES340_COMPUTE_UNIT_SPEND_CAP if fit_role == "lomo" else None
+                ),
+                "compute_unit_balance_at_start": (
+                    float(approval["compute_unit_balance_at_start"]) if fit_role == "lomo" else None
+                ),
+                "compute_unit_rate_per_hour_at_start": (
+                    compute_unit_rate_per_hour if fit_role == "lomo" else None
+                ),
                 "training_and_selection": {
                     "batch_size_directed_scenes": BATCH_SIZE,
                     "sampling": (
@@ -2279,7 +2706,7 @@ def run_campaign(
                         GPU_RETRY_WALL_BUDGET_SECONDS if device == "cuda" else None
                     ),
                     "campaign_gpu_wall_seconds": (
-                        GPU_CAMPAIGN_BUDGET_SECONDS if device == "cuda" else None
+                        campaign_gpu_budget_seconds if device == "cuda" else None
                     ),
                     "maximum_gpu_memory_allocated_bytes": (
                         MAX_GPU_ALLOCATED_BYTES if device == "cuda" else None
@@ -2314,17 +2741,17 @@ def run_campaign(
                     "owner-private; no evaluation-role files or labels are loaded"
                 ),
                 "evaluation_scoring": "not run",
-                "learned_lomo": "not run",
+                "learned_lomo": "pending fit execution" if fit_role == "lomo" else "not run",
             }
             _atomic_json(output_root / "reproducibility-manifest.json", freeze)
             _atomic_write(output_root / "toy-preflight.json", toy_payload)
             freeze_sha256 = _sha256_file(output_root / "reproducibility-manifest.json")
             ledger: dict[str, object] = {
-                "schema_id": "fpdbench.res338-research-final-fit-ledger",
+                "schema_id": ledger_schema,
                 "schema_version": "1.0.0",
                 "status": "RUNNING",
                 "frozen_manifest_sha256": freeze_sha256,
-                "required_fit_count": 18,
+                "required_fit_count": expected_fit_count,
                 "completed_fit_count": 0,
                 "failed_fit_count": 0,
                 "reserved_training_cpu_seconds": 0.0,
@@ -2341,7 +2768,16 @@ def run_campaign(
         else:
             assert freeze is not None and prior_ledger is not None
             if (
-                freeze.get("schema_id") != "fpdbench.res338-research-final-fit-campaign"
+                freeze.get("schema_id") != freeze_schema
+                or freeze.get("fit_role", "final_train") != fit_role
+                or freeze.get("lomo_fit_matrix_sha256") != lomo_matrix_sha256
+                or freeze.get("lomo_source_cache_manifest_sha256") != lomo_cache_manifest_sha256
+                or freeze.get("lomo_source_cache_campaign_ledger_sha256")
+                != lomo_cache_ledger_sha256
+                or (
+                    fit_role == "lomo"
+                    and freeze.get("final_checkpoint_sha256s") != final_checkpoint_sha256s
+                )
                 or freeze.get("research_manifest_sha256") != RESEARCH_MANIFEST_SHA256
                 or freeze.get("research_scope") != research_scope
                 or freeze.get("research_projection_sha256")
@@ -2424,6 +2860,7 @@ def run_campaign(
         freeze_sha256 = str(ledger["frozen_manifest_sha256"])
         prior_runs = cast(list[dict[str, object]], ledger["runs"])
         completed_ids: set[str] = set()
+        seen_checkpoint_sha256s = set(final_checkpoint_sha256s)
         for item in prior_runs:
             run_id = str(item["run_id"])
             fit = next(
@@ -2431,17 +2868,30 @@ def run_campaign(
             )
             if fit is None:
                 raise ValueError("campaign ledger contains a run outside the frozen fit schedule")
+            fit_training = (
+                cast(Sequence[str], fit["train_match_ids"]) if fit_role == "lomo" else train_matches
+            )
+            fit_validation = (
+                cast(Sequence[str], fit["validation_match_ids"])
+                if fit_role == "lomo"
+                else validation_matches
+            )
             _verify_committed_run(
                 output_root,
                 item,
                 fit,
                 runtime_sha256,
-                train_matches,
-                validation_matches,
+                fit_training,
+                fit_validation,
                 plan_sha256,
                 protocol_sha256,
                 device,
+                forbidden_checkpoint_sha256s=final_checkpoint_sha256s,
             )
+            checkpoint_sha256 = str(item["checkpoint_sha256"])
+            if fit_role == "lomo" and checkpoint_sha256 in seen_checkpoint_sha256s:
+                raise ValueError("LOMO checkpoint SHA-256 is not unique across frozen fits")
+            seen_checkpoint_sha256s.add(checkpoint_sha256)
             completed_ids.add(run_id)
         if int(ledger["completed_fit_count"]) != len(completed_ids):
             raise ValueError("campaign coverage count differs from committed fit receipts")
@@ -2469,15 +2919,22 @@ def run_campaign(
             )
             if fit is None or current_run_id in completed_ids:
                 raise ValueError("uncommitted run is outside the frozen schedule")
-            config = _per_fit_config(
-                cast(InformationRegime, fit["information_regime"]),
-                cast(TargetRepresentation, fit["target_representation"]),
-                int(fit["seed"]),
-                train_matches,
-                validation_matches,
-                plan_sha256,
-                protocol_sha256,
-                device,
+            fit_training = (
+                cast(Sequence[str], fit["train_match_ids"]) if fit_role == "lomo" else train_matches
+            )
+            fit_validation = (
+                cast(Sequence[str], fit["validation_match_ids"])
+                if fit_role == "lomo"
+                else validation_matches
+            )
+            config = _scheduled_fit_config(
+                fit,
+                fit_role=fit_role,
+                train_matches=fit_training,
+                validation_matches=fit_validation,
+                plan_sha256=plan_sha256,
+                protocol_sha256=protocol_sha256,
+                device=device,
             )
             current_config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
             if current_config_sha256 != ledger.get("current_configuration_sha256"):
@@ -2509,11 +2966,20 @@ def run_campaign(
                         committed_item,
                         fit,
                         runtime_sha256,
-                        train_matches,
-                        validation_matches,
+                        fit_training,
+                        fit_validation,
                         plan_sha256,
                         protocol_sha256,
                         device,
+                        forbidden_checkpoint_sha256s=[
+                            *final_checkpoint_sha256s,
+                            *[
+                                str(prior["checkpoint_sha256"])
+                                for prior in cast(list[dict[str, object]], ledger["runs"])
+                                if prior.get("status") == "completed"
+                                and prior.get("checkpoint_sha256")
+                            ],
+                        ],
                     )
                     completed_ids.add(current_run_id)
                     ledger["completed_fit_count"] = int(ledger["completed_fit_count"]) + 1
@@ -2576,9 +3042,51 @@ def run_campaign(
             ledger["current_configuration_sha256"] = None
             _atomic_json(output_root / "campaign.json", ledger)
         if current_run_id is None and retry_interrupted_run is not None:
-            raise ValueError("retry ID does not match an uncommitted fit")
+            if fit_role != "lomo":
+                raise ValueError("retry ID does not match an uncommitted fit")
+            attempt_history = cast(dict[str, list[dict[str, object]]], ledger["attempt_history"])
+            prior_attempts = attempt_history.get(retry_interrupted_run, [])
+            next_fit = next(
+                (fit for fit in configs if _fit_run_id(fit) not in completed_ids),
+                None,
+            )
+            if (
+                next_fit is None
+                or _fit_run_id(next_fit) != retry_interrupted_run
+                or not retry_infrastructure_confirmed
+                or not retry_oom_excluded
+                or not retry_reason
+                or (
+                    prior_attempts
+                    and (
+                        len(prior_attempts) != 1
+                        or prior_attempts[0].get("status")
+                        != "external_worker_interruption_before_fit_start"
+                        or prior_attempts[0].get("reason") != retry_reason
+                    )
+                )
+            ):
+                raise ValueError(
+                    "pre-start retry lacks exact infrastructure and OOM-exclusion proof"
+                )
+            if not retry_allowed("uncommitted", "external_worker_interruption", 1, True):
+                raise RuntimeError("the frozen infrastructure retry conditions are not met")
+            if not prior_attempts:
+                attempt_history[retry_interrupted_run] = [
+                    {
+                        "attempt_number": 1,
+                        "status": "external_worker_interruption_before_fit_start",
+                        "infrastructure_confirmed": True,
+                        "oom_excluded": True,
+                        "reason": retry_reason,
+                        "confirmed_at_utc": datetime.now(UTC).isoformat(),
+                    }
+                ]
+            ledger["attempt_history"] = attempt_history
+            retry_id = retry_interrupted_run
+            _atomic_json(output_root / "campaign.json", ledger)
 
-        if not fresh and ledger["status"] == "RES338_RESEARCH_FINAL_FITS_COMPLETE":
+        if not fresh and ledger["status"] == complete_status:
             return ledger
         if not fresh and ledger["status"] == "INCOMPLETE":
             raise RuntimeError("incomplete scientific campaign cannot be resumed")
@@ -2631,21 +3139,33 @@ def run_campaign(
                 _atomic_json(output_root / "campaign.json", ledger)
                 return ledger
             reserved_gpu = float(ledger.get("reserved_gpu_wall_seconds", 0.0)) + fit_gpu_wall_budget
-            if device == "cuda" and reserved_gpu > GPU_CAMPAIGN_BUDGET_SECONDS:
+            campaign_gpu_budget_seconds = (
+                RES340_GPU_CAMPAIGN_BUDGET_SECONDS
+                if fit_role == "lomo"
+                else GPU_CAMPAIGN_BUDGET_SECONDS
+            )
+            if device == "cuda" and reserved_gpu > campaign_gpu_budget_seconds:
                 ledger["status"] = "INCOMPLETE"
                 ledger["campaign_stop_reason"] = "campaign_gpu_wall_budget_exceeded"
                 _refresh_resource_totals(ledger, freeze, campaign_wall_start, campaign_cpu_start)
                 _atomic_json(output_root / "campaign.json", ledger)
                 return ledger
-            config = _per_fit_config(
-                cast(InformationRegime, fit["information_regime"]),
-                cast(TargetRepresentation, fit["target_representation"]),
-                int(fit["seed"]),
-                train_matches,
-                validation_matches,
-                plan_sha256,
-                protocol_sha256,
-                device,
+            fit_training = (
+                cast(Sequence[str], fit["train_match_ids"]) if fit_role == "lomo" else train_matches
+            )
+            fit_validation = (
+                cast(Sequence[str], fit["validation_match_ids"])
+                if fit_role == "lomo"
+                else validation_matches
+            )
+            config = _scheduled_fit_config(
+                fit,
+                fit_role=fit_role,
+                train_matches=fit_training,
+                validation_matches=fit_validation,
+                plan_sha256=plan_sha256,
+                protocol_sha256=protocol_sha256,
+                device=device,
             )
             config_sha256 = hashlib.sha256(_canonical(config)).hexdigest()
             attempt_log = cast(dict[str, list[dict[str, object]]], ledger["attempt_history"])
@@ -2673,9 +3193,13 @@ def run_campaign(
 
             receipt = _fit_one(
                 run_root=output_root,
-                cache_by_match=cache_by_match,
-                train_matches=train_matches,
-                validation_matches=validation_matches,
+                cache_by_match=(
+                    res340_lomo.cache_view_for_fit(cache_by_match, fit)
+                    if fit_role == "lomo"
+                    else cache_by_match
+                ),
+                train_matches=fit_training,
+                validation_matches=fit_validation,
                 regime=cast(InformationRegime, fit["information_regime"]),
                 representation=cast(TargetRepresentation, fit["target_representation"]),
                 seed=int(fit["seed"]),
@@ -2695,6 +3219,22 @@ def run_campaign(
                     fit_gpu_wall_budget if device == "cuda" else GPU_FIT_WALL_BUDGET_SECONDS
                 ),
                 worker_memory_limit_bytes=worker_memory_limit,
+                fit_role=fit_role,
+                fold_id=cast(str | None, fit.get("fold_id")),
+                held_out_match_id=cast(str | None, fit.get("held_out_match_id")),
+                campaign_gpu_budget_seconds=(
+                    RES340_GPU_CAMPAIGN_BUDGET_SECONDS
+                    if fit_role == "lomo"
+                    else GPU_CAMPAIGN_BUDGET_SECONDS
+                ),
+                forbidden_checkpoint_sha256s=[
+                    *final_checkpoint_sha256s,
+                    *[
+                        str(prior["checkpoint_sha256"])
+                        for prior in cast(list[dict[str, object]], ledger["runs"])
+                        if prior.get("status") == "completed" and prior.get("checkpoint_sha256")
+                    ],
+                ],
             )
             run_receipt_path = output_root / "runs" / run_id.replace("|", "--") / "receipt.json"
             entry.update(
@@ -2741,8 +3281,8 @@ def run_campaign(
                 return ledger
             _atomic_json(output_root / "campaign.json", ledger)
             if max_new_fits is not None and newly_completed >= max_new_fits:
-                if len(completed_ids) == 18:
-                    ledger["status"] = "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+                if len(completed_ids) == expected_fit_count:
+                    ledger["status"] = complete_status
                     _refresh_resource_totals(
                         ledger, freeze, campaign_wall_start, campaign_cpu_start
                     )
@@ -2750,11 +3290,11 @@ def run_campaign(
                     _atomic_json(output_root / "campaign.json", ledger)
                 return ledger
 
-        if len(completed_ids) != 18:
+        if len(completed_ids) != expected_fit_count:
             ledger["status"] = "INCOMPLETE"
             _atomic_json(output_root / "campaign.json", ledger)
             return ledger
-        ledger["status"] = "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+        ledger["status"] = complete_status
         _refresh_resource_totals(ledger, freeze, campaign_wall_start, campaign_cpu_start)
         ledger["fit_coverage"] = [str(item["run_id"]) for item in ledger["runs"]]
         _atomic_json(output_root / "campaign.json", ledger)
@@ -2800,6 +3340,9 @@ def main() -> None:
     )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--retry-interrupted-run")
+    parser.add_argument("--retry-infrastructure-confirmed", action="store_true")
+    parser.add_argument("--retry-oom-excluded", action="store_true")
+    parser.add_argument("--retry-reason")
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--research-scope", choices=("full", "training-validation"), default="full")
     parser.add_argument("--reference-manifest", type=Path)
@@ -2808,6 +3351,15 @@ def main() -> None:
     parser.add_argument("--toy-preflight", type=Path)
     parser.add_argument("--max-new-fits", type=int)
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--fit-role", choices=("final_train", "lomo"), default="final_train")
+    parser.add_argument("--owner-approval", type=Path)
+    parser.add_argument("--compute-unit-balance", type=float)
+    parser.add_argument("--compute-unit-rate-per-hour", type=float)
+    parser.add_argument("--lomo-cache-manifest", type=Path)
+    parser.add_argument("--lomo-cache-manifest-sha256")
+    parser.add_argument("--lomo-cache-ledger", type=Path)
+    parser.add_argument("--lomo-cache-ledger-sha256")
+    parser.add_argument("--campaign-started-at-utc")
     args = parser.parse_args()
     if args.retry_interrupted_run and not args.resume:
         parser.error("--retry-interrupted-run requires --resume")
@@ -2817,6 +3369,9 @@ def main() -> None:
         args.output_root,
         resume=args.resume,
         retry_interrupted_run=args.retry_interrupted_run,
+        retry_infrastructure_confirmed=args.retry_infrastructure_confirmed,
+        retry_oom_excluded=args.retry_oom_excluded,
+        retry_reason=args.retry_reason,
         device=args.device,
         research_scope=args.research_scope,
         reference_manifest_path=args.reference_manifest,
@@ -2825,10 +3380,20 @@ def main() -> None:
         toy_preflight_path=args.toy_preflight,
         max_new_fits=args.max_new_fits,
         prepare_only=args.prepare_only,
+        fit_role=args.fit_role,
+        owner_approval_path=args.owner_approval,
+        compute_unit_balance=args.compute_unit_balance,
+        compute_unit_rate_per_hour=args.compute_unit_rate_per_hour,
+        lomo_cache_manifest_path=args.lomo_cache_manifest,
+        lomo_cache_manifest_sha256=args.lomo_cache_manifest_sha256,
+        lomo_cache_ledger_path=args.lomo_cache_ledger,
+        lomo_cache_ledger_sha256=args.lomo_cache_ledger_sha256,
+        campaign_started_at_utc=args.campaign_started_at_utc,
     )
     print(json.dumps(result, sort_keys=True))
     if (
-        result["status"] != "RES338_RESEARCH_FINAL_FITS_COMPLETE"
+        result["status"]
+        not in {"RES338_RESEARCH_FINAL_FITS_COMPLETE", "RES340_RESEARCH_LOMO_FITS_COMPLETE"}
         and not (args.prepare_only and result["status"] == "PREPARED")
         and not (args.max_new_fits is not None and result["status"] == "RUNNING")
     ):
