@@ -58,12 +58,30 @@ uv run fpdbench validate
 uv run fpdbench evidence validate
 uv run fpdbench reproducibility check
 uv build
-uv run python tools/wheel_smoke.py dist/*.whl
+uv run python tools/wheel_smoke.py dist/*.whl dist/*.tar.gz
+uv run python tools/res643_package_smoke.py dist/*.whl dist/*.tar.gz
+uv run python tools/res645_package_smoke.py dist/*.whl dist/*.tar.gz
 ```
+
+This mirrors the `validation` and `public-reproducibility` jobs in `.github/workflows/ci.yml`, which also capture the isolated streaming runtime and run the focused producer diagnostic before `pytest`. The [test prerequisites](#test-prerequisites) above apply to the `pytest` step.
 
 The wheel smoke installs offline into a temporary virtual environment outside the checkout, verifies the packaged calibration bytes and evaluator imports, and exercises the installed CLI. The artifact guard blocks `.safetensors`, `.onnx`, `.h5`, `.hdf5`, and `.keras`; `.pb` is blocked for model/checkpoint/weights paths or names. A small generic `.bin` remains allowed, while model/checkpoint/weights `.bin` paths are blocked and all files retain the 10 MiB size cap.
 
 Reproduction policy: **NO TRAINING. NO PRIVATE TRUTH. NO PUBLIC TEST GENERATION. NO NETWORK ARTIFACT DOWNLOAD.**
+
+## Test prerequisites
+
+Two streaming integration modules (`tests/integration/test_streaming_population_verifier_v1.py` and `tests/integration/test_streaming_runtime_attestation.py`) run against a separately pinned producer package, the PR #25 source tree at commit `aad8888eb6c7c046e4dfbce866886bf2ec8dd123`. Without `FPDBENCH_PR25_PACKAGE_ROOT`, these tests fail with `CI must provide the pinned PR #25 source package` or `KeyError: 'FPDBENCH_PR25_PACKAGE_ROOT'`. The CI workflow provides it with:
+
+```bash
+git fetch --no-tags origin aad8888eb6c7c046e4dfbce866886bf2ec8dd123
+test "$(git rev-parse FETCH_HEAD)" = "aad8888eb6c7c046e4dfbce866886bf2ec8dd123"
+mkdir -p "$HOME/fpd-pr25-package"
+git archive FETCH_HEAD src/fpdbench | tar -x -C "$HOME/fpd-pr25-package"
+export FPDBENCH_PR25_PACKAGE_ROOT="$HOME/fpd-pr25-package/src/fpdbench"
+```
+
+Run the Python gates in a checkout that has no `site/node_modules`. The artifact guard (`src/fpdbench/validation/artifacts.py`) walks the working tree and exempts only `.git`, `.venv`, and cache directories, so a local `npm ci` makes its size check fail with `file exceeds 10485760 bytes` for a file that is not tracked. A fresh clone that runs the Python gates before any `npm ci` avoids this.
 
 ## Canonical conditional-motion split protocols
 

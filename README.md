@@ -4,6 +4,15 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 
 **Interactive research story:** [fpd-bench-showcase.vercel.app](https://fpd-bench-showcase.vercel.app) — a 3D, scroll-driven companion to Paper A showing what each information regime may see at the forecast origin and the four-match descriptive results. It is non-archival research communication built only from the public aggregate [findings](docs/res440/findings.json); pitch motion is schematic. Source and checks: [`site/`](site/README.md).
 
+## Start here
+
+1. **What FPD Bench investigates.** Conditional multi-agent motion prediction in football tracking data: given observed history, what can be predicted about a target team's positions, and how the answer depends on which future information (if any) the model may see. The information regimes (`history_only`, `future_ball`, `future_opponent_plus_ball`) are explicit and not interchangeable.
+2. **What runs now.** The public checkout executes the benchmark definitions, transforms, evaluators, validators and synthetic regression references described in the [reproducibility model](docs/reproducibility.md). It contains no private datasets, tracking bytes, checkpoints or private truth. Run the checks in [Quickstart](#quickstart).
+3. **What the evidence is.** The completed [four-match descriptive study](docs/res440/results.md) is research-only. Its independent unit is four matches, its protected population status is `NOT_QUALIFIED`, and it makes no significance, generalization, causal or deployment claims. The original 234-fit design is incomplete and the 216 training leave-one-match-out fits were never run.
+4. **Paper A (methodology).** The benchmark-methodology manuscript, its [supplement](docs/paper-a/supplement.md) and [submission-readiness record](docs/paper-a/submission-readiness.md) are in `docs/paper-a/`. It presents one bounded descriptive demonstration on the four matches. The repository does not record a journal submission, peer review or publication status.
+5. **Interactive companion.** The [research showcase](https://fpd-bench-showcase.vercel.app) is a non-archival communication aid built from the public findings file. Its pitch motion is schematic, not tracking data ([source](site/README.md)).
+6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This is a development version (`0.1.0.dev0`) without a tagged release, DOI, or `CITATION.cff`; see [licensing, attribution and citation policy](docs/licensing-and-governance.md).
+
 ## Research families
 
 - `workload_performance_state`: a partial, non-executable whole-session historical study and an invalidated signed-acceleration formulation with a recovered diagnostic RMSE evaluator.
@@ -34,7 +43,7 @@ uv run fpdbench benchmarks list
 uv run fpdbench validate
 ```
 
-Python 3.12 or newer is required. No private datasets or checkpoints are included.
+Python 3.12 or newer is required. `uv sync` installs the package and development tools. The complete CI environment is `uv sync --locked --all-groups` under CPython 3.12 or 3.13: the `research-training` group pins CPU PyTorch 2.6.0, which has no CPython 3.14 wheels. Some streaming integration tests also need the pinned PR #25 source package; the exact procedure is in [the reproducibility guide](docs/reproducibility.md#test-prerequisites). No private datasets or checkpoints are included.
 
 Original FPD Bench code and project-written documentation are licensed under [Apache-2.0](LICENSE). The license does not grant rights to upstream datasets, models, or artifacts; restricted artifact bytes are not distributed. See the [licensing, attribution, and citation policy](docs/licensing-and-governance.md).
 
