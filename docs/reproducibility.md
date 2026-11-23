@@ -12,7 +12,7 @@ A storage/source cadence change leaves benchmark identity and release compatibil
 
 Each relative path is rendered with `/` separators, normalized to Unicode NFC, and encoded as UTF-8. Records are ordered by normalized UTF-8 path bytes. A regular-file record contains the SHA-256 of its raw bytes. Each record is compact JSON with sorted keys (`kind`, `path`, `sha256`), UTF-8 encoded with `ensure_ascii=False`, followed by one LF byte. The aggregate is SHA-256 over the concatenated record lines.
 
-The pre-reconstruction baseline for `/home/litju/Research-Benchmarks-Registry` is 793 paths and `539f453eedd2e11b5ee5c2346df4c5ee360a04f5daa55e66e0c0810ed7d20511`. Two earlier 793-file reports gave `16b8e3bd97dd155584688b0fcdcc9c326d3407eeb0e4bfa6de3f0f13dafef2b8` and `7bab728177acaba464e590b38e8c633d7f252e042311d3b9022f73cae435863d`. No per-file manifest or hashing procedure for either report survives in the registry or the earlier closeout comment. Six common aggregate serializations over the current path/hash list did not reproduce either value:
+The pre-reconstruction baseline for the maintainer's local registry root (`<local-registry-root>`) is 793 paths and `539f453eedd2e11b5ee5c2346df4c5ee360a04f5daa55e66e0c0810ed7d20511`. Two earlier 793-file reports gave `16b8e3bd97dd155584688b0fcdcc9c326d3407eeb0e4bfa6de3f0f13dafef2b8` and `7bab728177acaba464e590b38e8c633d7f252e042311d3b9022f73cae435863d`. No per-file manifest or hashing procedure for either report survives in the registry or the earlier closeout comment. Six common aggregate serializations over the current path/hash list did not reproduce either value:
 
 - Bare per-file SHA-256 hex values joined by LF: `6d8137eb8b901aa7f0a02d884da3b6a10e65a757bcbbefd3448524d71a0b09e7`.
 - Standard `sha256sum` lines (`digest`, two spaces, path, LF): `f6ef03921d75b8fda2f9f1658ff3ae1fb69a6b7e4d551acbd3cb6103707eeb06`.
@@ -40,7 +40,7 @@ Historical result records, fixture manifests, population counts, output digests,
 The capability matrix is checked by `fpdbench reproducibility check` and distinguishes `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT`, and `FORBIDDEN_PRIVATE_TRUTH`. `fpdbench evidence validate` checks the complete public SHA-reference inventory without reading external files or using the network. Optional strict resolution reads the supplied registry only, requires its canonical 793-path digest before and after, and reports every zero or multiple content match:
 
 ```bash
-uv run fpdbench evidence validate --registry-root /home/litju/Research-Benchmarks-Registry
+uv run fpdbench evidence validate --registry-root <local-registry-root>
 ```
 
 Strict resolution supports two explicit local-source catalogues under `registry/<benchmark-slug>/`: `forensic_freeze/preflight/data_assets.preflight.jsonl` (`recorded_sha256` plus `original_path` for data assets) and `r2/conditional_team_response_absolute_position/EVALUATOR_STATES.json` (`states[*].evidence[*].sha256` plus `path` for scientific code/tools, dataset schemas/manifests, and scientific configuration/results). It rehashes each pointed-to regular file, reports the registry-relative catalogue record and a sanitized `local-source://` identifier, and never fetches URI sources.

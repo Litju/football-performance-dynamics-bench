@@ -7,9 +7,8 @@ No population qualification token is created. Empirical execution remains blocke
 
 ## Integration preflight
 
-Canonical checkout: `/home/litju/football-performance-dynamics-bench`.
-Clean isolated WSL worktree:
-`/home/litju/football-performance-dynamics-bench-res501-adapter`.
+Canonical checkout: `<canonical-checkout>` (the maintainer's WSL checkout of this repository).
+Clean isolated WSL worktree: `<canonical-checkout>-res501-adapter`.
 Local platform: Linux `6.18.33.2-microsoft-standard-WSL2`, CPython 3.14.5.
 
 GitHub API and `git ls-remote` both matched these exact open draft heads:
