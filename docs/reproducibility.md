@@ -71,7 +71,7 @@ Reproduction policy: **NO TRAINING. NO PRIVATE TRUTH. NO PUBLIC TEST GENERATION.
 
 ## Test prerequisites
 
-Two streaming integration modules (`tests/integration/test_streaming_population_verifier_v1.py` and `tests/integration/test_streaming_runtime_attestation.py`) run against a separately pinned producer package, the PR #25 source tree at commit `aad8888eb6c7c046e4dfbce866886bf2ec8dd123`. Without `FPDBENCH_PR25_PACKAGE_ROOT`, these tests fail with `CI must provide the pinned PR #25 source package` or `KeyError: 'FPDBENCH_PR25_PACKAGE_ROOT'`. The CI workflow provides it with:
+Two streaming integration modules (`tests/integration/test_streaming_population_verifier_v1.py` and `tests/integration/test_streaming_runtime_attestation.py`) run against a separately pinned producer package, the PR #25 source tree at commit `aad8888eb6c7c046e4dfbce866886bf2ec8dd123`. Without `FPDBENCH_PR25_PACKAGE_ROOT`, these tests fail with `CI must provide the pinned PR #25 source package` or `KeyError: 'FPDBENCH_PR25_PACKAGE_ROOT'`. The CI workflow provides it from a runner temporary directory; the local equivalent is:
 
 ```bash
 git fetch --no-tags origin aad8888eb6c7c046e4dfbce866886bf2ec8dd123

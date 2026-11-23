@@ -11,7 +11,7 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 3. **What the evidence is.** The completed [four-match descriptive study](docs/res440/results.md) is research-only. Its independent unit is four matches, its protected population status is `NOT_QUALIFIED`, and it makes no significance, generalization, causal or deployment claims. The original 234-fit design is incomplete and the 216 training leave-one-match-out fits were never run.
 4. **Paper A (methodology).** The benchmark-methodology manuscript, its [supplement](docs/paper-a/supplement.md) and [submission-readiness record](docs/paper-a/submission-readiness.md) are in `docs/paper-a/`. It presents one bounded descriptive demonstration on the four matches. The repository does not record a journal submission, peer review or publication status.
 5. **Interactive companion.** The [research showcase](https://fpd-bench-showcase.vercel.app) is a non-archival communication aid built from the public findings file. Its pitch motion is schematic, not tracking data ([source](site/README.md)).
-6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This is a development version (`0.1.0.dev0`) without a tagged release, DOI, or `CITATION.cff`; see [licensing, attribution and citation policy](docs/licensing-and-governance.md).
+6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This is a development version (`0.1.0.dev0`) without a tagged release, DOI, or `CITATION.cff`; see [licensing, attribution and citation policy](docs/licensing-and-governance.md).
 
 ## Research families
 
@@ -43,7 +43,7 @@ uv run fpdbench benchmarks list
 uv run fpdbench validate
 ```
 
-Python 3.12 or newer is required. `uv sync` installs the package and development tools. The complete CI environment is `uv sync --locked --all-groups` under CPython 3.12 or 3.13: the `research-training` group pins CPU PyTorch 2.6.0, which has no CPython 3.14 wheels. Some streaming integration tests also need the pinned PR #25 source package; the exact procedure is in [the reproducibility guide](docs/reproducibility.md#test-prerequisites). No private datasets or checkpoints are included.
+Python 3.12 or newer is required. `uv sync` installs the package and development tools. The complete CI environment is `uv sync --locked --all-groups` under CPython 3.12 (the version CI uses; 3.13 has matching torch wheels but was not tested here): the `research-training` group pins CPU PyTorch 2.6.0, which has no CPython 3.14 wheels. Some streaming integration tests also need the pinned PR #25 source package; the exact procedure is in [the reproducibility guide](docs/reproducibility.md#test-prerequisites). No private datasets or checkpoints are included.
 
 Original FPD Bench code and project-written documentation are licensed under [Apache-2.0](LICENSE). The license does not grant rights to upstream datasets, models, or artifacts; restricted artifact bytes are not distributed. See the [licensing, attribution, and citation policy](docs/licensing-and-governance.md).
 

@@ -33,7 +33,7 @@ Status key: **PASS** (exit 0 on the stated commit), **FAIL** (non-zero exit, cau
 | Reproducibility | `0feddee` | `uv run fpdbench reproducibility check` | PASS | exit 0 |
 | Runtime attestation | `0feddee` | `tools/attest_streaming_runtime.py capture` (isolated `env -i`) | PASS | exit 0 |
 | Full pytest | `0feddee` | `pytest -q -rfE`, with `FPDBENCH_PR25_PACKAGE_ROOT` set | **FAIL** (1 of 1340) | 1339 passed, 1 failed, 1784 s. See F2. |
-| Full pytest without PR #25 package | `0feddee` | same, env var unset, `node_modules` present | not a valid gate | 1303 passed, 7 failed, 30 errors. The 30 errors are the missing package (F3). The second run differed only by setting the package variable and removing `site/node_modules`, and those failures did not recur. The individual causes of the first run's remaining failures were not traced. Kept only as diagnostics. |
+| Full pytest without PR #25 package | `0feddee` | same, env var unset, `node_modules` present | not a valid gate | 1303 passed, 7 failed, 30 errors. The 30 errors are the missing package (F3). The second full run (the PASS-or-FAIL row above) differed only by setting the package variable and removing `site/node_modules`, and those failures did not recur. The individual causes of the first run's remaining failures were not traced. Kept only as diagnostics. |
 | CLI discovery | `0feddee` | `benchmarks list`, `families list`, `research-objects list` | PASS | exit 0 |
 | Data state and eligibility | `0feddee` | `data-states verify`, `eligibility verify` | PASS | `status: passed` for `skillcorner_5hz_v1` and `skillcorner_window_v1` |
 | Package build | `0feddee` | `uv build` | PASS | `football_performance_dynamics_bench-0.1.0.dev0` wheel and sdist |
@@ -56,6 +56,7 @@ Gates on the R8-QA commits (validators, then the doc-sensitive tests):
 | --- | --- | --- | --- |
 | `e7d98a6` | redact private checkout paths from public docs | PASS (naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`) |
 | `2e86e5e` | add newcomer path and document test prerequisites | PASS (ruff check and format, pyright, naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`, `test_cli.py`, `test_res646_preflight_qualification.py`) |
+| `218705a` | add release-readiness evidence report | PASS (ruff check and format, pyright, naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`) at this head; the report is the reviewed head, and the earlier amendment is superseded by the commit below |
 
 ## 3. Scientific claim audit
 
@@ -65,7 +66,7 @@ Each headline number was checked against `docs/res440/findings.json` (public, ag
 | --- | --- | --- | --- |
 | History-only displacement ADE 1.6680 m | `summary` / `history_baseline_comparisons`: 1.6680180412 m | `results.md`, `paper-a-evidence.md`, `manuscript.tex`, `supplement.md`, `scientific-audit.md` | consistent |
 | Constant velocity 2.2433 m | `history_baseline_comparisons` baseline 2.2433 | same | consistent |
-| 25.6% reduction | `reduction_percent` 25.6444 | same | consistent |
+| 25.6% reduction | `reduction_percent` 25.6445 | same | consistent |
 | History-only absolute XY ADE 2.1216 m (5.4%) | `summary` | `paper-a-evidence.md`, `results.md` | consistent |
 | 51,713 windows; 72 match/seed records; 18 checkpoints; 4 independent units | `windows` 51713, `independent_units` 4 | `results.md`, `supplement.md` | consistent |
 | `NOT_QUALIFIED` | `classification` = "research-only NOT_QUALIFIED" | README, `results.md`, showcase | consistent |
@@ -82,7 +83,7 @@ Severity: **blocker** = prevents a release-candidate or stable determination; **
 | F1 | defect (fixed) | README quickstart did not state the Python constraint for the full CI environment. On CPython 3.14, `uv sync --all-groups` fails because `torch==2.6.0+cpu` (research-training group) has no cp314 wheels. Plain `uv sync` works on 3.14 and was verified. | Fixed in `2e86e5e` (README quickstart note). |
 | F2 | **blocker (open)** | One full-suite failure on `0feddee` with the PR #25 package: `tests/unit/test_res646_preflight_qualification.py::test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption`, `KeyError: 'proposed_scope_sha256'` on the **second** `check()` call (test line 445). The test **passes** alone and the whole module passes (87/87), so the failure depends on test order or on leftover state. The cause was not established. | Open. Owner: R8-QA follow-up. The full-suite gate cannot be recorded as PASS until F2 is explained or fixed. |
 | F3 | defect (documented) | 30 streaming-integration errors without `FPDBENCH_PR25_PACKAGE_ROOT`; the streaming tests and the artifact-size guard both depend on local layout (a local `site/node_modules` made the guard fail on an untracked 10 MB+ file). | Documented in `docs/reproducibility.md#test-prerequisites` (`2e86e5e`). |
-| F4 | defect (fixed) | Private absolute checkout and registry paths (`/home/litju/...`) appeared in three public documents. No code depends on them. | Fixed in `e7d98a6`. A tracked-tree search after the fix finds no remaining `/home/litju` string. |
+| F4 | defect (fixed) | Private absolute checkout and registry paths (the maintainer's home directory) appeared in three public documents. No code depends on them. | Fixed in `e7d98a6`. A tracked-tree search after the fix finds no remaining checkout-path string outside this report's own description of F4. |
 | F5 | defect (fixed) | The documented public command block omitted the CI sdist smoke and the RES643/RES645 package-parity steps. | Fixed in `2e86e5e`. |
 | F6 | defect (fixed) | No newcomer entry point: the README did not state what is investigated, what runs publicly, the limitations, or how Paper A and the showcase relate to the evidence. | Fixed in `2e86e5e` (`Start here`). |
 | F7 | blocker (owner decision) | Redistribution of SkillCorner-derived content is not cleared. `docs/data-rights.md` records **CONDITIONAL GO** for local public research use and a retained release gate for core source files and row-level derivatives. | Owner decision. Routed to the R8 artifact-publication issue and the data-rights record. Not waived. |
@@ -100,6 +101,7 @@ Severity: **blocker** = prevents a release-candidate or stable determination; **
 | --- | --- |
 | Target transforms, displacement inversion, information-boundary checks, raw evaluators, absolute-position calibration, physical diagnostics, canonical protocols, scientific-lock construction, result-manifest hashing, CLI discovery and validation | `PUBLIC_EXECUTABLE` |
 | Historical result records, fixture manifests, population counts, output digests, checkpoint identifiers as public metadata | `PUBLIC_VERIFIABLE` |
+| Evidence pointers that resolve only against a supplied local registry (`evidence validate --registry-root`) | `LOCAL_EVIDENCE_VERIFIABLE` |
 | Historical raw tracking bytes, learned checkpoints, historical source-to-fixture regeneration, learned-model inference | `UNAVAILABLE_PUBLIC_ARTIFACT` |
 | J03WMX qualification truth | `FORBIDDEN_PRIVATE_TRUTH` (never read) |
 | SkillCorner source data bytes and row-level derivatives | rights-restricted (F7); not in repository |
