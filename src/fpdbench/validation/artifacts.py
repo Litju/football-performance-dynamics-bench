@@ -94,9 +94,7 @@ def ignored_generated_site_dirs(root: Path) -> frozenset[tuple[str, str]]:
     return _GENERATED_SITE_DIRS.difference(tracked_roots)
 
 
-def ignored_generated_site_path(
-    relative: Path, ignored_roots: frozenset[tuple[str, str]]
-) -> bool:
+def ignored_generated_site_path(relative: Path, ignored_roots: frozenset[tuple[str, str]]) -> bool:
     """Only an exact generated site subtree may be excluded from scanning."""
     return len(relative.parts) >= 2 and relative.parts[:2] in ignored_roots
 
