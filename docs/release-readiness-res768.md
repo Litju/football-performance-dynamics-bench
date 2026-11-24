@@ -1,8 +1,8 @@
 # Release-readiness evidence (R8 QA audit)
 
-Status date: 2026-11-23. Baseline: `main` at `0feddee7e666771b1dcecfdd0bcf57db33a31964` (merge of PR #42). Scope: public documentation, reproducibility, rights and release metadata. This report is a QA gate. It is not a stable release, a citation or archival record, or a scientific qualification.
+Status date: 2026-11-24. Original baseline: `main` at `0feddee7e666771b1dcecfdd0bcf57db33a31964` (merge of PR #42); code baseline for the RC verification: `ba2e79f` (bounded clock-skew repair). Scope: public documentation, reproducibility, rights and release metadata. This report is a QA gate. It is not a stable release, a citation or archival record, or a scientific qualification.
 
-**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication.
+**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication. The release-candidate recommendation is **GO** for the repaired code, subject to the exact-head CI and independent review being recorded in the PR; stable release remains **NO_GO**.
 
 ## 1. Environments
 
@@ -15,6 +15,8 @@ Status date: 2026-11-23. Baseline: `main` at `0feddee7e666771b1dcecfdd0bcf57db33
 | Node / npm | v22.23.2 / 10.9.8 |
 | Clean checkout | fresh `git clone` of the local repository, pinned to the exact commit under test |
 | Pinned PR #25 source package | commit `aad8888eb6c7c046e4dfbce866886bf2ec8dd123`, extracted with `git archive FETCH_HEAD src/fpdbench` as in CI |
+| Browser system libraries | `libnspr4`, `libnss3` and `libasound2t64` fetched with `apt-get download` and extracted to a user-local directory; `LD_LIBRARY_PATH` was set only for the site browser check. No system package was installed and no preflight/security behavior depends on this workaround. |
+| Host clock | WSL2 wall clock stepped backward by 0.001–3.4 s (median ~1.6 s) roughly every 31 s, with forward corrections up to 2.5 s (measured against `time.monotonic_ns()`), while the monotonic clock advanced normally. This is the F2 trigger, not a repository-generated clock. |
 
 Commands below are the ones run. Exit codes were recorded for each run.
 
@@ -32,18 +34,22 @@ Status key: **PASS** (exit 0 on the stated commit), **FAIL** (non-zero exit, cau
 | Evidence | `0feddee` | `uv run fpdbench evidence validate` | PASS | exit 0 |
 | Reproducibility | `0feddee` | `uv run fpdbench reproducibility check` | PASS | exit 0 |
 | Runtime attestation | `0feddee` | `tools/attest_streaming_runtime.py capture` (isolated `env -i`) | PASS | exit 0 |
-| Full pytest | `0feddee` | `pytest -q -rfE`, with `FPDBENCH_PR25_PACKAGE_ROOT` set | **FAIL** (1 of 1340) | 1339 passed, 1 failed, 1784 s. See F2. |
-| Full pytest without PR #25 package | `0feddee` | same, env var unset, `node_modules` present | not a valid gate | 1303 passed, 7 failed, 30 errors. The 30 errors are the missing package (F3). The second full run (the PASS-or-FAIL row above) differed only by setting the package variable and removing `site/node_modules`, and those failures did not recur. The individual causes of the first run's remaining failures were not traced. Kept only as diagnostics. |
+| Full pytest | `ba2e79f` | `pytest -q -rfE`, with `FPDBENCH_PR25_PACKAGE_ROOT` set | **PASS** (1344) | 1344 passed in 1393.67 s (23:13) on CPython 3.12.13 in a fresh clone: the original 1,340 tests plus four clock-skew regression cases. This is the repaired code. |
+| Full pytest baseline (pre-repair) | `0feddee` | same | **FAIL** (1 of 1340) | 1339 passed, 1 failed, 1784 s. The failure was the F2 `KeyError`; it is now explained and fixed. |
+| F2 real-clock regression (pre-repair) | `0feddee` | target test repeated 40 times in one clean clone | **FAIL** (1 of 40) | Iteration 31 reproduced the exact `KeyError: 'proposed_scope_sha256'`. The clock monitor recorded backward steps (median ~1.6 s, max ~3.4 s) over the same interval. |
+| F2 real-clock regression (post-repair) | `ba2e79f` | target test repeated 40 times | **PASS** (40/40) | 0 failures, including intervals containing host clock steps. |
+| F2 deterministic regression | `ba2e79f` | 1 s and 4 s backward clock steps; 6 s and 1 h future-dated controls | **PASS** | The 1 s/4 s cases previously returned `RES646_GATE5_BLOCKED`; after the repair both consecutive checks return `RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW` with identical scope identities. The 6 s/1 h controls remain blocked. |
+| Full pytest without PR #25 package | `0feddee` | same, env var unset, `node_modules` present | not a valid gate | 1303 passed, 7 failed, 30 errors. The 30 errors are the missing package (F3). The second full run (the baseline row above) differed only by setting the package variable and removing `site/node_modules`. Kept only as diagnostics. |
 | CLI discovery | `0feddee` | `benchmarks list`, `families list`, `research-objects list` | PASS | exit 0 |
 | Data state and eligibility | `0feddee` | `data-states verify`, `eligibility verify` | PASS | `status: passed` for `skillcorner_5hz_v1` and `skillcorner_window_v1` |
-| Package build | `0feddee` | `uv build` | PASS | `football_performance_dynamics_bench-0.1.0.dev0` wheel and sdist |
-| Wheel/sdist smoke | `0feddee` | `tools/wheel_smoke.py dist/*.whl dist/*.tar.gz` | PASS | exit 0 (Python 3.12 and 3.14 environments) |
-| RES643 package parity | `0feddee` | `tools/res643_package_smoke.py` | PASS | exit 0 under Python 3.12, `--all-groups` (needs `numpy`) |
-| RES645 package parity | `0feddee` | `tools/res645_package_smoke.py` | PASS | exit 0 under Python 3.12, `--all-groups` |
+| Package build | `ba2e79f` | `uv build` | PASS | `football_performance_dynamics_bench-0.1.0.dev0` wheel and sdist |
+| Wheel/sdist smoke | `ba2e79f` | `tools/wheel_smoke.py dist/*.whl dist/*.tar.gz` | PASS | `isolated wheel smoke passed` under Python 3.12.13 |
+| RES643 package parity | `ba2e79f` | `tools/res643_package_smoke.py` | PASS | `RES643 isolated wheel/sdist parity passed` |
+| RES645 package parity | `ba2e79f` | `tools/res645_package_smoke.py` | PASS | `RES645 isolated wheel/sdist parity passed` |
 | Site install | `0feddee` | `npm ci` in `site/` | PASS | exit 0; `found 0 vulnerabilities` |
 | Site build | `0feddee` | `npm run build` | PASS | exit 0 (`tsc --noEmit && vite build`) |
 | Site content | `0feddee` | `npm run check:content` | PASS | "content checks passed" |
-| Site browser (a11y, phone, reduced motion) | `0feddee` | `npm run check:browser` | **BLOCKED** | Playwright Chromium cannot start: `libnspr4.so: cannot open shared object file`. The system library is not installed on this host. Installing it needs system access, which this QA run did not use. |
+| Site browser (a11y, phone, reduced motion) | `ba2e79f` | `npm run build && npx vite preview --port 4173`, then `npm run check:browser` | **PASS** | `browser checks passed`; desktop, phone and reduced-motion runs completed with no serious/critical axe violations, console errors or horizontal overflow. Chromium ran with the user-local libraries above. |
 | Relative links | `0feddee` | Python check over 59 Markdown files | PASS | 0 broken |
 | External links | `0feddee` | HTTP status of 86 unique external URLs | PASS with notes | 83 HTTP 200; 2 DOI links return HTTP 403 to an automated client (unverified, not broken); `http://localhost:5173` is a development-server instruction, not a link |
 | Live showcase reachability | n/a | `GET https://fpd-bench-showcase.vercel.app/` | PASS (reachability only) | HTTP 200. Deploy identity and content were not inspected through Vercel tooling. |
@@ -57,6 +63,15 @@ Gates on the R8-QA commits (validators, then the doc-sensitive tests):
 | `e7d98a6` | redact private checkout paths from public docs | PASS (naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`) |
 | `2e86e5e` | add newcomer path and document test prerequisites | PASS (ruff check and format, pyright, naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`, `test_cli.py`, `test_res646_preflight_qualification.py`) |
 | `218705a` | add release-readiness evidence report | PASS (ruff check and format, pyright, naming, validate, evidence, reproducibility) | PASS (`test_reproducibility.py`, `test_validation.py`) at this head; the report is the reviewed head, and the earlier amendment is superseded by the commit below |
+| `ba2e79f` | bound future clock skew in RES646 preflight | PASS (ruff check and format, pyright, naming, validate, evidence, reproducibility, CLI discovery, data states, eligibility) | PASS (`test_res646_preflight_qualification.py`, 91 tests; 40/40 target repeats) |
+
+### F2 root cause and repair
+
+The failure was a **wall-clock synchronization race**, not a preflight data mutation or a test-order leak. In the clean CPython 3.12.13 environment, a monitor comparing `time.time_ns()` with `time.monotonic_ns()` recorded repeated backward wall-clock steps (median ~1.6 s, maximum ~3.4 s, roughly every 31 s) plus forward corrections up to ~2.5 s. The target fixture stamps `verified_at_utc` with `datetime.now(UTC)`, and `_qualify` rejects any evidence whose timestamp is even slightly in the future. If a host clock step landed between the fixture stamp and the second `check()`, the evidence appeared future-dated, the second report became `RES646_GATE5_BLOCKED`, and the test then raised `KeyError: 'proposed_scope_sha256'`.
+
+The repair accepts only a bounded **five-second** future skew as clock jitter. Stale evidence (older than one day), clearly future-dated evidence (beyond five seconds), and all other fail-closed checks are unchanged. No exception is suppressed, no preflight step is skipped, and no input/model byte is opened. The regression tests use a fixed clock relative to the fixture timestamp: 1 s and 4 s backward steps (both blocked before the repair, both ready after) and 6 s and 1 h future-dated controls (both remain blocked). Repeating the unmodified target test 40 times reproduced the exact `KeyError` once at iteration 31; repeating the repaired test 40 times passed all runs while the host clock was still stepping.
+
+`res646_preflight.py` is part of `res645_pipeline.CODE_FILES`, so the repair changes the code identity bound into Gate 5 evidence. Any pre-existing Gate 5 evidence must be regenerated and re-reviewed; this is fail-closed and no live evidence is committed to the public repository. The synthetic regression fixture computes its provenance after the change, so it exercises the new identity.
 
 ## 3. Scientific claim audit
 
@@ -81,7 +96,7 @@ Severity: **blocker** = prevents a release-candidate or stable determination; **
 | ID | Severity | Finding | Status |
 | --- | --- | --- | --- |
 | F1 | defect (fixed) | README quickstart did not state the Python constraint for the full CI environment. On CPython 3.14, `uv sync --all-groups` fails because `torch==2.6.0+cpu` (research-training group) has no cp314 wheels. Plain `uv sync` works on 3.14 and was verified. | Fixed in `2e86e5e` (README quickstart note). |
-| F2 | **blocker (open)** | One full-suite failure on `0feddee` with the PR #25 package: `tests/unit/test_res646_preflight_qualification.py::test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption`, `KeyError: 'proposed_scope_sha256'` on the **second** `check()` call (test line 445). The test **passes** alone and the whole module passes (87/87), so the failure depends on test order or on leftover state. The cause was not established. | Open. Owner: R8-QA follow-up. The full-suite gate cannot be recorded as PASS until F2 is explained or fixed. |
+| F2 | defect (fixed) | One full-suite failure on `0feddee` with the PR #25 package: `tests/unit/test_res646_preflight_qualification.py::test_complete_configuration_qualifies_without_input_bytes_or_scope_consumption`, `KeyError: 'proposed_scope_sha256'` on the **second** `check()` call. Root cause: repeated backward wall-clock steps (median ~1.6 s, maximum ~3.4 s) on this WSL2 host made the fixture timestamp look future-dated. A 40-repeat real-clock run reproduced the exact `KeyError` once. | Fixed in `ba2e79f`: bounded five-second future clock-skew tolerance; 1 s/4 s regressions pass, 6 s/1 h future evidence still blocked. Full suite and real-clock repeats pass. |
 | F3 | defect (documented) | 30 streaming-integration errors without `FPDBENCH_PR25_PACKAGE_ROOT`; the streaming tests and the artifact-size guard both depend on local layout (a local `site/node_modules` made the guard fail on an untracked 10 MB+ file). | Documented in `docs/reproducibility.md#test-prerequisites` (`2e86e5e`). |
 | F4 | defect (fixed) | Private absolute checkout and registry paths (the maintainer's home directory) appeared in three public documents. No code depends on them. | Fixed in `e7d98a6`. A tracked-tree search after the fix finds no remaining checkout-path string outside this report's own description of F4. |
 | F5 | defect (fixed) | The documented public command block omitted the CI sdist smoke and the RES643/RES645 package-parity steps. | Fixed in `2e86e5e`. |
@@ -90,7 +105,7 @@ Severity: **blocker** = prevents a release-candidate or stable determination; **
 | F8 | blocker (metadata) | `CITATION.cff`, DOI and archive metadata are absent. The licensing record says these depend on verified rightsholders and affiliations. | Routed to the R8 citation and archive issue. Not created here, to avoid inventing authorship or identity. |
 | F9 | blocker (release) | No stable version, tag, changelog or release notes. Package version is `0.1.0.dev0`. No tags exist locally or on the remote. | Routed to the R8 stable-release issue. |
 | F10 | blocker (owner) | Author, affiliation and copyright attestations are not established by repository evidence (`docs/licensing-and-governance.md`). | Owner decision; routed to the R8 citation and archive issue. |
-| F11 | open (environment) | Browser accessibility, phone and reduced-motion checks are BLOCKED on this host (missing `libnspr4`). | Re-run on a host with Chromium system libraries before a release determination. |
+| F11 | defect (environment; verified) | Browser accessibility, phone and reduced-motion checks were blocked by missing Chromium system libraries (`libnspr4`, `libnss3`, `libasound2t64`). | Verified with user-local extracted libraries and `LD_LIBRARY_PATH`; `npm run check:browser` passes. No system package was installed and the repository is unchanged. |
 | F12 | note | The synthetic PR #25 fixture archive (`tests/fixtures/streaming-verifier-v1/pr25-synthetic-fixtures.zip`, 4 MB) is consistent with its README (synthetic team IDs 101/202, player IDs from 1001, 100 by 60 pitch). Its match-ID labels coincide with public match IDs in `findings.json`. A rights reviewer should confirm that the labels carry no real-data content. | Note for R8 artifact-publication issue. |
 | F13 | note | Two DOI links return HTTP 403 to automated clients. | Note; verify manually. |
 | F14 | note | Paper A readiness record states "ready for final owner review." It does not record a journal submission, peer review or publication. The repository does not claim one. | Consistent. No change. |
@@ -134,13 +149,15 @@ cd site && npm ci && npm run build && npm run check:content
 
 | Item | Owner issue | Required for |
 | --- | --- | --- |
-| F2: order-dependent test failure | R8-QA follow-up (this branch's review) | RC determination |
 | F7: SkillCorner redistribution and row-level derivative rights | R8 artifact-publication issue and data-rights owner | any artifact publication |
 | F8, F10: citation, DOI, author and affiliation attestations | R8 citation and archive issue | archive and citation |
 | F9: stable version, tag, changelog, release notes | R8 stable-release issue | stable release |
 | Benchmark, data and model cards | R8 benchmark, data and model cards issue | research-software completeness |
-| F11: browser checks on a host with Chromium libraries | environment owner | release determination |
+
+F2 (clock-skew test failure) and F11 (browser system libraries) are closed by reproduced evidence in this branch and are no longer release gates.
 
 ## 8. Determination
 
-**NO_GO** for a stable release and for any public artifact or archive. The determination is not **GO** for release-candidate status while F2 remains unexplained. Items F1, F3, F4, F5 and F6 are repaired or documented in this branch. Remaining items are listed above with their owners. No owner approval, authorship, affiliation, DOI, rights clearance or publication status was assumed.
+**Release-candidate recommendation: GO, conditional on the exact-head CI and independent review recorded in the PR.** The full suite (1,344 tests: 1,340 original plus four clock-skew regressions) passes on the repaired code in the documented CPython 3.12.13 clean-clone environment, the F2 real-clock and deterministic regressions pass, and the validators, type checks, packaging smokes and site browser checks pass. This recommendation covers **research-software release-candidate readiness** only; it is not owner approval or a stable-release authorization.
+
+**Stable release and public artifact/archive: NO_GO.** The separate rights, citation, authorship, archival and stable-version gates (F7, F8, F10, F9 and the benchmark/data/model cards) remain open with their owners. No owner approval, authorship, affiliation, DOI, rights clearance or publication status was assumed. No tag, release, DOI deposit or deployment was created by this QA work.
