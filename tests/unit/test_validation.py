@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 from fpdbench.validation.artifacts import validate_artifacts
@@ -144,3 +145,66 @@ def test_artifact_guard_rejects_skillcorner_data_paths_and_lfs_pointers(tmp_path
 def test_repository_configuration_matches_python_registry() -> None:
     root = Path(__file__).resolve().parents[2]
     assert validate_repository(root) == ()
+
+
+def test_generated_site_output_is_ignored_only_when_untracked(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / ".gitignore").write_text("node_modules/\ndist/\nqa/\n.vercel/\n")
+    forbidden_name = "ALI" + "478"
+    generated = (
+        site / "node_modules" / f"{forbidden_name}.js",
+        site / "dist" / "app.js",
+        site / "qa" / "phone.png",
+        site / ".vercel" / "output.txt",
+    )
+    for path in generated:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{forbidden_name}\n" + "x" * 1024)
+
+    # Both policies ignore untracked dependency/build output, even after npm ci.
+    assert validate_artifacts(tmp_path, max_file_bytes=256) == ()
+    assert validate_naming(tmp_path) == ()
+
+    # Force-tracking anything in an otherwise ignored tree re-enables policy scans.
+    tracked = site / "node_modules" / "model.pt"
+    tracked.write_bytes(b"restricted weight")
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "add", "-f", "site/node_modules/model.pt"], check=True
+    )
+    assert any("site/node_modules/model.pt" in error for error in validate_artifacts(tmp_path))
+    assert any(forbidden_name in error for error in validate_naming(tmp_path))
+
+
+def test_generated_site_exception_does_not_hide_other_paths(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "site").mkdir()
+    (tmp_path / "site" / ".gitignore").write_text("node_modules/\ndist/\nqa/\n.vercel/\n")
+    outside = tmp_path / "site" / "src" / "model.pt"
+    outside.parent.mkdir(parents=True)
+    outside.write_bytes(b"not generated")
+    other = tmp_path / "docs" / ("BM" + "123" + ".md")
+    other.parent.mkdir()
+    other.write_text("bad identifier")
+
+    assert any("site/src/model.pt" in error for error in validate_artifacts(tmp_path))
+    assert any(other.name in error for error in validate_naming(tmp_path))
+
+
+def test_generated_site_exclusion_fails_closed_without_git_index(tmp_path: Path) -> None:
+    generated = tmp_path / "site" / "node_modules" / "model.pt"
+    generated.parent.mkdir(parents=True)
+    generated.write_bytes(b"restricted weight")
+    assert any("site/node_modules/model.pt" in error for error in validate_artifacts(tmp_path))
+
+
+def test_generated_site_root_symlink_remains_blocked(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / ".gitignore").write_text("node_modules/\n")
+    destination = tmp_path / "destination"
+    destination.mkdir()
+    (site / "node_modules").symlink_to(destination, target_is_directory=True)
+    assert any("site/node_modules" in error for error in validate_artifacts(tmp_path))
