@@ -40,9 +40,6 @@ _GENERATED_SITE_DIRS = frozenset(
         ("site", ".vercel"),
     }
 )
-
-
-
 # This sample is explicitly MIT-licensed; the core data files have unresolved scope.
 _ALLOWED_DATA_FILES = frozenset(
     {
