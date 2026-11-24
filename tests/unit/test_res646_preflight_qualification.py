@@ -442,6 +442,7 @@ def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumpti
     first = local.check()
     second = local.check()
     assert first["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", first
+    assert second["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", second
     assert first["proposed_scope_sha256"] == second["proposed_scope_sha256"]
     assert len(first["evaluation_role_counts"]) == 4
     assert len(inspected) == 266
