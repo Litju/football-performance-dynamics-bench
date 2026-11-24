@@ -2,7 +2,7 @@
 
 Status date: 2026-11-24. Original baseline: `main` at `0feddee7e666771b1dcecfdd0bcf57db33a31964` (merge of PR #42); code baseline for the RC verification: `ba2e79f` (bounded clock-skew repair). Scope: public documentation, reproducibility, rights and release metadata. This report is a QA gate. It is not a stable release, a citation or archival record, or a scientific qualification.
 
-**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication. The release-candidate recommendation is **GO** for the repaired code; exact-head CI and independent review are recorded below. Stable release remains **NO_GO**.
+**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication. The release-candidate recommendation was **GO** on the previously reviewed pre-cleanup head; the narrow follow-up repairs in §9 require new exact-head CI and review before the current branch can inherit that status. Stable release remains **NO_GO**.
 
 ## 1. Environments
 
@@ -158,6 +158,16 @@ F2 (clock-skew test failure) and F11 (browser system libraries) are closed by re
 
 ## 8. Determination
 
-**Release-candidate recommendation: GO.** The full suite (1,344 tests: 1,340 original plus four clock-skew regressions) passes on the repaired code in the documented CPython 3.12.13 clean-clone environment, the F2 real-clock and deterministic regressions pass, the validators, type checks, packaging smokes and site browser checks pass, and exact-head CI and independent review are recorded above. This recommendation covers **research-software release-candidate readiness** only; it is not owner approval or a stable-release authorization.
+**Prior release-candidate recommendation: GO on the reviewed clock-skew repair head.** The 1,344-test suite, F2 regressions, validators, package smokes, browser checks and exact-head hosted CI passed as recorded above. The subsequent public-handoff cleanup in §9 alters the current branch and must receive its own exact-head CI and review before a current-head GO can be asserted. Neither recommendation constitutes owner approval or stable-release authorization.
 
 **Stable release and public artifact/archive: NO_GO.** The separate rights, citation, authorship, archival and stable-version gates (F7, F8, F10, F9 and the benchmark/data/model cards) remain open with their owners. No owner approval, authorship, affiliation, DOI, rights clearance or publication status was assumed. No tag, release, DOI deposit or deployment was created by this QA work.
+
+## 9. Post-review public handoff corrections (verification pending)
+
+Three narrow repairs were added after the previously reviewed code head:
+
+- **Copy-paste Quickstart:** root README runs the documented public smoke suite without the separate PR #25 integration fixture. The full suite continues to require that pinned, synthetic-only source package; the complete procedure remains in `docs/reproducibility.md#test-prerequisites`.
+- **Generated frontend output:** artifact and naming policies ignore only Git-untracked `site/node_modules`, `site/dist`, `site/qa` and `site/.vercel` trees. A force-tracked file in a generated tree restores inspection of that tree; generated-tree root symlinks remain disallowed, and missing Git index evidence disables the exception. Four focused regression tests cover generated output, force-tracking, unrelated forbidden paths and fail-closed cases. This removes the earlier order-of-operations workaround between Python validation and `npm ci`. It does not expand any data-rights or model-artifact permission.
+- **Preflight diagnostics:** the existing consecutive-Gate-5 test asserts the second report's expected status before accessing its scope digest, exposing future blocked reports directly instead of surfacing a secondary KeyError.
+
+These changes were committed on the existing DRAFT PR, with issue-scoped atomic commits. **This section is a change record, not a verification PASS.** The 1,344-test and hosted-CI passes above belong to the previous reviewed head; the new tests and all affected source checks must be run on the updated exact head before this QA gate can close. No scientific lock, empirical finding, protected approval, release tag or stable-release gate is changed.
