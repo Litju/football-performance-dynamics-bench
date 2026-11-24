@@ -32,8 +32,6 @@ _FORBIDDEN_NAME_PARTS = frozenset({"challenge", "private", "truth_data"})
 _IGNORED_PARTS = frozenset(
     {".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", ".pyright"}
 )
-
-
 _GENERATED_SITE_DIRS = frozenset(
     {
         ("site", "node_modules"),
@@ -42,6 +40,22 @@ _GENERATED_SITE_DIRS = frozenset(
         ("site", ".vercel"),
     }
 )
+
+
+
+# This sample is explicitly MIT-licensed; the core data files have unresolved scope.
+_ALLOWED_DATA_FILES = frozenset(
+    {
+        Path("data/bodypose/README.md"),
+        Path("data/bodypose/MANIFEST.json"),
+        Path("data/bodypose/sample_1925299_phase406.jsonl.gz"),
+    }
+)
+_SECRET_NAMES = frozenset({".env", "id_rsa", "credentials.json", "secrets.json"})
+_MODEL_PATH_PARTS = frozenset(
+    {"model", "models", "checkpoint", "checkpoints", "weights", "saved_model"}
+)
+_MODEL_NAME = re.compile(r"(?:^|[._-])(?:model|checkpoint|weights|saved_model)(?:$|[._-])", re.I)
 
 
 def ignored_generated_site_dirs(root: Path) -> frozenset[tuple[str, str]]:
@@ -88,20 +102,6 @@ def ignored_generated_site_path(
 ) -> bool:
     """Only an exact generated site subtree may be excluded from scanning."""
     return len(relative.parts) >= 2 and relative.parts[:2] in ignored_roots
-
-# This sample is explicitly MIT-licensed; the core data files have unresolved scope.
-_ALLOWED_DATA_FILES = frozenset(
-    {
-        Path("data/bodypose/README.md"),
-        Path("data/bodypose/MANIFEST.json"),
-        Path("data/bodypose/sample_1925299_phase406.jsonl.gz"),
-    }
-)
-_SECRET_NAMES = frozenset({".env", "id_rsa", "credentials.json", "secrets.json"})
-_MODEL_PATH_PARTS = frozenset(
-    {"model", "models", "checkpoint", "checkpoints", "weights", "saved_model"}
-)
-_MODEL_NAME = re.compile(r"(?:^|[._-])(?:model|checkpoint|weights|saved_model)(?:$|[._-])", re.I)
 
 
 def _model_binary_path(relative: Path) -> bool:
