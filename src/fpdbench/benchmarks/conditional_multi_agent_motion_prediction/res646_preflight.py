@@ -20,6 +20,10 @@ from .empirical_experiment_plan import protocol_split_v2
 
 ADMISSION_SHA256 = "a8c82bfa09ac792d6c4ae779d4b28158c33ed3c2500f8548f3e94d48197f4fd1"
 CONSUMED_SCOPE = "d359751e969767f30ed6e90c65b13d0eec49f11c9e33e1d2319b19530d28f2e0"
+# Wall-clock synchronization (observed on WSL2/NTP) can step backward by about a
+# second. Treat only that bounded skew as clock jitter; stale or clearly
+# future-dated evidence still fails closed.
+MAX_FUTURE_CLOCK_SKEW = timedelta(seconds=5)
 
 
 def _validate_admission(document: object, expected_sha256: str) -> dict[str, int]:
@@ -305,9 +309,10 @@ def _qualify(values: dict[str, str], prior: bytes) -> dict[str, Any]:
     ):
         raise ValueError("configured metadata paths have unexpected names")
     verified_at = datetime.fromisoformat(evidence["verified_at_utc"].replace("Z", "+00:00"))
-    if verified_at.tzinfo is None or not timedelta(0) <= datetime.now(
-        UTC
-    ) - verified_at < timedelta(days=1):
+    now = datetime.now(UTC)
+    if verified_at.tzinfo is None or not (
+        -MAX_FUTURE_CLOCK_SKEW <= now - verified_at < timedelta(days=1)
+    ):
         raise ValueError("independent resource/quota evidence is stale or future-dated")
     admission = json.loads(_metadata(Path(values["RESEARCH_ADMISSION"])))
     counts = _validate_admission(admission, ADMISSION_SHA256)
