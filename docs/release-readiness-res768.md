@@ -2,7 +2,7 @@
 
 Status date: 2026-11-24. Original baseline: `main` at `0feddee7e666771b1dcecfdd0bcf57db33a31964` (merge of PR #42); code baseline for the RC verification: `ba2e79f` (bounded clock-skew repair). Scope: public documentation, reproducibility, rights and release metadata. This report is a QA gate. It is not a stable release, a citation or archival record, or a scientific qualification.
 
-**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication. The release-candidate recommendation is **GO** for the repaired code, subject to the exact-head CI and independent review being recorded in the PR; stable release remains **NO_GO**.
+**Overall determination: NO_GO** for a stable release (R8 stable-release issue) and for any public artifact or archival step. The repository is acceptable as a documented, non-archival research-software **development** state, subject to the open items below. The repository does not record owner decisions for rights, citation, authorship or publication. The release-candidate recommendation is **GO** for the repaired code; exact-head CI and independent review are recorded below. Stable release remains **NO_GO**.
 
 ## 1. Environments
 
@@ -53,8 +53,8 @@ Status key: **PASS** (exit 0 on the stated commit), **FAIL** (non-zero exit, cau
 | Relative links | `0feddee` | Python check over 59 Markdown files | PASS | 0 broken |
 | External links | `0feddee` | HTTP status of 86 unique external URLs | PASS with notes | 83 HTTP 200; 2 DOI links return HTTP 403 to an automated client (unverified, not broken); `http://localhost:5173` is a development-server instruction, not a link |
 | Live showcase reachability | n/a | `GET https://fpd-bench-showcase.vercel.app/` | PASS (reachability only) | HTTP 200. Deploy identity and content were not inspected through Vercel tooling. |
-| Hosted CI on exact PR head | pending | `.github/workflows/ci.yml` | NOT_RUN | Requires the draft PR. Recorded in the PR body. |
-| Independent review | pending | separate reviewer | NOT_RUN | Recorded in the PR body. |
+| Hosted CI on code head | `4b7bc7c` | `.github/workflows/ci.yml` | **PASS** | Run [45414442244](https://github.com/Litju/football-performance-dynamics-bench/actions/runs/45414442244): `quality` and `public-reproducibility` both succeeded. The report-only follow-up is covered by the final docs-only CI run linked in the PR. |
+| Independent review | `4b7bc7c` | separate read-only reviewer | **APPROVE** | Automated reviewer in a separate context approved the repair and evidence after changes; it is not a human owner approval or release authorization. |
 
 Gates on the R8-QA commits (validators, then the doc-sensitive tests):
 
@@ -158,6 +158,6 @@ F2 (clock-skew test failure) and F11 (browser system libraries) are closed by re
 
 ## 8. Determination
 
-**Release-candidate recommendation: GO, conditional on the exact-head CI and independent review recorded in the PR.** The full suite (1,344 tests: 1,340 original plus four clock-skew regressions) passes on the repaired code in the documented CPython 3.12.13 clean-clone environment, the F2 real-clock and deterministic regressions pass, and the validators, type checks, packaging smokes and site browser checks pass. This recommendation covers **research-software release-candidate readiness** only; it is not owner approval or a stable-release authorization.
+**Release-candidate recommendation: GO.** The full suite (1,344 tests: 1,340 original plus four clock-skew regressions) passes on the repaired code in the documented CPython 3.12.13 clean-clone environment, the F2 real-clock and deterministic regressions pass, the validators, type checks, packaging smokes and site browser checks pass, and exact-head CI and independent review are recorded above. This recommendation covers **research-software release-candidate readiness** only; it is not owner approval or a stable-release authorization.
 
 **Stable release and public artifact/archive: NO_GO.** The separate rights, citation, authorship, archival and stable-version gates (F7, F8, F10, F9 and the benchmark/data/model cards) remain open with their owners. No owner approval, authorship, affiliation, DOI, rights clearance or publication status was assumed. No tag, release, DOI deposit or deployment was created by this QA work.
