@@ -36,14 +36,16 @@ Reproducibility binds benchmark definition, data state and membership, split pro
 
 ## Quickstart
 
+This public smoke check needs no private data, model checkpoints, or external PR #25 fixture package:
+
 ```bash
-uv sync
-uv run pytest
+uv sync --locked --python 3.12
 uv run fpdbench benchmarks list
 uv run fpdbench validate
+uv run pytest -q tests/unit/test_validation.py
 ```
 
-Python 3.12 or newer is required. `uv sync` installs the package and development tools. The complete CI environment is `uv sync --locked --all-groups` under CPython 3.12 (the version CI uses; 3.13 has matching torch wheels but was not tested here): the `research-training` group pins CPU PyTorch 2.6.0, which has no CPython 3.14 wheels. Some streaming integration tests also need the pinned PR #25 source package; the exact procedure is in [the reproducibility guide](docs/reproducibility.md#test-prerequisites). No private datasets or checkpoints are included.
+For the **complete test suite**, use the CPython 3.12 `uv sync --locked --all-groups` environment and first install the pinned PR #25 *synthetic source package* as described in [test prerequisites](docs/reproducibility.md#test-prerequisites). Running unrestricted `uv run pytest` without that prerequisite is not a valid full-suite verification. The `research-training` group pins CPU PyTorch 2.6.0; CPython 3.14 has no compatible wheel, and 3.13 was not tested here. No private datasets or checkpoints are included.
 
 Original FPD Bench code and project-written documentation are licensed under [Apache-2.0](LICENSE). The license does not grant rights to upstream datasets, models, or artifacts; restricted artifact bytes are not distributed. See the [licensing, attribution, and citation policy](docs/licensing-and-governance.md).
 
