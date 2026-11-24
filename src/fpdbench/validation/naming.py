@@ -4,6 +4,8 @@ import ast
 import re
 from pathlib import Path
 
+from fpdbench.validation.artifacts import ignored_generated_site_dirs, ignored_generated_site_path
+
 FORBIDDEN_PATH_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
@@ -76,12 +78,15 @@ def _python_provenance_value_spans(source: str) -> tuple[tuple[int, int], ...]:
 
 def validate_naming(root: Path) -> tuple[str, ...]:
     errors: list[str] = []
+    ignored_site_dirs = ignored_generated_site_dirs(root)
     if any(pattern.search(root.name) for pattern in FORBIDDEN_PATH_PATTERNS):
         errors.append(f"forbidden canonical path component: {root.name}")
     for path in root.rglob("*"):
         if _ignored(path):
             continue
         relative = path.relative_to(root)
+        if ignored_generated_site_path(relative, ignored_site_dirs):
+            continue
         if any(pattern.search(path.name) for pattern in FORBIDDEN_PATH_PATTERNS):
             errors.append(f"forbidden canonical path component: {relative.as_posix()}")
         if not path.is_file():
