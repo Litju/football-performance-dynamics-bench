@@ -81,7 +81,7 @@ git archive FETCH_HEAD src/fpdbench | tar -x -C "$HOME/fpd-pr25-package"
 export FPDBENCH_PR25_PACKAGE_ROOT="$HOME/fpd-pr25-package/src/fpdbench"
 ```
 
-Run the Python gates in a checkout that has no `site/node_modules`. The artifact guard (`src/fpdbench/validation/artifacts.py`) walks the working tree and exempts only `.git`, `.venv`, and cache directories, so a local `npm ci` makes its size check fail with `file exceeds 10485760 bytes` for a file that is not tracked. A fresh clone that runs the Python gates before any `npm ci` avoids this.
+A Git checkout may run the Python checks **before or after** the frontend `npm ci` and site build. The artifact and naming validators exclude only untracked generated `site/node_modules`, `site/dist`, `site/qa` and `site/.vercel` trees. If any file in one of those trees is force-added to the Git index, that entire tree is inspected as before; a generated-tree root symlink is still rejected by the artifact guard. A missing or unreadable Git index disables these exclusions (fail closed). The rules do **not** exempt similarly named paths outside `site/`, tracked content, or any restricted data or checkpoints elsewhere in the repository.
 
 ## Canonical conditional-motion split protocols
 
