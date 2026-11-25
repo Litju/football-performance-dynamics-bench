@@ -223,23 +223,33 @@ jobs:
               assert hashlib.sha256(p.read_bytes()).hexdigest() == entry["sha256"]
           PY
 
-      - name: Refuse preexisting release or conflicting tag
+      - name: Refuse existing published release or mismatched immutable tag
         shell: bash
         run: |
-          test -z "$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; refusing to overwrite"
             exit 1
+          fi
+          raw_ref="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | awk '{print $1}')"
+          resolved_ref="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG^{}" | awk '{print $1}')"
+          if [ -n "$raw_ref" ]; then
+            if [ "$resolved_ref" != "$GITHUB_SHA" ]; then
+              echo "Existing tag does not resolve to the authorized commit or is not annotated"
+              exit 1
+            fi
+            echo "Verified existing annotated tag at exact commit; release-creation retry allowed"
           fi
 
       - name: Tag exact verified commit and publish GitHub source-only release
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$RELEASE_TAG" -m "FPD Bench software v1.0.0: source-only research release"
-          test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA"
-          git push origin "refs/tags/$RELEASE_TAG"
+          if [ -z "$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$RELEASE_TAG" -m "FPD Bench software v1.0.0: source-only research release"
+            test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
           gh release create "$RELEASE_TAG" release-bundle/* \
             --verify-tag \
             --title "FPD Bench v1.0.0 — Public Research Software" \
