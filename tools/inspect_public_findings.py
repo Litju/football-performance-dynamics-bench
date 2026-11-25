@@ -100,10 +100,7 @@ def audit(data: dict[str, Any]) -> dict[str, Any]:
         )
         differences = []
         for match in matches:
-            difference = (
-                by_match[match, left, rep]["ade_m"]
-                - by_match[match, right, rep]["ade_m"]
-            )
+            difference = by_match[match, left, rep]["ade_m"] - by_match[match, right, rep]["ade_m"]
             near(row[match], difference, f"{contrast}/{rep}/{match}")
             differences.append(difference)
         near(row["mean_m"], mean(differences), f"{contrast}/{rep}/equal-match mean")
@@ -168,9 +165,7 @@ def render(data: dict[str, Any]) -> str:
         ]
     )
     for row in verified["contrasts"]:
-        rows.append(
-            f"| {row['contrast']} | {row['representation']} | {row['mean_m']:.4f} |"
-        )
+        rows.append(f"| {row['contrast']} | {row['representation']} | {row['mean_m']:.4f} |")
     rows.extend(
         [
             "",
