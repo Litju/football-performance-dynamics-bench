@@ -9,7 +9,7 @@ import os
 import shlex
 import sys
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -442,6 +442,7 @@ def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumpti
     first = local.check()
     second = local.check()
     assert first["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", first
+    assert second["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", second
     assert first["proposed_scope_sha256"] == second["proposed_scope_sha256"]
     assert len(first["evaluation_role_counts"]) == 4
     assert len(inspected) == 266
@@ -455,6 +456,53 @@ def test_complete_configuration_qualifies_without_input_bytes_or_scope_consumpti
     loaded.assert_not_called()
     forward.assert_not_called()
     reserved.assert_not_called()
+
+
+def _clock_at(real_datetime: type[datetime], value: datetime) -> type[datetime]:
+    class FixedClock(real_datetime):  # type: ignore[misc]
+        @classmethod
+        def now(cls, tz: Any = None) -> datetime:
+            return value.astimezone(tz) if tz is not None else value.replace(tzinfo=None)
+
+    return FixedClock
+
+
+@pytest.mark.parametrize("backward_seconds", [1, 4])
+def test_small_wall_clock_step_does_not_change_consecutive_preflight(
+    local: LocalEvidence,
+    monkeypatch: pytest.MonkeyPatch,
+    backward_seconds: int,
+) -> None:
+    first = local.check()
+    assert first["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", first
+    verified_at = datetime.fromisoformat(local.document["verified_at_utc"].replace("Z", "+00:00"))
+    # The second check sees the wall clock exactly backward_seconds behind the
+    # fixture stamp, independent of how long the first check took.
+    monkeypatch.setattr(
+        p,
+        "datetime",
+        _clock_at(p.datetime, verified_at - timedelta(seconds=backward_seconds)),
+    )
+    second = local.check()
+    assert second["status"] == "RES646_GATE5_READY_FOR_INDEPENDENT_REVIEW", second
+    assert first["proposed_scope_sha256"] == second["proposed_scope_sha256"]
+
+
+@pytest.mark.parametrize("future_seconds", [6, 3600])
+def test_future_dated_evidence_beyond_clock_skew_is_blocked(
+    local: LocalEvidence,
+    monkeypatch: pytest.MonkeyPatch,
+    future_seconds: int,
+) -> None:
+    verified_at = datetime.fromisoformat(local.document["verified_at_utc"].replace("Z", "+00:00"))
+    monkeypatch.setattr(
+        p,
+        "datetime",
+        _clock_at(p.datetime, verified_at - timedelta(seconds=future_seconds)),
+    )
+    report = local.check()
+    assert report["status"] == "RES646_GATE5_BLOCKED"
+    assert "future-dated" in str(report["blockers"])
 
 
 @pytest.mark.parametrize(
@@ -649,8 +697,6 @@ def test_quota_evidence_must_belong_to_current_user_and_mount(
 
 @pytest.mark.parametrize("when", ["stale", "future"])
 def test_resource_attestation_must_be_recent(local: LocalEvidence, when: str) -> None:
-    from datetime import timedelta
-
     offset = timedelta(days=-2 if when == "stale" else 2)
     local.document["verified_at_utc"] = (datetime.now(UTC) + offset).isoformat()
     local.save()
