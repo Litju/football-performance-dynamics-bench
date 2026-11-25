@@ -104,9 +104,9 @@ def test_real_repository_candidate_manifest_binds_existing_public_assets() -> No
     assert manifest["status"] == "CANDIDATE_ONLY_NOT_PUBLISHED"
     assert manifest["protected_population"] == "NOT_QUALIFIED"
     assert len(manifest["entries"]) == 12
-    assert {entry["path"] for entry in manifest["entries"]} == {
-        name for name, _ in module.ASSETS
-    }
+    actual_paths = {entry["path"] for entry in manifest["entries"]}
+    expected_paths = {name for name, _ in module.ASSETS}
+    assert actual_paths == expected_paths
     assert all(entry["bytes"] > 0 for entry in manifest["entries"])
     assert all(len(entry["sha256"]) == 64 for entry in manifest["entries"])
     assert manifest["source_commit"] == module.git(root, "rev-parse", "HEAD").decode().strip()
