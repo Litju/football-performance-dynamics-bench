@@ -60,6 +60,9 @@ jobs:
           assert Path("LICENSE").is_file()
           assert Path("docs/release-v1.0.0.md").is_file()
           PY
+          # The GitHub source archive contains every tracked file, not just the wheel.
+          # Even explicitly MIT-licensed samples need a separate payload/license decision.
+          test -z "$(git ls-files -- data/)"
           test -z "$(git status --porcelain --untracked-files=no)"
 
       - uses: astral-sh/setup-uv@v5
