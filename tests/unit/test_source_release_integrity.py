@@ -50,8 +50,16 @@ def test_source_publication_requires_manual_main_owner_dispatch() -> None:
     assert "expected_commit_sha:" in workflow
     assert "EXPECTED_SHA:" in workflow
     assert 'test "$GITHUB_SHA" = "$EXPECTED_SHA"' in workflow
-    assert "contents: write" in workflow
-    assert "uv run pytest" in workflow
+    assert "  verify:\n" in workflow
+    assert "  publish:\n" in workflow
+    verify_job, publish_job = workflow.split("  publish:\n", maxsplit=1)
+    assert "contents: write" not in verify_job
+    assert "contents: read" in verify_job
+    assert "contents: write" in publish_job
+    assert "needs: verify" in publish_job
+    assert "actions/upload-artifact@v4" in verify_job
+    assert "actions/download-artifact@v4" in publish_job
+    assert "uv run pytest" in verify_job
     assert "uv run fpdbench validate" in workflow
     assert "tools/public_release_asset_manifest.py" in workflow
     assert workflow.index("uv run pytest") < workflow.index("git tag -a")
