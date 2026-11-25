@@ -28,4 +28,4 @@ For actual available data and model semantics, read [the public benchmark cards]
 
 ## Release history
 
-No formally tagged public software release has been issued in this changelog.
+Consult [GitHub Releases](https://github.com/Litju/football-performance-dynamics-bench/releases) for the authoritative existence, date and tagged Git SHA of software distributions. This changelog does not fabricate a tag, DOI or deposit.
