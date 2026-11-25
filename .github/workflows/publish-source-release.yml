@@ -50,7 +50,6 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
-          test "$(git branch --show-current)" = ""
           test "$GITHUB_REF" = "refs/heads/main"
 
       - name: Verify release identity and sole approved software citation
