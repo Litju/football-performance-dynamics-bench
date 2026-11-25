@@ -68,9 +68,7 @@ def test_mutated_tracked_public_asset_fails(
         module.generate(tmp_path)
 
 
-def test_untracked_candidate_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_untracked_candidate_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fixture_repo(tmp_path, monkeypatch)
     target = tmp_path / "docs" / "res440" / "untracked.svg"
     target.write_text("synthetic")
@@ -87,9 +85,7 @@ def test_restricted_or_escaping_paths_fail(tmp_path: Path, filename: str) -> Non
         module.safe_path(tmp_path, filename)
 
 
-def test_public_asset_symlink_fails_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_public_asset_symlink_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fixture_repo(tmp_path, monkeypatch)
     source = tmp_path / "docs" / "res440" / "findings.json"
     source.rename(tmp_path / "separate.json")
