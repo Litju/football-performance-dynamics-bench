@@ -7,6 +7,10 @@ on:
         description: "Enter RELEASE_V1_SOURCE_ONLY to publish verified original software without private data or weights"
         required: true
         type: string
+      expected_commit_sha:
+        description: "Exact reviewed 40-character main HEAD to tag; must match this workflow's GITHUB_SHA"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,6 +30,7 @@ jobs:
       RELEASE_TAG: v1.0.0
       RELEASE_VERSION: 1.0.0
       GH_TOKEN: ${{ github.token }}
+      EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,6 +43,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Verify exact approved main commit before accessing release scope
+        shell: bash
+        run: |
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git branch --show-current)" = ""
+          test "$GITHUB_REF" = "refs/heads/main"
 
       - name: Verify release identity and sole approved software citation
         shell: bash
