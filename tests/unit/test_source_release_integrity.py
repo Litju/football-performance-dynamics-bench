@@ -47,6 +47,9 @@ def test_source_publication_requires_manual_main_owner_dispatch() -> None:
     assert "github.ref == 'refs/heads/main'" in workflow
     assert "github.actor == 'Litju'" in workflow
     assert "RELEASE_V1_SOURCE_ONLY" in workflow
+    assert "expected_commit_sha:" in workflow
+    assert "EXPECTED_SHA:" in workflow
+    assert 'test "$GITHUB_SHA" = "$EXPECTED_SHA"' in workflow
     assert "contents: write" in workflow
     assert "uv run pytest" in workflow
     assert "uv run fpdbench validate" in workflow
