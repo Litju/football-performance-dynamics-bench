@@ -1,6 +1,6 @@
 # Public research-software release gates
 
-**Status:** preparation only. The maintainer has approved the original-code Apache-2.0 release authority and sole software citation author, recorded in [AUTHORS.md](../AUTHORS.md) and [CITATION.cff](../CITATION.cff). **No tagged stable `v1.0.0` release, published archival DOI, protected-population qualification or newly authorized third-party artifact distribution** is established. The current Python distribution remains `0.1.0.dev0`.
+**Status:** candidate version `1.0.0` for an explicitly **software/source-only GitHub release**. The maintainer approved the Apache-2.0 license authority for original code/documentation and the sole software author in [AUTHORS.md](../AUTHORS.md) and [CITATION.cff](../CITATION.cff). **Neither the source tree nor a green CI job alone proves a GitHub tag/release exists.** A separate DOI/archival deposit, private model/data redistribution and protected-population qualification remain unapproved. Check [GitHub Releases](https://github.com/Litju/football-performance-dynamics-bench/releases) for actual publication.
 
 This page separates **software reproducibility**, **scientific result validity**, **rights**, **authorship**, and **archive publication**. No single passing workflow can substitute for another authority.
 
@@ -27,13 +27,13 @@ This page separates **software reproducibility**, **scientific result validity**
 3. **Artifact hygiene:** inspect `git ls-files` and the actual would-be release payload (not just the diff); no raw upstream tracking, source-derived rows, private truth, ledgers, receipts, keys, model weights or unintended URLs/paths are distributed. Verify all allowlisted public files and checksums independently; the public source-only GitHub auto-generated archive is distinct from optional uploaded assets.
 4. **Rights and attribution:** project maintainer explicitly attests authority to distribute every original contribution under Apache-2.0; third-party notices/source credits and any permissions for proposed *additional* assets are recorded. Do not manufacture ownership from a Git author.
 5. **Authorship and citation:** obtain approved author names, order, roles/affiliations and consent before creating a valid `CITATION.cff`. Confirm who can license the manuscript/metadata if included. Do not guess email, ORCID, funding, institutions or DOI.
-6. **Version consistency:** only once gates pass, advance `pyproject.toml` from `0.1.0.dev0` to the approved stable software version, update changelog/release notes, bind release file checksums and rerun exact-head CI. Record a frozen Git SHA and use a history-preserving merge.
+6. **Version consistency:** the proposed `1.0.0` version must agree across `pyproject.toml`, `uv.lock`, `CITATION.cff`, source-only release notes, build distribution metadata and final tag. Run exact-head tests and package checks after all version changes and preserve history in a non-squash merge.
 7. **Archive:** create and verify the permanent archive record **only after** author/rightsholder approval and exact version/tag verification; distinguish *concept* and *version-specific* DOIs. No fake Zenodo accession, fabricated DOI or publication date.
-8. **Integration:** cut a signed-off GitHub source release and archive only with exact-head quality/reproducibility evidence, complete metadata and appropriate owner sign-off. Note any missing external grants without changing protected status.
+8. **Integration:** the GitHub **source-only** release may be issued via the guarded owner-dispatched workflow only after full exact-head checks, signed-off original-code scope, public aggregate asset audit, CFF, release version and notes are verified. Any later Zenodo/DOI **archival** release is a separate approval/action; never imply DOI assignment from a GitHub tag. Note unresolved external rights without changing protected status.
 
 ## Authorship/citation approval record — partially completed
 
-The root [CITATION.cff](../CITATION.cff) now records **Julio Rodriguez** as the sole, explicitly approved **software** citation author. Its metadata include required schema fields, code repository and Apache-2.0 license; it does **not** assert a released software version, release date, DOI, institution or paper author list. The final release may add its verified version/date only once actually tagged; add an archival DOI only after one is issued and verified. A `preferred-citation` for Paper A must remain absent unless its distinct bibliographic state and author list are approved.
+The root [CITATION.cff](../CITATION.cff) records **Julio Rodriguez** as the sole explicitly approved **software** author and declares the **candidate version 1.0.0** with code repository and Apache-2.0 license. The version alone does not establish that a tag or GitHub Release was issued; verify those externally. No DOI, institutional affiliation, paper author list or publication date is asserted. Add an archival DOI only after its independent issuance; a `preferred-citation` for Paper A remains out of scope without distinct author/publication approval.
 
 | Owner question | Required evidence | Current status |
 | --- | --- | --- |
@@ -41,8 +41,14 @@ The root [CITATION.cff](../CITATION.cff) now records **Julio Rodriguez** as the 
 | What is the software author list and order? | Explicit contributor approval of the software citation role | **APPROVED:** Julio Rodriguez, sole software author; no affiliation/ORCID asserted |
 | Which third-party materials need notices or separate grants? | Audited source/asset inventory and any required upstream notices | **PENDING FINAL PAYLOAD REVIEW** |
 | Is a software-only release approved without private assets? | Owner request for a source-only release, plus final exact-payload safety/rights check | **OWNER REQUESTED** for software/source and public aggregates; final exact-payload review still pending |
-| What version/tag and archive identifiers actually exist? | Verified final Git SHA/version/tag, registered DOI or archive permalink | **UNISSUED** |
+| What version/tag and archive identifiers actually exist? | Exact checked release SHA, source-only GitHub tag, distinct DOI issuance | **v1.0.0 SOURCE CANDIDATE**; no tag or DOI is asserted until independently verified |
 | Is Paper A an accepted publication? | Journal record, not a manuscript draft | **NO ACCEPTANCE CLAIM** |
+
+## Separate release workflow and archival decision
+
+The repository provides a **manual-only** GitHub Actions workflow, `.github/workflows/publish-source-release.yml`. Only the repository owner may dispatch it from `main` with **both** the exact source-only confirmation token and the independently reviewed **40-character commit SHA**. The workflow refuses a different checkout SHA, version or citation. It repeats the complete public test/validation and packaging gates, verifies software citation/version, audits committed public aggregate file bytes, builds and hashes the wheel and source distribution, refuses an existing tag, then creates an annotated `v1.0.0` tag and publishes a GitHub Release with source-only assets and immutable build checksums. If any step fails before tagging, **no release must be claimed**. If GitHub rejects tag creation or publishing, report the failure and leave the relevant release step incomplete.
+
+That GitHub release is **not** equivalent to an archival DOI. A future Zenodo/other archival deposit needs an actual provider connection, verified archive contents, metadata, version and separately recorded authority. The scope of the existing research results does not change with software versioning.
 
 ## Immutable release manifest — requirements
 
@@ -52,4 +58,4 @@ For current source and result identities, consult the immutable [source authorit
 
 ## Owner-controlled publication decision
 
-Until the separate decisions above are documented, **NO-GO for stable v1.0.0 and archival deposit**, regardless of successful Python/site CI. This is compatible with continuing to publish and improve the already-public *development* source and non-reconstructive scientific description. Finishing this checklist is not itself a publication or rights grant.
+**Conditional GO for an owner-dispatched, verified source-only GitHub v1.0.0 software release:** original-code authority and sole software authorship are approved; final head, package and public aggregate payload checks must still succeed, and the maintainer must explicitly initiate the guarded workflow. **NO-GO remains for DOI/Zenodo deposit, unapproved third-party row-level data, private checkpoint distribution, protected population qualification and any journal-publication claim.** Completion of this document alone is not publication.

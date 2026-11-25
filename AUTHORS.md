@@ -18,6 +18,6 @@ The underlying SkillCorner tracking/events/phases, row-level derivatives, owner-
 
 ## Citation and release status
 
-The root [CITATION.cff](CITATION.cff) records the approved author without assigning a nonexistent DOI, version tag, release date, institution or paper publication. An actual versioned software citation can add an issued release version and date only after the release process verifies them. Its DOI must not be added until an archive assigns one.
+The root [CITATION.cff](CITATION.cff) records the approved author and the **candidate software version 1.0.0**, without asserting an unissued tag, DOI, release date, institution or paper publication. The release is authentic only after its exact Git SHA is tagged and the GitHub Release is verified. A DOI must not be added until an archive assigns one.
 
 The original 234-fit campaign and its 216 planned training LOMO fits are incomplete; the four-match research-only study and protected `NOT_QUALIFIED` status remain unchanged by this authorship record.

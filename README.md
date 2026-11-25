@@ -11,7 +11,7 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 3. **What the evidence is.** The completed [four-match descriptive study](docs/res440/results.md) is research-only. Its independent unit is four matches, its protected population status is `NOT_QUALIFIED`, and it makes no significance, generalization, causal or deployment claims. The original 234-fit design is incomplete and the 216 training leave-one-match-out fits were never run.
 4. **Paper A (methodology).** The benchmark-methodology manuscript, its [supplement](docs/paper-a/supplement.md) and [submission-readiness record](docs/paper-a/submission-readiness.md) are in `docs/paper-a/`. It presents one bounded descriptive demonstration on the four matches. The repository does not record a journal submission, peer review or publication status.
 5. **Interactive companion.** The [research showcase](https://fpd-bench-showcase.vercel.app) is a non-archival communication aid built from the public findings file. Its pitch motion is schematic, not tracking data ([source](site/README.md)).
-6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This is a development version (`0.1.0.dev0`) with an owner-approved [software citation](CITATION.cff) and [author record](AUTHORS.md), but **no stable release tag or issued DOI**; see [licensing, attribution and citation policy](docs/licensing-and-governance.md).
+6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This release candidate declares software package version `1.0.0` and has an owner-approved [software citation](CITATION.cff) and [author record](AUTHORS.md). Only a verified [GitHub release tag](https://github.com/Litju/football-performance-dynamics-bench/releases) establishes publication; this source does **not** claim an issued archival DOI. See [licensing and citation governance](docs/licensing-and-governance.md).
 
 ## Public research cards
 
@@ -23,7 +23,7 @@ The cards describe research-only, four-match **descriptive** findings. They do n
 
 ## Contributing and release state
 
-The public research checkout is a **development distribution** (`0.1.0.dev0`), not an approved `v1.0.0` release. See the [changelog](CHANGELOG.md), [contribution and source-rights requirements](CONTRIBUTING.md), [software release gate and author/citation approvals](docs/software-release-gates.md), and [proposed release notes](docs/proposed-release-notes.md). No DOI, archival paper acceptance, protected population qualification or raw-data redistribution is implied.
+The source tree declares the **v1.0.0 software-release candidate**. Its actual publication status, exact SHA and assets must be checked at [GitHub Releases](https://github.com/Litju/football-performance-dynamics-bench/releases); a source declaration does not issue a tag. See the [changelog](CHANGELOG.md), [contribution rules](CONTRIBUTING.md), [software-only release gates](docs/software-release-gates.md), and [v1.0.0 notes](docs/release-v1.0.0.md). No archival DOI, paper acceptance, protected qualification or raw-data redistribution is implied.
 
 ## Research families
 

@@ -125,7 +125,7 @@ def _raw_lock_hashes_for(evaluator: RawDisplacementEvaluatorConfiguration) -> tu
 
 
 def test_package_import_and_registry_discovery() -> None:
-    assert __version__ == "0.1.0.dev0"
+    assert __version__ == "1.0.0"
     assert version("football-performance-dynamics-bench") == __version__
     registry = default_registry()
     assert len(registry.discover()) == 2

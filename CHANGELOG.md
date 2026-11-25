@@ -2,9 +2,9 @@
 
 This file records public research-software evolution, not scientific qualification or publication acceptance. Version numbers in the Python distribution, the independent showcase site and scientific benchmark/protocol contracts refer to **different identities**. For exact scientific state, consult the frozen manifests and [reproducibility model](docs/reproducibility.md).
 
-## Unreleased — development series (`0.1.0.dev0`)
+## 1.0.0 — public research-software source-release candidate
 
-**No stable software release, git tag, archived DOI or official citation is asserted here.** A future `v1.0.0` software release requires the separate [release gates](docs/software-release-gates.md).
+The package and citation declare software version `1.0.0`; **publication is established only if the corresponding `v1.0.0` GitHub Release and immutable tag exist and match the verified source**. This version is original-code/public-aggregate research software, not a protected scientific qualification. No archival DOI is asserted. See the [release notes](docs/release-v1.0.0.md) and [independent release gates](docs/software-release-gates.md).
 
 ### Implemented in the public research checkout
 
@@ -22,10 +22,10 @@ This file records public research-software evolution, not scientific qualificati
 - The original prospective **234-fit** experiment matrix and **216 training LOMO fits** were **not completed**; protected source population remains `NOT_QUALIFIED`.
 - No raw SkillCorner core tracking/event/phase files, row-level source-derived windows, private truth, private receipts or original learned checkpoint bytes are included or authorized for redistribution.
 - No proof of cross-league, cross-season or independent-provider generalization, statistical significance, causal effects, production accuracy or model deployment.
-- The sole software author and original-code Apache-2.0 release authority are now owner-approved in `AUTHORS.md` and `CITATION.cff`. No DOI/Zenodo record, tagged versioned public release manifest, institutional-affiliation attestation or archival paper submission has been completed.
+- The sole software author and original-code Apache-2.0 release authority are owner-approved in `AUTHORS.md` and `CITATION.cff`. The actual tag, version-specific release manifest and publication date must be verified on GitHub Releases; **no DOI/Zenodo record, institutional affiliation, or archival paper submission is asserted here**.
 
 For actual available data and model semantics, read [the public benchmark cards](docs/public-benchmark-cards.md), [source/model cards](docs/public-data-and-model-cards.md), [scientific results](docs/res440/results.md), [reproducibility](docs/reproducibility.md), and [source rights policy](docs/data-rights.md).
 
 ## Release history
 
-No formally tagged public software release has been issued in this changelog.
+Consult [GitHub Releases](https://github.com/Litju/football-performance-dynamics-bench/releases) for the authoritative existence, date and tagged Git SHA of software distributions. This changelog does not fabricate a tag, DOI or deposit.
