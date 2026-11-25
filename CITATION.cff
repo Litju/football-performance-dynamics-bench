@@ -8,6 +8,7 @@ authors:
     given-names: "Julio"
 repository-code: "https://github.com/Litju/football-performance-dynamics-bench"
 license: "Apache-2.0"
+version: "1.0.0"
 keywords:
   - football
   - research software
