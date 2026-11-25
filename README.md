@@ -23,7 +23,7 @@ The cards describe research-only, four-match **descriptive** findings. They do n
 
 ## Contributing and release state
 
-The public research checkout is a **development distribution** (`0.1.0.dev0`), not an approved `v1.0.0` release. See the [changelog](CHANGELOG.md), [contribution and source-rights requirements](CONTRIBUTING.md), [software release gate and author/citation approvals](docs/software-release-gates.md), and [proposed release notes](docs/proposed-release-notes.md). No DOI, archival paper acceptance, protected population qualification or raw-data redistribution is implied.
+The source tree declares the **v1.0.0 software-release candidate**. Its actual publication status, exact SHA and assets must be checked at [GitHub Releases](https://github.com/Litju/football-performance-dynamics-bench/releases); a source declaration does not issue a tag. See the [changelog](CHANGELOG.md), [contribution rules](CONTRIBUTING.md), [software-only release gates](docs/software-release-gates.md), and [v1.0.0 notes](docs/release-v1.0.0.md). No archival DOI, paper acceptance, protected qualification or raw-data redistribution is implied.
 
 ## Research families
 
