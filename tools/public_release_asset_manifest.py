@@ -80,15 +80,15 @@ def generate(root: Path = ROOT) -> dict[str, Any]:
         if relative not in tracked:
             raise ValueError(f"candidate asset is not tracked: {relative}")
         target = safe_path(root, relative)
-        if git(root, "diff", "--name-only", "HEAD", "--", relative):
+        committed = git(root, "show", f"HEAD:{relative}")
+        if target.read_bytes() != committed:
             raise ValueError(f"candidate asset differs from the source commit: {relative}")
-        digest = hashlib.sha256(target.read_bytes()).hexdigest()
         entries.append(
             {
                 "path": relative,
                 "rights_class": category,
-                "bytes": target.stat().st_size,
-                "sha256": digest,
+                "bytes": len(committed),
+                "sha256": hashlib.sha256(committed).hexdigest(),
             }
         )
     entries.sort(key=lambda value: str(value["path"]))
