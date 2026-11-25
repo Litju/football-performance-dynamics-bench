@@ -92,3 +92,21 @@ def test_public_asset_symlink_fails_closed(tmp_path: Path, monkeypatch: pytest.M
     source.symlink_to(tmp_path / "separate.json")
     with pytest.raises(ValueError, match="symlink"):
         module.safe_path(tmp_path, "docs/res440/findings.json")
+
+
+def test_real_repository_candidate_manifest_binds_existing_public_assets() -> None:
+    """A release manifest must cover the actual public Git artifacts, not only toy fixtures."""
+    root = Path(__file__).resolve().parents[2]
+    if not (root / ".git").exists():
+        pytest.skip("candidate release-manifest audit requires a Git checkout")
+    manifest = module.generate(root)
+    assert manifest["release_authorized"] is False
+    assert manifest["status"] == "CANDIDATE_ONLY_NOT_PUBLISHED"
+    assert manifest["protected_population"] == "NOT_QUALIFIED"
+    assert len(manifest["entries"]) == 12
+    assert {entry["path"] for entry in manifest["entries"]} == {
+        name for name, _ in module.ASSETS
+    }
+    assert all(entry["bytes"] > 0 for entry in manifest["entries"])
+    assert all(len(entry["sha256"]) == 64 for entry in manifest["entries"])
+    assert manifest["source_commit"] == module.git(root, "rev-parse", "HEAD").decode().strip()
