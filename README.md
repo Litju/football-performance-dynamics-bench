@@ -19,7 +19,7 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 - [Source, baseline, model and limitations cards](docs/public-data-and-model-cards.md): the pinned SkillCorner source and rights scope, deterministic references, frozen DeepSets development/evaluation, observed tracking quality, uncertainty and responsible non-uses.
 - [Public reproduction walkthrough](docs/public-reproduction-walkthrough.md): clean-clone CLI checks, an invented trajectory evaluator example, public aggregate arithmetic verification, source verification boundaries, LOMO interpretation and figure regeneration.
 
-The cards describe research-only, four-match **descriptive** findings. They do not distribute SkillCorner rows, trained weights, private evidence, or authorize protected population qualification. The complete scientific authorities remain the versioned protocol, [published results](docs/res440/results.md), [Paper A evidence](docs/paper-a-evidence.md) and [data rights policy](docs/data-rights.md).
+The cards describe research-only, four-match **descriptive** findings. They do not distribute SkillCorner rows, trained weights, private evidence, or authorize protected population qualification. The [public asset inventory](docs/public-asset-inventory.md) and [candidate manifest tool](tools/public_release_asset_manifest.py) distinguish already-public non-reconstructive aggregate bytes from distribution-prohibited upstream data, private artifacts and source-release approvals. The complete scientific authorities remain the versioned protocol, [published results](docs/res440/results.md), [Paper A evidence](docs/paper-a-evidence.md) and [data rights policy](docs/data-rights.md).
 
 ## Contributing and release state
 

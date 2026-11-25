@@ -36,6 +36,20 @@ def test_governance_separates_commit_and_publication_authorship() -> None:
     assert not any(line.startswith("doi:") for line in citation.splitlines())
 
 
+def test_approved_citation_scope_excludes_third_party_and_paper_authorship() -> None:
+    """Approved software authorship cannot silently grant dataset or paper rights."""
+    citation = (ROOT / "CITATION.cff").read_text()
+    authors = (ROOT / "AUTHORS.md").read_text()
+    assert citation.count('family-names: "Rodriguez"') == 1
+    assert citation.count('given-names: "Julio"') == 1
+    assert 'license: "Apache-2.0"' in citation
+    assert "sole software citation author" in authors
+    assert "original code and project-written documentation" in authors
+    assert "SkillCorner" in authors and "PySport" in authors
+    assert "Paper A" in authors and "Paper B" in authors
+    assert not any(line.startswith(("doi:", "date-released:")) for line in citation.splitlines())
+
+
 def test_code_license_does_not_change_skillcorner_data_rights() -> None:
     policy = (ROOT / "docs/licensing-and-governance.md").read_text().lower()
     rights = (ROOT / "docs/data-rights.md").read_text().lower()
