@@ -92,9 +92,12 @@ def generate(root: Path = ROOT) -> dict[str, Any]:
             }
         )
     entries.sort(key=lambda value: str(value["path"]))
-    canonical = "\n".join(
-        json.dumps(entry, sort_keys=True, separators=(",", ":")) for entry in entries
-    ).encode() + b"\n"
+    canonical = (
+        "\n".join(
+            json.dumps(entry, sort_keys=True, separators=(",", ":")) for entry in entries
+        ).encode()
+        + b"\n"
+    )
     return {
         "schema": "fpdbench.public-release-asset-candidate/1",
         "status": "CANDIDATE_ONLY_NOT_PUBLISHED",
