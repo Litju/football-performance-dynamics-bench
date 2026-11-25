@@ -32,7 +32,11 @@ def test_approved_software_citation_is_versioned_without_fabricated_doi() -> Non
         'version: "1.0.0"',
         'repository-code: "https://github.com/Litju/football-performance-dynamics-bench"',
     }
-    assert expected.issubset(set(line.strip() for line in lines))
+    # CFF authors are YAML sequence items; normalize the leading list marker.
+    normalized = {line.strip().removeprefix("- ").strip() for line in lines}
+    assert expected.issubset(normalized)
+    author_lines = [line for line in lines if line.startswith("  - family-names:")]
+    assert author_lines == ['  - family-names: "Rodriguez"']
     assert not any(re.match(r"^(doi|date-released|preferred-citation):", line) for line in lines)
     assert (ROOT / "AUTHORS.md").is_file()
 
