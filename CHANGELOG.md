@@ -2,9 +2,9 @@
 
 This file records public research-software evolution, not scientific qualification or publication acceptance. Version numbers in the Python distribution, the independent showcase site and scientific benchmark/protocol contracts refer to **different identities**. For exact scientific state, consult the frozen manifests and [reproducibility model](docs/reproducibility.md).
 
-## Unreleased — development series (`0.1.0.dev0`)
+## 1.0.0 — public research-software source-release candidate
 
-**No stable software release, git tag, archived DOI or official citation is asserted here.** A future `v1.0.0` software release requires the separate [release gates](docs/software-release-gates.md).
+The package and citation declare software version `1.0.0`; **publication is established only if the corresponding `v1.0.0` GitHub Release and immutable tag exist and match the verified source**. This version is original-code/public-aggregate research software, not a protected scientific qualification. No archival DOI is asserted. See the [release notes](docs/release-v1.0.0.md) and [independent release gates](docs/software-release-gates.md).
 
 ### Implemented in the public research checkout
 
