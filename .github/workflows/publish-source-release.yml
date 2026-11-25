@@ -46,6 +46,13 @@ jobs:
 
           pkg = tomllib.loads(Path("pyproject.toml").read_text())["project"]
           assert pkg["version"] == "1.0.0"
+          assert '__version__ = "1.0.0"' in Path("src/fpdbench/__init__.py").read_text()
+          lock = tomllib.loads(Path("uv.lock").read_text())
+          local = [
+              p for p in lock["package"]
+              if p["name"] == "football-performance-dynamics-bench"
+          ]
+          assert len(local) == 1 and local[0]["version"] == pkg["version"]
           cff = Path("CITATION.cff").read_text()
           for required in (
               "cff-version: 1.2.0",
