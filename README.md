@@ -13,6 +13,13 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 5. **Interactive companion.** The [research showcase](https://fpd-bench-showcase.vercel.app) is a non-archival communication aid built from the public findings file. Its pitch motion is schematic, not tracking data ([source](site/README.md)).
 6. **Limits and release status.** Every public capability is labelled in the [capability matrix](docs/reproducibility.md#public-reproducibility-boundary) as `PUBLIC_EXECUTABLE`, `PUBLIC_VERIFIABLE`, `LOCAL_EVIDENCE_VERIFIABLE`, `UNAVAILABLE_PUBLIC_ARTIFACT` or `FORBIDDEN_PRIVATE_TRUTH`. This is a development version (`0.1.0.dev0`) without a tagged release, DOI, or `CITATION.cff`; see [licensing, attribution and citation policy](docs/licensing-and-governance.md).
 
+## Public research cards
+
+- [Prospective benchmark cards](docs/public-benchmark-cards.md): the absolute XY and origin-relative displacement target contracts, three information regimes, historical-versus-prospective identity, match-level evaluation and executable boundaries.
+- [Source, baseline, model and limitations cards](docs/public-data-and-model-cards.md): the pinned SkillCorner source and rights scope, deterministic references, frozen DeepSets development/evaluation, observed tracking quality, uncertainty and responsible non-uses.
+
+The cards describe research-only, four-match **descriptive** findings. They do not distribute SkillCorner rows, trained weights, private evidence, or authorize protected population qualification. The complete scientific authorities remain the versioned protocol, [published results](docs/res440/results.md), [Paper A evidence](docs/paper-a-evidence.md) and [data rights policy](docs/data-rights.md).
+
 ## Research families
 
 - `workload_performance_state`: a partial, non-executable whole-session historical study and an invalidated signed-acceleration formulation with a recovered diagnostic RMSE evaluator.
