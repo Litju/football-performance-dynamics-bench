@@ -41,23 +41,23 @@ uv run fpdbench validate
 uv run python tools/inspect_public_findings.py
 ```
 
-The full suite has a separately pinned **public synthetic** streaming-integration source-package prerequisite. See [test prerequisites](docs/reproducibility.md#test-prerequisites), the [public reproduction walkthrough](docs/public-reproduction-walkthrough.md), and [release gate policy](docs/software-release-gates.md).
+The full suite has a separately pinned **public synthetic** streaming-integration source-package prerequisite. See [test prerequisites](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/reproducibility.md#test-prerequisites), the [public reproduction walkthrough](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/public-reproduction-walkthrough.md), and [release gate policy](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/software-release-gates.md).
 
 ## Citation, source attribution and license
 
-The software citation is [`CITATION.cff`](CITATION.cff), with **Julio Rodriguez** as the owner-approved sole software author. Original, rights-cleared project code and documentation are licensed under **Apache-2.0**; this does not sublicense upstream datasets or private checkpoints.
+The software citation is [`CITATION.cff`](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/CITATION.cff), with **Julio Rodriguez** as the owner-approved sole software author. Original, rights-cleared project code and documentation are licensed under **Apache-2.0**; this does not sublicense upstream datasets or private checkpoints.
 
-Upstream source: **SkillCorner Open Data**, released by SkillCorner in collaboration with **PySport**, at the pinned source revision specified in [the source card](docs/skillcorner-source-card.md). Core source-data/row-level redistribution rights remain restricted by the [rights policy](docs/data-rights.md).
+Upstream source: **SkillCorner Open Data**, released by SkillCorner in collaboration with **PySport**, at the pinned source revision specified in [the source card](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/skillcorner-source-card.md). Core source-data/row-level redistribution rights remain restricted by the [rights policy](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/data-rights.md).
 
 **Archiving:** this GitHub source-code release is separate from any later Zenodo/archive deposit. No DOI is asserted here unless a separately issued DOI is verified and added subsequently. An absent DOI does not become a fabricated placeholder citation.
 
 ## Research resources
 
-- [Scientific result and limitations](docs/res440/results.md)
-- [Public result aggregates](docs/res440/findings.json)
-- [Prospective benchmark cards](docs/public-benchmark-cards.md)
-- [Source, baseline and model cards](docs/public-data-and-model-cards.md)
-- [Public reproduction walkthrough](docs/public-reproduction-walkthrough.md)
-- [Public aggregate-safe asset policy](docs/public-asset-inventory.md)
-- [Paper A submission-readiness record](docs/paper-a/submission-readiness.md)
+- [Scientific result and limitations](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/res440/results.md)
+- [Public result aggregates](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/res440/findings.json)
+- [Prospective benchmark cards](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/public-benchmark-cards.md)
+- [Source, baseline and model cards](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/public-data-and-model-cards.md)
+- [Public reproduction walkthrough](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/public-reproduction-walkthrough.md)
+- [Public aggregate-safe asset policy](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/public-asset-inventory.md)
+- [Paper A submission-readiness record](https://github.com/Litju/football-performance-dynamics-bench/blob/v1.0.0/docs/paper-a/submission-readiness.md)
 - [Interactive research companion](https://fpd-bench-showcase.vercel.app)
