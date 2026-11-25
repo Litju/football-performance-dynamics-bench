@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Football Performance Dynamics Bench in research, please cite this software and credit any upstream datasets separately."
+type: software
+title: "Football Performance Dynamics Bench"
+abstract: "Open research software for inspectable football-performance benchmark definitions, physical trajectory evaluation, source/measurement protocols, and reproducible public research aggregates. The published four-match findings are descriptive and the protected population remains not qualified."
+authors:
+  - family-names: "Rodriguez"
+    given-names: "Julio"
+repository-code: "https://github.com/Litju/football-performance-dynamics-bench"
+license: "Apache-2.0"
+keywords:
+  - football
+  - research software
+  - scientific benchmarking
+  - human performance
+  - multi-agent motion prediction
+  - reproducibility
