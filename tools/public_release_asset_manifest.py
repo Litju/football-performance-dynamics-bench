@@ -41,8 +41,7 @@ def git(root: Path, *args: str) -> bytes:
     result = subprocess.run(
         ["git", "-C", str(root), *args],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return result.stdout
 
