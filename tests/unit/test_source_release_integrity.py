@@ -15,9 +15,7 @@ def test_candidate_package_and_lockfile_are_same_version() -> None:
     version = project["project"]["version"]
     assert version == "1.0.0"
     packages = [
-        pkg
-        for pkg in lock["package"]
-        if pkg["name"] == "football-performance-dynamics-bench"
+        pkg for pkg in lock["package"] if pkg["name"] == "football-performance-dynamics-bench"
     ]
     assert len(packages) == 1
     assert packages[0]["version"] == version
