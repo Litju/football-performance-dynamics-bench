@@ -1,6 +1,6 @@
 # Public research-software release gates
 
-**Status:** preparation only. No tagged stable `v1.0.0` release, published archival DOI, author-approved software citation, protected-population qualification or newly authorized artifact distribution is established by this document. The current Python distribution is `0.1.0.dev0`.
+**Status:** preparation only. The maintainer has approved the original-code Apache-2.0 release authority and sole software citation author, recorded in [AUTHORS.md](../AUTHORS.md) and [CITATION.cff](../CITATION.cff). **No tagged stable `v1.0.0` release, published archival DOI, protected-population qualification or newly authorized third-party artifact distribution** is established. The current Python distribution remains `0.1.0.dev0`.
 
 This page separates **software reproducibility**, **scientific result validity**, **rights**, **authorship**, and **archive publication**. No single passing workflow can substitute for another authority.
 
@@ -31,16 +31,16 @@ This page separates **software reproducibility**, **scientific result validity**
 7. **Archive:** create and verify the permanent archive record **only after** author/rightsholder approval and exact version/tag verification; distinguish *concept* and *version-specific* DOIs. No fake Zenodo accession, fabricated DOI or publication date.
 8. **Integration:** cut a signed-off GitHub source release and archive only with exact-head quality/reproducibility evidence, complete metadata and appropriate owner sign-off. Note any missing external grants without changing protected status.
 
-## Authorship/citation approval record — not yet completed
+## Authorship/citation approval record — partially completed
 
-This repository intentionally has **no** `CITATION.cff` until required fields are verified and approved. A schema-valid citation needs `cff-version`, `message`, `title`, and **approved authors**. The final release may add `version`, `repository-code`, `license: Apache-2.0`, verified release date and DOI once assigned. A `preferred-citation` for Paper A must remain absent unless the paper's exact bibliographic state and author order are approved.
+The root [CITATION.cff](../CITATION.cff) now records **Julio Rodriguez** as the sole, explicitly approved **software** citation author. Its metadata include required schema fields, code repository and Apache-2.0 license; it does **not** assert a released software version, release date, DOI, institution or paper author list. The final release may add its verified version/date only once actually tagged; add an archival DOI only after one is issued and verified. A `preferred-citation` for Paper A must remain absent unless its distinct bibliographic state and author list are approved.
 
 | Owner question | Required evidence | Current status |
 | --- | --- | --- |
-| Who are the software's rights-holders and release approvers? | Explicit authority statement covering original contributions and applicable employer/institution obligations | **UNCONFIRMED** |
-| What is the final software author list and order? | Each named person's approval of attribution/role; affiliations only with confirmation | **UNCONFIRMED** |
+| Who may license the original project code/docs? | Maintainer approval to release rights-controlled original contributions under Apache-2.0; additional third-party rights remain separate | **OWNER ATTESTED** for original software and project-written documentation; final source payload still requires inspection |
+| What is the software author list and order? | Explicit contributor approval of the software citation role | **APPROVED:** Julio Rodriguez, sole software author; no affiliation/ORCID asserted |
 | Which third-party materials need notices or separate grants? | Audited source/asset inventory and any required upstream notices | **PENDING FINAL PAYLOAD REVIEW** |
-| Is a software-only release approved without private assets? | Owner approval of exactly which binaries/source archives/public aggregates will appear | **PENDING** |
+| Is a software-only release approved without private assets? | Owner request for a source-only release, plus final exact-payload safety/rights check | **OWNER REQUESTED** for software/source and public aggregates; final exact-payload review still pending |
 | What version/tag and archive identifiers actually exist? | Verified final Git SHA/version/tag, registered DOI or archive permalink | **UNISSUED** |
 | Is Paper A an accepted publication? | Journal record, not a manuscript draft | **NO ACCEPTANCE CLAIM** |
 
