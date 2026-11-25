@@ -22,7 +22,7 @@ This file records public research-software evolution, not scientific qualificati
 - The original prospective **234-fit** experiment matrix and **216 training LOMO fits** were **not completed**; protected source population remains `NOT_QUALIFIED`.
 - No raw SkillCorner core tracking/event/phase files, row-level source-derived windows, private truth, private receipts or original learned checkpoint bytes are included or authorized for redistribution.
 - No proof of cross-league, cross-season or independent-provider generalization, statistical significance, causal effects, production accuracy or model deployment.
-- No author-approved `CITATION.cff`, DOI/Zenodo record, versioned public release manifest, final copyright/affiliation attestation or archival paper submission has been completed.
+- The sole software author and original-code Apache-2.0 release authority are now owner-approved in `AUTHORS.md` and `CITATION.cff`. No DOI/Zenodo record, tagged versioned public release manifest, institutional-affiliation attestation or archival paper submission has been completed.
 
 For actual available data and model semantics, read [the public benchmark cards](docs/public-benchmark-cards.md), [source/model cards](docs/public-data-and-model-cards.md), [scientific results](docs/res440/results.md), [reproducibility](docs/reproducibility.md), and [source rights policy](docs/data-rights.md).
 
