@@ -27,7 +27,13 @@ def test_governance_separates_commit_and_publication_authorship() -> None:
     assert "explicit approval" in policy
     assert "institutional affiliation" in policy
     assert "no `notice` file is added" in policy
-    assert "no `citation.cff` is created" in policy
+    assert "julio rodriguez as the sole software citation author" in policy
+    citation = (ROOT / "CITATION.cff").read_text()
+    assert "cff-version: 1.2.0" in citation
+    assert 'family-names: "Rodriguez"' in citation
+    assert 'given-names: "Julio"' in citation
+    assert 'license: "Apache-2.0"' in citation
+    assert not any(line.startswith("doi:") for line in citation.splitlines())
 
 
 def test_code_license_does_not_change_skillcorner_data_rights() -> None:
