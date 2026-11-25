@@ -21,6 +21,10 @@ Reproducible benchmarks for performance-state estimation, multimodal state recon
 
 The cards describe research-only, four-match **descriptive** findings. They do not distribute SkillCorner rows, trained weights, private evidence, or authorize protected population qualification. The complete scientific authorities remain the versioned protocol, [published results](docs/res440/results.md), [Paper A evidence](docs/paper-a-evidence.md) and [data rights policy](docs/data-rights.md).
 
+## Contributing and release state
+
+The public research checkout is a **development distribution** (`0.1.0.dev0`), not an approved `v1.0.0` release. See the [changelog](CHANGELOG.md), [contribution and source-rights requirements](CONTRIBUTING.md), [software release gate and author/citation approvals](docs/software-release-gates.md), and [proposed release notes](docs/proposed-release-notes.md). No DOI, archival paper acceptance, protected population qualification or raw-data redistribution is implied.
+
 ## Research families
 
 - `workload_performance_state`: a partial, non-executable whole-session historical study and an invalidated signed-acceleration formulation with a recovered diagnostic RMSE evaluator.
