@@ -60,7 +60,8 @@ def test_source_publication_requires_manual_main_owner_dispatch() -> None:
     assert "actions/upload-artifact@v4" in verify_job
     assert "actions/download-artifact@v4" in publish_job
     assert "uv run pytest" in verify_job
-    assert "uv run fpdbench validate" in workflow
+    assert "git ls-files -- data/" in verify_job
+    assert "uv run fpdbench validate" in verify_job
     assert "tools/public_release_asset_manifest.py" in workflow
     assert workflow.index("uv run pytest") < workflow.index("git tag -a")
     assert workflow.index("git tag -a") < workflow.index("gh release create")
