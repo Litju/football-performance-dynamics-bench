@@ -69,8 +69,7 @@ def test_source_publication_requires_manual_main_owner_dispatch() -> None:
     assert workflow.index("git tag -a") < workflow.index("gh release create")
     assert "dist/*.whl dist/*.tar.gz" in workflow
     assert (
-        "from tools.select_release_distributions import select_distribution_artifacts"
-        in workflow
+        "from tools.select_release_distributions import select_distribution_artifacts" in workflow
     )
     assert 'dist = select_distribution_artifacts(Path("dist"), version="1.0.0")' in workflow
     assert "shutil.copyfile(artifact, bundle / artifact.name)" in workflow
