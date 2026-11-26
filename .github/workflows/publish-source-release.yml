@@ -128,8 +128,11 @@ jobs:
           import hashlib
           import json
           import os
+          import shutil
           from pathlib import Path
           import subprocess
+
+          from tools.select_release_distributions import select_distribution_artifacts
 
           candidate = json.loads(
               (Path(os.environ["RUNNER_TEMP"]) / "public-aggregate-candidate.json").read_text()
@@ -140,10 +143,10 @@ jobs:
           assert len(candidate["entries"]) == 12
           sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           assert candidate["source_commit"] == sha == os.environ["GITHUB_SHA"]
-          dist = sorted(Path("dist").iterdir())
-          assert len(dist) == 2
-          assert sum(p.suffix == ".whl" for p in dist) == 1
-          assert sum(p.name.endswith(".tar.gz") for p in dist) == 1
+          # There may be incidental entries in dist/; only the exact versioned
+          # wheel/sdist are eligible and any competing archive fails closed.
+          dist = select_distribution_artifacts(Path("dist"), version="1.0.0")
+          print("Selected release archives:", [p.name for p in dist])
           entries = [
               {
                   "name": p.name,
@@ -167,9 +170,15 @@ jobs:
           Path("release-artifact-manifest.json").write_text(
               json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
           )
+          bundle = Path("release-bundle")
+          bundle.mkdir(exist_ok=False)
+          for artifact in dist:
+              shutil.copyfile(artifact, bundle / artifact.name)
+          shutil.copyfile("release-artifact-manifest.json", bundle / "release-artifact-manifest.json")
+          assert sorted(p.name for p in bundle.iterdir()) == sorted(
+              [p.name for p in dist] + ["release-artifact-manifest.json"]
+          )
           PY
-          mkdir -p release-bundle
-          cp dist/*.whl dist/*.tar.gz release-artifact-manifest.json release-bundle/
 
       - uses: actions/upload-artifact@v4
         with:
